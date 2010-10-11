@@ -38,7 +38,7 @@ ParticleSystem::ParticleSystem(uint numParticles, uint3 gridSize, bool IsGLEnabl
 	dCellEnd(0)
 {    	
 	numGridCells = gridSize.x*gridSize.y*gridSize.z;
-	gridSortBits = 9;//18;
+	gridSortBits = 15;//18;
 
 	params.worldOrigin = make_float3(-1.0f, -1.0f, -1.0f);
 	params.gridSize = gridSize;
@@ -46,15 +46,14 @@ ParticleSystem::ParticleSystem(uint numParticles, uint3 gridSize, bool IsGLEnabl
 	params.cellSize = make_float3(params.particleRadius * 2.0f, params.particleRadius * 2.0f, params.particleRadius * 2.0f);
 
 	params.particleMass = 0.02f;
-	params.smoothingRadius = 3.0f * params.particleRadius;
-	//params.gravity = make_float3(0.0f, -0.1f, 0.0f);    	 
-	params.gravity = make_float3(0.0f, -0.1f, 0.0f);    	 
+	params.smoothingRadius = 3.0f * params.particleRadius;	 	 
+	params.gravity = make_float3(0.0f, -0.0f, 0.0f);    	 
 
 	params.Poly6Kern = 315.0f / (64.0f * CUDART_PI_F * pow(params.smoothingRadius, 9.0f));
-	params.SpikyKern = (-0.5f) * -45.0f /(CUDART_PI_F * pow(params.smoothingRadius, 6.0f));
+	params.SpikyKern = (-0.5f) * -45.0f /(CUDART_PI_F * pow(params.smoothingRadius, 6.0f));	
 
-	params.Young = 1000.3f;
-	params.Poisson = 0.27f;
+	params.Young = 1000.0f;
+	params.Poisson = 0.17f;
 	
 	params.deltaTime = 0.0005f;
     _initialize(numParticles);
@@ -241,8 +240,8 @@ void ParticleSystem::reset()
 	//float spacing = params.particleRadius * 2.0f;
 	float spacing = params.particleRadius * 1.0f;
     uint gridSize[3];    
-	gridSize[0] = 3;
-	gridSize[1] = gridSize[2] =4;		
+	gridSize[0] = 10;
+	gridSize[1] = gridSize[2] =5;		
     initGrid(gridSize, spacing, jitter, numParticles);
         
     setArray(POSITION, hPos, 0, numParticles);   
@@ -273,7 +272,8 @@ void ParticleSystem::initGrid(uint *size, float spacing, float jitter, uint numP
 					hVel[i*4] = 0;
 					hVel[i*4+1] = 0;
 					hVel[i*4+2] = 0;					
-					hVel[i*4+3] = x == 0 ? 0: 1.0f;	//mmm see integrate kernel										
+					hVel[i*4+3] = 1.0f;					
+					//hVel[i*4+3] = x == 0 ? 0: 1.0f;	//mmm see integrate kernel										
 				}
 			}
 		}

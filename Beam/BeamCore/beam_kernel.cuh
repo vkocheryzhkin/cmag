@@ -14,6 +14,7 @@
 #include "vector_types.h"
 #include "vector_functions.h"
 typedef unsigned int uint;
+#define CUDART_PI_F          3.1415926535897932384626433832795
 
 struct SimParams 
 {        
