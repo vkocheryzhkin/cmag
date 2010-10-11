@@ -1,0 +1,5 @@
+glob:Debug
+glob:*.user
+glob:*.pdb
+glob:*.ncb
+glob:*.suo

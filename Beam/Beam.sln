@@ -1,0 +1,29 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Beam", "Beam\Beam.vcproj", "{DBE27AEF-0987-48EA-B5F4-0D9B4FE0B201}"
+	ProjectSection(ProjectDependencies) = postProject
+		{3170EE41-EE0A-4D07-A779-7EB5C9A5D82A} = {3170EE41-EE0A-4D07-A779-7EB5C9A5D82A}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BeamCore", "BeamCore\BeamCore.vcproj", "{3170EE41-EE0A-4D07-A779-7EB5C9A5D82A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DBE27AEF-0987-48EA-B5F4-0D9B4FE0B201}.Debug|Win32.ActiveCfg = Debug|Win32
+		{DBE27AEF-0987-48EA-B5F4-0D9B4FE0B201}.Debug|Win32.Build.0 = Debug|Win32
+		{DBE27AEF-0987-48EA-B5F4-0D9B4FE0B201}.Release|Win32.ActiveCfg = Release|Win32
+		{DBE27AEF-0987-48EA-B5F4-0D9B4FE0B201}.Release|Win32.Build.0 = Release|Win32
+		{3170EE41-EE0A-4D07-A779-7EB5C9A5D82A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{3170EE41-EE0A-4D07-A779-7EB5C9A5D82A}.Debug|Win32.Build.0 = Debug|Win32
+		{3170EE41-EE0A-4D07-A779-7EB5C9A5D82A}.Release|Win32.ActiveCfg = Release|Win32
+		{3170EE41-EE0A-4D07-A779-7EB5C9A5D82A}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
