@@ -1,1 +1,1 @@
-cmag
+mag
