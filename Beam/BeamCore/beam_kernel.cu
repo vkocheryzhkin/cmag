@@ -15,6 +15,103 @@ texture<uint, 1, cudaReadModeElementType> cellEndTex;
 
 __constant__ SimParams params;
 
+
+struct Matrix3x4
+{
+  float a11,a12,a13,a14;
+  float a21,a22,a23,a24;
+  float a31,a32,a33,a34;
+};
+
+static __inline__ __device__ Matrix3x4 make_Matrix3x4()
+{
+  Matrix3x4 t; 
+  t.a11 = 0; t.a12= 0; t.a13 = 0; t.a14 = 0;
+  t.a21 = 0; t.a22= 0; t.a23 = 0; t.a24 = 0;
+  t.a31 = 0; t.a32= 0; t.a33 = 0; t.a34 = 0;
+  return t;
+};
+__device__ Matrix3x4 operator+ (const Matrix3x4 & a, const Matrix3x4 & b) 
+{ 
+	Matrix3x4 r;
+	r.a11 = a.a11 + b.a11;
+	r.a11 = a.a12 + b.a12;
+	r.a11 = a.a13 + b.a13;
+	r.a21 = a.a21 + b.a21;
+	r.a22 = a.a22 + b.a22;
+	r.a23 = a.a23 + b.a23;
+	r.a31 = a.a31 + b.a31;
+	r.a32 = a.a32 + b.a32;
+	r.a33 = a.a33 + b.a33;
+	return r; 
+}
+__device__ Matrix3x4 operator- (const Matrix3x4 & a, const Matrix3x4 & b) 
+{ 
+	Matrix3x4 r;
+	r.a11 = a.a11 - b.a11;
+	r.a11 = a.a12 - b.a12;
+	r.a11 = a.a13 - b.a13;
+	r.a21 = a.a21 - b.a21;
+	r.a22 = a.a22 - b.a22;
+	r.a23 = a.a23 - b.a23;
+	r.a31 = a.a31 - b.a31;
+	r.a32 = a.a32 - b.a32;
+	r.a33 = a.a33 - b.a33;
+	return r; 
+}
+
+__device__ Matrix3x4 operator* (const Matrix3x4 & a, const Matrix3x4 & b) 
+{ 
+	Matrix3x4 r;
+	r.a11 = a.a11 * b.a11 + a.a12 * b.a21 + a.a13 * b.a31;
+	r.a12 = a.a11 * b.a12 + a.a12 * b.a22 + a.a13 * b.a32;
+	r.a13 = a.a11 * b.a13 + a.a12 * b.a23 + a.a13 * b.a33;
+
+	r.a21 = a.a21 * b.a11 + a.a22 * b.a21 + a.a23 * b.a31;
+	r.a22 = a.a21 * b.a12 + a.a22 * b.a22 + a.a23 * b.a32;
+	r.a23 = a.a21 * b.a13 + a.a22 * b.a23 + a.a23 * b.a33;
+
+	r.a31 = a.a31 * b.a11 + a.a32 * b.a21 + a.a33 * b.a31;
+	r.a32 = a.a31 * b.a12 + a.a32 * b.a22 + a.a33 * b.a32;
+	r.a33 = a.a31 * b.a13 + a.a32 * b.a23 + a.a33 * b.a33;
+	return r; 
+}
+
+__device__ Matrix3x4 operator* (const float & a, const Matrix3x4 & b) 
+{ 
+	Matrix3x4 r;
+	r.a11 = a * b.a11;
+	r.a12 = a * b.a12;
+	r.a13 = a * b.a13;
+
+	r.a21 = a * b.a21;
+	r.a22 = a * b.a22;
+	r.a23 = a * b.a23;
+
+	r.a31 = a * b.a31;
+	r.a32 = a * b.a32;
+	r.a33 = a * b.a33;
+
+	return r; 
+}
+
+__device__ Matrix3x4 Transpose (const Matrix3x4 & b) 
+{ 
+	Matrix3x4 r;
+	r.a11 = b.a11;
+	r.a12 = b.a21;
+	r.a13 = b.a31;
+
+	r.a21 = b.a12;
+	r.a22 = b.a22;
+	r.a23 = b.a32;
+
+	r.a31 = b.a13;
+	r.a32 = b.a23;
+	r.a33 = b.a33;
+	return r; 
+}
+
 __device__ int3 calcGridPos(float3 p)
 {
     int3 gridPos;
@@ -160,7 +257,7 @@ void calcDensityD(
 	measures[index].y = params.particleMass / dens;	//volume
 }
 
-__device__ float12 sumDisplacementGradientPart(
+__device__ Matrix3x4 sumDisplacementGradientPart(
 				   int3    gridPos,
                    uint    index,
                    float3  pos_i,
@@ -174,7 +271,7 @@ __device__ float12 sumDisplacementGradientPart(
 	uint gridHash = calcGridHash(gridPos);
 
     uint startIndex = FETCH(cellStart, gridHash);    	
-	float12 gradient = make_float12();	
+	Matrix3x4 gradient = make_Matrix3x4();	
 	
     if (startIndex != 0xffffffff) {               
         uint endIndex = FETCH(cellEnd, gridHash);
@@ -190,17 +287,18 @@ __device__ float12 sumDisplacementGradientPart(
 				if (dist < params.smoothingRadius) {
 					float tempExpr =  (params.smoothingRadius - dist);															
 
-					gradient.u.x += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * (relPos.x / dist) * tempExpr * tempExpr;
-					gradient.u.y += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * (relPos.y / dist) * tempExpr * tempExpr;
-					gradient.u.z += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * (relPos.z / dist) * tempExpr * tempExpr;
 					
-					gradient.v.x += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.SpikyKern * (relPos.x / dist) * tempExpr * tempExpr;
-					gradient.v.y += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.SpikyKern * (relPos.y / dist) * tempExpr * tempExpr;
-					gradient.v.z += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.SpikyKern * (relPos.z / dist) * tempExpr * tempExpr;
+					gradient.a11 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * (relPos.x / dist) * tempExpr * tempExpr;
+					gradient.a12 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * (relPos.y / dist) * tempExpr * tempExpr;
+					gradient.a13 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * (relPos.z / dist) * tempExpr * tempExpr;
+					
+					gradient.a21 += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.SpikyKern * (relPos.x / dist) * tempExpr * tempExpr;
+					gradient.a22 += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.SpikyKern * (relPos.y / dist) * tempExpr * tempExpr;
+					gradient.a23 += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.SpikyKern * (relPos.z / dist) * tempExpr * tempExpr;
 
-					gradient.w.x += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.SpikyKern * (relPos.x / dist) * tempExpr * tempExpr;
-					gradient.w.y += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.SpikyKern * (relPos.y / dist) * tempExpr * tempExpr;
-					gradient.w.z += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.SpikyKern * (relPos.z / dist) * tempExpr * tempExpr;					
+					gradient.a31 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.SpikyKern * (relPos.x / dist) * tempExpr * tempExpr;
+					gradient.a32 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.SpikyKern * (relPos.y / dist) * tempExpr * tempExpr;
+					gradient.a33 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.SpikyKern * (relPos.z / dist) * tempExpr * tempExpr;					
 				}                
             }
         }
@@ -226,23 +324,39 @@ __global__ void calcDisplacementGradientD(
 	float3 pos = make_float3(FETCH(oldPos, index));
 	float3 referencePos = make_float3(FETCH(oldReferencePos, index));
     int3 gridPos = calcGridPos(pos);
-	float12 result = make_float12();	
-	float12 buf = make_float12();	
+	Matrix3x4 result = make_Matrix3x4();	
+	Matrix3x4 buf = make_Matrix3x4();	
 	int cellcount = 2;
     for(int z=-cellcount; z<=cellcount; z++) {
         for(int y=-cellcount; y<=cellcount; y++) {
             for(int x=-cellcount; x<=cellcount; x++) {
                 int3 neighbourPos = gridPos + make_int3(x, y, z);
                 buf = sumDisplacementGradientPart(neighbourPos, index, pos, oldPos, referencePos, oldReferencePos, oldMeasures, cellStart, cellEnd);
-				result.u+=buf.u;//todo: remove this stuff
-				result.v+=buf.v;
-				result.w+=buf.w;
+				result.a11 += buf.a11;
+				result.a12 += buf.a12;
+				result.a13 += buf.a13;
+
+				result.a21 += buf.a21;
+				result.a22 += buf.a22;
+				result.a23 += buf.a23;
+
+				result.a31 += buf.a31;
+				result.a32 += buf.a32;
+				result.a33 += buf.a33;
             }
         }
     }    				
-	udisplacementGradient[index] = result.u;
-	vdisplacementGradient[index] = result.v;
-	wdisplacementGradient[index] = result.w;
+	udisplacementGradient[index].x = result.a11;
+	udisplacementGradient[index].y = result.a12;
+	udisplacementGradient[index].z = result.a13;
+
+	vdisplacementGradient[index].x = result.a21;
+	vdisplacementGradient[index].y = result.a22;
+	vdisplacementGradient[index].z = result.a23;
+
+	wdisplacementGradient[index].x = result.a31;
+	wdisplacementGradient[index].y = result.a32;	
+	wdisplacementGradient[index].z = result.a33;
 }
 
 __device__ float3 sumForcePart(
@@ -265,24 +379,32 @@ __device__ float3 sumForcePart(
 	float3 vSigma = make_float3(0.0f);
 	float3 wSigma = make_float3(0.0f);
 	float3 d = make_float3(0.0f);	
-	
-	float3 uJ = make_float3(du_i.x + 1, du_i.y    , du_i.z	 );
-	float3 vJ = make_float3(dv_i.x	 , dv_i.y + 1, dv_i.z	 );
-	float3 wJ = make_float3(dw_i.x	 , dw_i.y	 , dw_i.z + 1);
+		
+	Matrix3x4 J = make_Matrix3x4();
+	J.a11 = du_i.x + 1;
+	J.a12 = du_i.y;
+	J.a13 = du_i.z;
+	J.a21 = dv_i.x;
+	J.a22 = dv_i.y + 1;
+	J.a23 = dv_i.z;
+	J.a31 = dw_i.x;
+	J.a32 = dw_i.y;
+	J.a33 = dw_i.z + 1;	
 
-	//Green-Saint-Venant strain tensor
-	float3 uE = 0.5 * make_float3(uJ.x * uJ.x + vJ.x * vJ.x + wJ.x * wJ.x - 1,	uJ.x * uJ.y + vJ.x * vJ.y + wJ.x * wJ.y	   ,	uJ.x * uJ.z + vJ.x * vJ.z + wJ.x * wJ.z		);
-	float3 vE = 0.5 * make_float3(uJ.y * uJ.x + vJ.y * vJ.x + wJ.y * wJ.x    ,	uJ.y * uJ.y + vJ.y * vJ.y + wJ.y * wJ.y - 1,	uJ.y * uJ.z + vJ.y * vJ.z + wJ.y * wJ.z		);
-	float3 wE = 0.5 * make_float3(uJ.z * uJ.x + vJ.z * vJ.x + wJ.z * wJ.x	 ,	uJ.z * uJ.y + uJ.z * vJ.y + wJ.z * wJ.y	   ,	uJ.z * uJ.z + vJ.z * vJ.z + wJ.z * wJ.z - 1 );
+	Matrix3x4 I = make_Matrix3x4();
+	I.a11 = 1; I.a22 = 1; I.a33 = 1;		
+
+	//Green-Saint-Venant strain tensor	
+	Matrix3x4 E = 0.5 * ( Transpose(J)*J - I);
 
 	//Stress tensor
-	uSigma.x = (params.Young / ( 1 + params.Poisson))*(uE.x + (params.Poisson / ( 1 - 2*params.Poisson))*(uE.x + vE.y + wE.z));
-	vSigma.y = (params.Young / ( 1 + params.Poisson))*(vE.y + (params.Poisson / ( 1 - 2*params.Poisson))*(uE.x + vE.y + wE.z)); 
-	wSigma.z = (params.Young / ( 1 + params.Poisson))*(wE.z + (params.Poisson / ( 1 - 2*params.Poisson))*(uE.x + vE.y + wE.z));
+	uSigma.x = (params.Young / ( 1 + params.Poisson))*(E.a11 + (params.Poisson / ( 1 - 2 * params.Poisson))*(E.a11 + E.a22 + E.a33));
+	vSigma.y = (params.Young / ( 1 + params.Poisson))*(E.a22 + (params.Poisson / ( 1 - 2 * params.Poisson))*(E.a11 + E.a22 + E.a33)); 
+	wSigma.z = (params.Young / ( 1 + params.Poisson))*(E.a33 + (params.Poisson / ( 1 - 2 * params.Poisson))*(E.a11 + E.a22 + E.a33));
 	
-	uSigma.y = vSigma.x = (params.Young / (1 + params.Poisson))*uE.y; //uE.y == vE.x
-	uSigma.z = wSigma.x = (params.Young / (1 + params.Poisson))*uE.z;
-	vSigma.z = wSigma.y = (params.Young / (1 + params.Poisson))*vE.z;		
+	uSigma.y = vSigma.x = (params.Young / (1 + params.Poisson))*E.a12;
+	uSigma.z = wSigma.x = (params.Young / (1 + params.Poisson))*E.a13;
+	vSigma.z = wSigma.y = (params.Young / (1 + params.Poisson))*E.a23;		
 
     if (startIndex != 0xffffffff) {               
         uint endIndex = FETCH(cellEnd, gridHash);
