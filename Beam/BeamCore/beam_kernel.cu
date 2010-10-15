@@ -418,9 +418,8 @@ __device__ float3 sumForcePart(
 	dUT.a32 = dw_i.y;
 	dUT.a33 = dw_i.z;	
 
-	J = I + dUT;		
+	J = I + dUT;			
 	
-
 	//Green-Saint-Venant strain tensor	
 	Matrix3x4 E = 0.5 * ( (Transpose(J)*J) - I);	
 
