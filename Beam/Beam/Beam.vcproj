@@ -61,8 +61,8 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="cudart.lib cutil32D.lib  glew32.lib cudpp32.lib"
-				OutputFile="../../../bin/win32/$(ConfigurationName)/$(ProjectName).exe"
+				AdditionalDependencies="cudart.lib  cutil32D.lib glew32.lib cudpp32.lib"
+				OutputFile="../../../C/bin/win32/$(ConfigurationName)/$(ProjectName).exe"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="$(CUDA_PATH)/lib/$(PlatformName);&quot;$(NVSDKCOMPUTE_ROOT)/C/common/lib&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/shared/lib&quot;"
 				GenerateDebugInformation="true"

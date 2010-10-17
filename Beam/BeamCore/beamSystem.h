@@ -33,7 +33,10 @@ public:
 	void * getCudauDisplacementGradient()        const {return (void *)duDisplacementGradient;}
 	void * getCudavDisplacementGradient()        const {return (void *)dvDisplacementGradient;}
 	void * getCudawDisplacementGradient()        const {return (void *)dwDisplacementGradient;}
-
+	void * getCudaPositionVBO() const {return (void *)cudaPosVBO;}
+	void * getCudaVelocity() const {return (void *)dVelocity;}
+	void * getCudaSortedReferencePosition() const {return (void *)dSortedReferencePos;}	
+	void * getCudaMeasures() const {return (void *)dMeasures;}
 	void * getCudaAcceleration()        const {return (void *)dAcceleration;}	
 	void * getCudaHash()				const {return (void *)dHash;}
 	void * getCudaIndex()				const {return (void *)dIndex;}
@@ -60,7 +63,7 @@ protected: // data
 	//float* hDisplacement; //remove
 
     // GPU data
-    float* dPos;   
+    //float* dPos;   
 	float* dSortedPos; //sorted
 	float* dVelocity;
 	//float* dDisplacement;		  //remove

@@ -40,7 +40,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="$(BOOST_ROOT)"
+				AdditionalIncludeDirectories="$(BOOST_ROOT); ..\BeamCore;$(CUDA_PATH)/include;$(NVSDKCOMPUTE_ROOT)\C\common\inc"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -58,8 +58,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libboost_unit_test_framework-vc90-mt-gd-1_44.lib"
-				AdditionalLibraryDirectories="&quot;$(BOOST_ROOT)&quot;\lib"
+				AdditionalDependencies="libboost_unit_test_framework-vc90-mt-gd-1_44.lib cudart.lib  cutil32D.lib glew32.lib cudpp32.lib"
+				OutputFile="../../../C/bin/win32/$(ConfigurationName)/$(ProjectName).exe"
+				AdditionalLibraryDirectories="&quot;$(BOOST_ROOT)&quot;\lib;$(CUDA_PATH)/lib/$(PlatformName);&quot;$(NVSDKCOMPUTE_ROOT)/C/common/lib&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/shared/lib&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				TargetMachine="1"
@@ -161,7 +162,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath=".\StartTest.cpp"
+			RelativePath=".\SystemFunctionalTest.cpp"
 			>
 		</File>
 	</Files>

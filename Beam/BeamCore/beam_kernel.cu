@@ -23,7 +23,7 @@ struct Matrix3x4
   float a31,a32,a33,a34;
 };
 
-static __inline__ __device__ Matrix3x4 make_Matrix3x4()
+__device__ Matrix3x4 make_Matrix3x4()
 {
   Matrix3x4 t; 
   t.a11 = 0; t.a12= 0; t.a13 = 0; t.a14 = 0;
@@ -35,8 +35,8 @@ __device__ Matrix3x4 operator+ (const Matrix3x4 & a, const Matrix3x4 & b)
 { 
 	Matrix3x4 r;
 	r.a11 = a.a11 + b.a11;
-	r.a11 = a.a12 + b.a12;
-	r.a11 = a.a13 + b.a13;
+	r.a12 = a.a12 + b.a12;
+	r.a13 = a.a13 + b.a13;
 	r.a21 = a.a21 + b.a21;
 	r.a22 = a.a22 + b.a22;
 	r.a23 = a.a23 + b.a23;
@@ -49,8 +49,8 @@ __device__ Matrix3x4 operator- (const Matrix3x4 & a, const Matrix3x4 & b)
 { 
 	Matrix3x4 r;
 	r.a11 = a.a11 - b.a11;
-	r.a11 = a.a12 - b.a12;
-	r.a11 = a.a13 - b.a13;
+	r.a12 = a.a12 - b.a12;
+	r.a13 = a.a13 - b.a13;
 	r.a21 = a.a21 - b.a21;
 	r.a22 = a.a22 - b.a22;
 	r.a23 = a.a23 - b.a23;
@@ -277,7 +277,7 @@ void calcDensityD(
             }
         }
     }	
-	float dens = sum * params.particleMass * params.Poly6Kern;
+	float dens = sum * params.particleMass * params.Poly6Kern + 1500; //todo: introduce rest density
     measures[index].x = dens;	//density	
 	measures[index].y = params.particleMass / dens;	//volume
 }
@@ -405,6 +405,7 @@ __device__ float3 sumForcePart(
 	I.a11 = 1; I.a22 = 1; I.a33 = 1;		
 	Matrix3x4 dUT = make_Matrix3x4();
 	Matrix3x4 J = make_Matrix3x4();	
+	Matrix3x4 E = make_Matrix3x4();	
 
 	dUT.a11 = du_i.x;
 	dUT.a12 = du_i.y;
@@ -416,12 +417,12 @@ __device__ float3 sumForcePart(
 
 	dUT.a31 = dw_i.x;
 	dUT.a32 = dw_i.y;
-	dUT.a33 = dw_i.z;	
+	dUT.a33 = dw_i.z;
 
-	J = I + dUT;			
+	J = I + dUT;				
 	
 	//Green-Saint-Venant strain tensor	
-	Matrix3x4 E = 0.5 * ( (Transpose(J)*J) - I);	
+	E = 0.5 * ((Transpose(J)*J) - I);	
 
 	float t1 = E.a11;// - (E.a11 + E.a22 + E.a33)/3;
 	float t2 = E.a22;// - (E.a11 + E.a22 + E.a33)/3;
