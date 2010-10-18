@@ -34,6 +34,7 @@ struct SimParams
 	//Material
 	float Young;
 	float Poisson;
+	float restDensity;
 };
 
 

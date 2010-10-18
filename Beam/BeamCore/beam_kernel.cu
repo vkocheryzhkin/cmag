@@ -277,7 +277,7 @@ void calcDensityD(
             }
         }
     }	
-	float dens = sum * params.particleMass * params.Poly6Kern + 1500; //todo: introduce rest density
+	float dens = sum * params.particleMass * params.Poly6Kern + params.restDensity;
     measures[index].x = dens;	//density	
 	measures[index].y = params.particleMass / dens;	//volume
 }
@@ -424,9 +424,9 @@ __device__ float3 sumForcePart(
 	//Green-Saint-Venant strain tensor	
 	E = 0.5 * ((Transpose(J)*J) - I);	
 
-	float t1 = E.a11;// - (E.a11 + E.a22 + E.a33)/3;
-	float t2 = E.a22;// - (E.a11 + E.a22 + E.a33)/3;
-	float t3 = E.a33;// - (E.a11 + E.a22 + E.a33)/3;
+	float t1 = E.a11 - (E.a11 + E.a22 + E.a33)/3;
+	float t2 = E.a22 - (E.a11 + E.a22 + E.a33)/3;
+	float t3 = E.a33 - (E.a11 + E.a22 + E.a33)/3;
 
 	//Stress tensor
 	Sigma.a11 = (params.Young / ( 1 + params.Poisson))*(t1 + (params.Poisson / ( 1 - 2 * params.Poisson))*(E.a11 + E.a22 + E.a33));
@@ -509,6 +509,7 @@ __global__ void integrate(float4* posArray, //input / output
 {
     uint index = __umul24(blockIdx.x,blockDim.x) + threadIdx.x;
     if (index >= numParticles) return;
+	if (index == 0 ) return;
 
 	volatile float4 posData = posArray[index];
 	volatile float4 velData = velArray[index];	
@@ -518,7 +519,7 @@ __global__ void integrate(float4* posArray, //input / output
     float3 vel = make_float3(velData.x, velData.y, velData.z);
 	float3 acc = make_float3(accData.x, accData.y, accData.z);
 
-	vel += (params.gravity + acc) * params.deltaTime * velData.w; //don't integrate left plane particles, see initGrid function	
+	vel += (params.gravity + acc) * params.deltaTime;
     pos += vel * params.deltaTime;  
 
 	posArray[index] = make_float4(pos, posData.w);

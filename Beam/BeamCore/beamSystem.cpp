@@ -46,15 +46,17 @@ ParticleSystem::ParticleSystem(uint numParticles, uint3 gridSize, bool IsGLEnabl
 
 	params.particleMass = 0.02f;
 	params.smoothingRadius = 3.0f * params.particleRadius;	 	 
-	params.gravity = make_float3(0.0f, -0.1f, 0.0f);    	 
+	params.gravity = make_float3(0.0f, -0.01f, 0.0f);    	 
 
 	params.Poly6Kern = 315.0f / (64.0f * CUDART_PI_F * pow(params.smoothingRadius, 9.0f));
 	params.SpikyKern = (-0.5f) * -45.0f /(CUDART_PI_F * pow(params.smoothingRadius, 6.0f));	
 
-	params.Young = 100000.0f;
+	params.Young = 1000000.0f;
 	params.Poisson = 0.45f;
+
+	params.restDensity = 2000.0f;
 	
-	params.deltaTime = 0.0005f;
+	params.deltaTime = 0.005f;
     _initialize(numParticles);
 }
 
@@ -269,15 +271,17 @@ void ParticleSystem::initGrid(uint *size, float spacing, float jitter, uint numP
 					hPos[i*4+2] =1 + (spacing * z) + params.particleRadius - 1.0f ;//+ (frand() * 2.0f - 1.0f) * jitter;					
 					hPos[i*4+3] = i;				
 					
-					hVel[i*4] = 0;
-					hVel[i*4+1] = 0;
-					hVel[i*4+2] = 0;										
-					//hVel[i*4+3] = 1.0f;
-					hVel[i*4+3] = y == 0 ? 0: 1.0f;	//mmm see integrate kernel										
+					hVel[i*4] = 0;	
+					if(i % 2)
+						hVel[i*4+1] = 0.01f * (frand() * 2.0f - 1.0f);
+					else
+						hVel[i*4+1] = -0.01f * (frand() * 2.0f - 1.0f);
+					hVel[i*4+2] = 0;															
+					hVel[i*4+3] = 1;
 				}
 			}
 		}
-	}	
+	}		
 }
 void ParticleSystem::preInit()
 {

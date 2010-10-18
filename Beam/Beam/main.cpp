@@ -230,6 +230,10 @@ void key(unsigned char key, int /*x*/, int /*y*/)
 		break;
     case '\033':
     case 'q':
+		atexit(cleanup);
+		if (psystem)
+			delete psystem;
+		cudaThreadExit();
         exit(0);
         break;
 	}
