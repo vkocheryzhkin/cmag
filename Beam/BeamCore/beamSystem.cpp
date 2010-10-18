@@ -45,14 +45,14 @@ ParticleSystem::ParticleSystem(uint numParticles, uint3 gridSize, bool IsGLEnabl
 	params.cellSize = make_float3(params.particleRadius * 2.0f, params.particleRadius * 2.0f, params.particleRadius * 2.0f);
 
 	params.particleMass = 0.02f;
-	params.smoothingRadius = 2.1f * params.particleRadius;	 	 
+	params.smoothingRadius = 3.0f * params.particleRadius;	 	 
 	params.gravity = make_float3(0.0f, -0.1f, 0.0f);    	 
 
 	params.Poly6Kern = 315.0f / (64.0f * CUDART_PI_F * pow(params.smoothingRadius, 9.0f));
 	params.SpikyKern = (-0.5f) * -45.0f /(CUDART_PI_F * pow(params.smoothingRadius, 6.0f));	
 
-	params.Young = 1000000.0f;
-	params.Poisson = 0.35f;
+	params.Young = 100000.0f;
+	params.Poisson = 0.45f;
 	
 	params.deltaTime = 0.0005f;
     _initialize(numParticles);
@@ -235,12 +235,12 @@ void ParticleSystem::setArray(ParticleArray array, const float* data, int start,
 
 void ParticleSystem::reset()
 {
-    float jitter = 0;// params.particleRadius*0.01f;			            	
+    float jitter = params.particleRadius*0.01f;			            	
 	//float spacing = params.particleRadius * 2.0f;
 	float spacing = params.particleRadius * 2.0f;
     uint gridSize[3];    
 	gridSize[0] = 1;
-	gridSize[1] = 2;		
+	gridSize[1] = 3;		
 	gridSize[2] = 1;
     initGrid(gridSize, spacing, jitter, numParticles);
         
@@ -264,9 +264,9 @@ void ParticleSystem::initGrid(uint *size, float spacing, float jitter, uint numP
 			for(uint x=0; x<size[0]; x++) {
 				uint i = (z*size[1]*size[0]) + (y*size[0]) + x;
 				if (i < numParticles) {
-					hPos[i*4] =  1 + (spacing * x) + params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;
+					hPos[i*4] =  1 + (spacing * x) + params.particleRadius - 1.0f ;//+ (frand() * 2.0f - 1.0f) * jitter;
 					hPos[i*4+1] =1 - (spacing * y) - params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;
-					hPos[i*4+2] =1 + (spacing * z) + params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;					
+					hPos[i*4+2] =1 + (spacing * z) + params.particleRadius - 1.0f ;//+ (frand() * 2.0f - 1.0f) * jitter;					
 					hPos[i*4+3] = i;				
 					
 					hVel[i*4] = 0;
