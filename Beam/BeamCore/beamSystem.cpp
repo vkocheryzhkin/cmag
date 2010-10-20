@@ -11,7 +11,7 @@
 #include <GL/glew.h>
 
 #ifndef CUDART_PI_F 
-#define CUDART_PI_F          3.1415926535897932384626433832795
+#define CUDART_PI_F           3.141592654f
 #endif
 
 ParticleSystem::ParticleSystem(uint numParticles, uint3 gridSize, bool IsGLEnabled) :
@@ -36,6 +36,7 @@ ParticleSystem::ParticleSystem(uint numParticles, uint3 gridSize, bool IsGLEnabl
 	dCellStart(0),
 	dCellEnd(0)
 {    	
+	srand(1973);
 	numGridCells = gridSize.x*gridSize.y*gridSize.z;
 	gridSortBits = 15;//18;
 
@@ -49,14 +50,18 @@ ParticleSystem::ParticleSystem(uint numParticles, uint3 gridSize, bool IsGLEnabl
 	params.gravity = make_float3(0.0f, -0.01f, 0.0f);    	 
 
 	params.Poly6Kern = 315.0f / (64.0f * CUDART_PI_F * pow(params.smoothingRadius, 9.0f));
-	params.SpikyKern = (-0.5f) * -45.0f /(CUDART_PI_F * pow(params.smoothingRadius, 6.0f));	
+	/*params.SpikyKern = -45.0f /(CUDART_PI_F * pow(params.smoothingRadius, 6.0f));	*/
 
-	params.Young = 1000000.0f;
-	params.Poisson = 0.45f;
+	float h = params.smoothingRadius;
+	float c = CUDART_PI_F / (8.0f * pow(h, 4.0f) * (CUDART_PI_F / 3.0f - 8.0f / CUDART_PI_F + 16.0f / pow(CUDART_PI_F, 2.0f)) );	
+	params.SpikyKern = -c;	
 
-	params.restDensity = 2000.0f;
+	params.Young = 6100000.0f;
+	params.Poisson = 0.49f;
+
+	params.restDensity = 0.0f;
 	
-	params.deltaTime = 0.005f;
+	params.deltaTime = 0.0005f;
     _initialize(numParticles);
 }
 
@@ -237,12 +242,12 @@ void ParticleSystem::setArray(ParticleArray array, const float* data, int start,
 
 void ParticleSystem::reset()
 {
-    float jitter = params.particleRadius*0.01f;			            	
+    float jitter = params.particleRadius*0.1f;			            	
 	//float spacing = params.particleRadius * 2.0f;
 	float spacing = params.particleRadius * 2.0f;
     uint gridSize[3];    
 	gridSize[0] = 1;
-	gridSize[1] = 3;		
+	gridSize[1] = 4;		
 	gridSize[2] = 1;
     initGrid(gridSize, spacing, jitter, numParticles);
         
@@ -260,22 +265,19 @@ inline float frand()
 
 void ParticleSystem::initGrid(uint *size, float spacing, float jitter, uint numParticles)
 {
-	srand(1973);
+	
 	for(uint z=0; z<size[2]; z++) {
 		for(uint y=0; y<size[1]; y++) {	
 			for(uint x=0; x<size[0]; x++) {
 				uint i = (z*size[1]*size[0]) + (y*size[0]) + x;
 				if (i < numParticles) {
 					hPos[i*4] =  1 + (spacing * x) + params.particleRadius - 1.0f ;//+ (frand() * 2.0f - 1.0f) * jitter;
-					hPos[i*4+1] =1 - (spacing * y) - params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;
+					hPos[i*4+1] = - (spacing * y) - params.particleRadius  + (frand() * 2.0f - 1.0f) * jitter;
 					hPos[i*4+2] =1 + (spacing * z) + params.particleRadius - 1.0f ;//+ (frand() * 2.0f - 1.0f) * jitter;					
 					hPos[i*4+3] = i;				
 					
 					hVel[i*4] = 0;	
-					if(i % 2)
-						hVel[i*4+1] = 0.01f * (frand() * 2.0f - 1.0f);
-					else
-						hVel[i*4+1] = -0.01f * (frand() * 2.0f - 1.0f);
+					hVel[i*4+1] = 0;					
 					hVel[i*4+2] = 0;															
 					hVel[i*4+3] = 1;
 				}

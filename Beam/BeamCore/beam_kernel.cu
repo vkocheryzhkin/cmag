@@ -16,24 +16,24 @@ texture<uint, 1, cudaReadModeElementType> cellEndTex;
 __constant__ SimParams params;
 
 
-struct Matrix3x4
+struct Matrix
 {
-  float a11,a12,a13,a14;
-  float a21,a22,a23,a24;
-  float a31,a32,a33,a34;
+  float a11,a12,a13;
+  float a21,a22,a23;
+  float a31,a32,a33;
 };
 
-__device__ Matrix3x4 make_Matrix3x4()
+__device__ Matrix make_Matrix()
 {
-  Matrix3x4 t; 
-  t.a11 = 0; t.a12= 0; t.a13 = 0; t.a14 = 0;
-  t.a21 = 0; t.a22= 0; t.a23 = 0; t.a24 = 0;
-  t.a31 = 0; t.a32= 0; t.a33 = 0; t.a34 = 0;
+  Matrix t; 
+  t.a11 = 0; t.a12= 0; t.a13 = 0;
+  t.a21 = 0; t.a22= 0; t.a23 = 0;
+  t.a31 = 0; t.a32= 0; t.a33 = 0;
   return t;
 };
-__device__ Matrix3x4 operator+ (const Matrix3x4 & a, const Matrix3x4 & b) 
+__device__ Matrix operator+ (const Matrix & a, const Matrix & b) 
 { 
-	Matrix3x4 r;
+	Matrix r;
 	r.a11 = a.a11 + b.a11;
 	r.a12 = a.a12 + b.a12;
 	r.a13 = a.a13 + b.a13;
@@ -45,9 +45,9 @@ __device__ Matrix3x4 operator+ (const Matrix3x4 & a, const Matrix3x4 & b)
 	r.a33 = a.a33 + b.a33;
 	return r; 
 }
-__device__ Matrix3x4 operator- (const Matrix3x4 & a, const Matrix3x4 & b) 
+__device__ Matrix operator- (const Matrix & a, const Matrix & b) 
 { 
-	Matrix3x4 r;
+	Matrix r;
 	r.a11 = a.a11 - b.a11;
 	r.a12 = a.a12 - b.a12;
 	r.a13 = a.a13 - b.a13;
@@ -60,7 +60,7 @@ __device__ Matrix3x4 operator- (const Matrix3x4 & a, const Matrix3x4 & b)
 	return r; 
 }
 
-__device__ Matrix3x4 operator+= (Matrix3x4 & a, const Matrix3x4 & b) 
+__device__ Matrix operator+= (Matrix & a, const Matrix & b) 
 { 	
 	a.a11 += b.a11;
 	a.a12 += b.a12;
@@ -76,9 +76,9 @@ __device__ Matrix3x4 operator+= (Matrix3x4 & a, const Matrix3x4 & b)
 	return a; 
 }
 
-__device__ Matrix3x4 operator* (const Matrix3x4 & a, const Matrix3x4 & b) 
+__device__ Matrix operator* (const Matrix & a, const Matrix & b) 
 { 
-	Matrix3x4 r;
+	Matrix r;
 	r.a11 = a.a11 * b.a11 + a.a12 * b.a21 + a.a13 * b.a31;
 	r.a12 = a.a11 * b.a12 + a.a12 * b.a22 + a.a13 * b.a32;
 	r.a13 = a.a11 * b.a13 + a.a12 * b.a23 + a.a13 * b.a33;
@@ -93,7 +93,7 @@ __device__ Matrix3x4 operator* (const Matrix3x4 & a, const Matrix3x4 & b)
 	return r; 
 }
 
-__device__ float3 operator* (const Matrix3x4 & a, const float3 & b) 
+__device__ float3 operator* (const Matrix & a, const float3 & b) 
 { 
 	float3 r;
 	r.x = a.a11 * b.x + a.a12 * b.y + a.a13 * b.z;	
@@ -102,9 +102,9 @@ __device__ float3 operator* (const Matrix3x4 & a, const float3 & b)
 	return r; 
 }
 
-__device__ Matrix3x4 operator* (const float & a, const Matrix3x4 & b) 
+__device__ Matrix operator* (const float & a, const Matrix & b) 
 { 
-	Matrix3x4 r;
+	Matrix r;
 	r.a11 = a * b.a11;
 	r.a12 = a * b.a12;
 	r.a13 = a * b.a13;
@@ -120,9 +120,9 @@ __device__ Matrix3x4 operator* (const float & a, const Matrix3x4 & b)
 	return r; 
 }
 
-__device__ Matrix3x4 Transpose (const Matrix3x4 & b) 
+__device__ Matrix Transpose (const Matrix & b) 
 { 
-	Matrix3x4 r;
+	Matrix r;
 	r.a11 = b.a11;
 	r.a12 = b.a21;
 	r.a13 = b.a31;
@@ -185,9 +185,9 @@ __global__ void reorderDataAndFindCellStartD(
 	extern __shared__ uint sharedHash[];    
     uint index = __umul24(blockIdx.x,blockDim.x) + threadIdx.x;
 	
-    uint hash;   
+    volatile uint hash;   
     if (index < numParticles) {
-        hash = Hash[index];
+         hash = Hash[index];
         
 	    sharedHash[threadIdx.x+1] = hash;
 
@@ -212,7 +212,7 @@ __global__ void reorderDataAndFindCellStartD(
             cellEnd[hash] = index + 1;
         }
 
-	    uint sortedIndex = Index[index];		 				
+	    volatile uint sortedIndex = Index[index];		 				
 		sortedPos[index] = FETCH(oldPos, sortedIndex);
         sortedReferencePos[index] = FETCH(oldReferencePos, sortedIndex);
 	}
@@ -282,7 +282,7 @@ void calcDensityD(
 	measures[index].y = params.particleMass / dens;	//volume
 }
 
-__device__ Matrix3x4 sumDisplacementGradientPart(
+__device__ Matrix sumDisplacementGradientPart(
 				   int3    gridPos,
                    uint    index,
                    float3  pos_i,
@@ -296,7 +296,7 @@ __device__ Matrix3x4 sumDisplacementGradientPart(
 	uint gridHash = calcGridHash(gridPos);
 
     uint startIndex = FETCH(cellStart, gridHash);    	
-	Matrix3x4 gradient = make_Matrix3x4();	
+	Matrix gradient = make_Matrix();	
 	
     if (startIndex != 0xffffffff) {               
         uint endIndex = FETCH(cellEnd, gridHash);
@@ -310,18 +310,18 @@ __device__ Matrix3x4 sumDisplacementGradientPart(
 				float dist = length(relPos);
 
 				if (dist < params.smoothingRadius) {				
-					float tempExpr =  (params.smoothingRadius - dist);																				
-					gradient.a11 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * (relPos.x / dist) * tempExpr * tempExpr;
-					gradient.a12 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * (relPos.y / dist) * tempExpr * tempExpr;
-					gradient.a13 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * (relPos.z / dist) * tempExpr * tempExpr;
+					float tempExpr =  sinf((dist + params.smoothingRadius) * CUDART_PI_F / (2.0f * params.smoothingRadius) );			
+					gradient.a11 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * (relPos.x / dist) * tempExpr;
+					gradient.a12 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * (relPos.y / dist) * tempExpr;
+					gradient.a13 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * (relPos.z / dist) * tempExpr;
 					
-					gradient.a21 += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.SpikyKern * (relPos.x / dist) * tempExpr * tempExpr;
-					gradient.a22 += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.SpikyKern * (relPos.y / dist) * tempExpr * tempExpr;
-					gradient.a23 += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.SpikyKern * (relPos.z / dist) * tempExpr * tempExpr;
+					gradient.a21 += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.SpikyKern * (relPos.x / dist) * tempExpr;
+					gradient.a22 += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.SpikyKern * (relPos.y / dist) * tempExpr;
+					gradient.a23 += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.SpikyKern * (relPos.z / dist) * tempExpr;
 
-					gradient.a31 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.SpikyKern * (relPos.x / dist) * tempExpr * tempExpr;
-					gradient.a32 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.SpikyKern * (relPos.y / dist) * tempExpr * tempExpr;
-					gradient.a33 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.SpikyKern * (relPos.z / dist) * tempExpr * tempExpr;																				
+					gradient.a31 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.SpikyKern * (relPos.x / dist) * tempExpr;
+					gradient.a32 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.SpikyKern * (relPos.y / dist) * tempExpr;
+					gradient.a33 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.SpikyKern * (relPos.z / dist) * tempExpr;																				
 				}                
             }
         }
@@ -346,40 +346,28 @@ __global__ void calcDisplacementGradientD(
 
 	float3 pos = make_float3(FETCH(oldPos, index));
 	float3 referencePos = make_float3(FETCH(oldReferencePos, index));
-    int3 gridPos = calcGridPos(pos);
-	Matrix3x4 result = make_Matrix3x4();	
-	Matrix3x4 buf = make_Matrix3x4();	
+    int3 gridPos = calcGridPos(pos);	
+	Matrix buf = make_Matrix();	
 	int cellcount = 1;
     for(int z=-cellcount; z<=cellcount; z++) {
         for(int y=-cellcount; y<=cellcount; y++) {
             for(int x=-cellcount; x<=cellcount; x++) {
                 int3 neighbourPos = gridPos + make_int3(x, y, z);
-                buf = sumDisplacementGradientPart(neighbourPos, index, pos, oldPos, referencePos, oldReferencePos, oldMeasures, cellStart, cellEnd);
-				result.a11 += buf.a11;
-				result.a12 += buf.a12;
-				result.a13 += buf.a13;
-
-				result.a21 += buf.a21;
-				result.a22 += buf.a22;
-				result.a23 += buf.a23;
-
-				result.a31 += buf.a31;
-				result.a32 += buf.a32;
-				result.a33 += buf.a33;
+                buf += sumDisplacementGradientPart(neighbourPos, index, pos, oldPos, referencePos, oldReferencePos, oldMeasures, cellStart, cellEnd);				
             }
         }
     }    				
-	udisplacementGradient[index].x = result.a11;
-	udisplacementGradient[index].y = result.a12;
-	udisplacementGradient[index].z = result.a13;
+	udisplacementGradient[index].x = buf.a11;
+	udisplacementGradient[index].y = buf.a12;
+	udisplacementGradient[index].z = buf.a13;
 
-	vdisplacementGradient[index].x = result.a21;
-	vdisplacementGradient[index].y = result.a22;
-	vdisplacementGradient[index].z = result.a23;
+	vdisplacementGradient[index].x = buf.a21;
+	vdisplacementGradient[index].y = buf.a22;
+	vdisplacementGradient[index].z = buf.a23;
 
-	wdisplacementGradient[index].x = result.a31;
-	wdisplacementGradient[index].y = result.a32;	
-	wdisplacementGradient[index].z = result.a33;
+	wdisplacementGradient[index].x = buf.a31;
+	wdisplacementGradient[index].y = buf.a32;	
+	wdisplacementGradient[index].z = buf.a33;
 }
 
 __device__ float3 sumForcePart(
@@ -398,14 +386,14 @@ __device__ float3 sumForcePart(
 	uint gridHash = calcGridHash(gridPos);
     uint startIndex = FETCH(cellStart, gridHash);    
 	float3 tmpForce = make_float3(0.0f);	
-	Matrix3x4 Sigma = make_Matrix3x4();
+	Matrix Sigma = make_Matrix();
 	float3 d = make_float3(0.0f);	
 		
-	Matrix3x4 I = make_Matrix3x4();
+	Matrix I = make_Matrix();
 	I.a11 = 1; I.a22 = 1; I.a33 = 1;		
-	Matrix3x4 dUT = make_Matrix3x4();
-	Matrix3x4 J = make_Matrix3x4();	
-	Matrix3x4 E = make_Matrix3x4();	
+	Matrix dUT = make_Matrix();
+	Matrix J = make_Matrix();	
+	Matrix E = make_Matrix();	
 
 	dUT.a11 = du_i.x;
 	dUT.a12 = du_i.y;
@@ -449,10 +437,10 @@ __device__ float3 sumForcePart(
 
 				float dist = length(relPos);
 				if (dist < params.smoothingRadius) {					
-					tempExpr =  (params.smoothingRadius - dist);					
-					d.x = volume_j * params.SpikyKern * (relPos.x / dist) * tempExpr * tempExpr;
-					d.y = volume_j * params.SpikyKern * (relPos.y / dist) * tempExpr * tempExpr;
-					d.z = volume_j * params.SpikyKern * (relPos.z / dist) * tempExpr * tempExpr;																		
+					tempExpr = sinf((dist + params.smoothingRadius) * CUDART_PI_F / (2.0f * params.smoothingRadius) );				
+					d.x = volume_j * params.SpikyKern * (relPos.x / dist) * tempExpr;
+					d.y = volume_j * params.SpikyKern * (relPos.y / dist) * tempExpr;
+					d.z = volume_j * params.SpikyKern * (relPos.z / dist) * tempExpr;																		
 
 					tmpForce += -volume_i * (((I + dUT) * Sigma) * d);
 				}                
@@ -497,7 +485,7 @@ __global__ void calcAccelerationD(
             }
         }
     }    	
-	uint originalIndex = Index[index];
+	volatile uint originalIndex = Index[index];
 	float3 acc = force / params.particleMass;			
 	acceleration[originalIndex] =  make_float4(acc, 0.0f);
 }

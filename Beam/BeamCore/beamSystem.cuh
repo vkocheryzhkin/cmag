@@ -1,3 +1,6 @@
+#ifndef BEAM_SYSTEM_H
+#define BEAM_SYSTEM_H
+
 #include "beam_kernel.cuh"
 
 extern "C"
@@ -70,4 +73,6 @@ extern "C"
 		float* velocity,
 		float* acceleration,
 		uint numParticles);	
-}
+};
+
+#endif
