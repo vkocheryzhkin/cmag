@@ -35,6 +35,7 @@ public:
 	void * getCudawDisplacementGradient()        const {return (void *)dwDisplacementGradient;}
 	void * getCudaPositionVBO() const {return (void *)cudaPosVBO;}
 	void * getCudaVelocity() const {return (void *)dVelocity;}
+	void * getCudaSortedPosition() const {return (void *)dSortedPos;}	
 	void * getCudaSortedReferencePosition() const {return (void *)dSortedReferencePos;}	
 	void * getCudaMeasures() const {return (void *)dMeasures;}
 	void * getCudaAcceleration()        const {return (void *)dAcceleration;}	

@@ -29,12 +29,13 @@ struct SimParams
 	float3 cellSize;
 
 	//Kernels
-	float Poly6Kern;
+	//float Poly6Kern;
 	float SpikyKern;
 	//Material
 	float Young;
 	float Poisson;
 	float restDensity;
+	float c;
 };
 
 

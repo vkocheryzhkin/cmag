@@ -162,7 +162,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath=".\StartTest.cpp"
+			RelativePath=".\SystemFunctionalTest.cpp"
 			>
 		</File>
 	</Files>

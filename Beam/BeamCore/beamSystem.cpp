@@ -47,19 +47,16 @@ ParticleSystem::ParticleSystem(uint numParticles, uint3 gridSize, bool IsGLEnabl
 
 	params.particleMass = 0.02f;
 	params.smoothingRadius = 3.0f * params.particleRadius;	 	 
-	params.gravity = make_float3(0.0f, -0.01f, 0.0f);    	 
-
-	params.Poly6Kern = 315.0f / (64.0f * CUDART_PI_F * pow(params.smoothingRadius, 9.0f));
-	/*params.SpikyKern = -45.0f /(CUDART_PI_F * pow(params.smoothingRadius, 6.0f));	*/
+	params.gravity = make_float3(0.0f, -0.01f, 0.0f);    	 	
 
 	float h = params.smoothingRadius;
-	float c = CUDART_PI_F / (8.0f * pow(h, 4.0f) * (CUDART_PI_F / 3.0f - 8.0f / CUDART_PI_F + 16.0f / pow(CUDART_PI_F, 2.0f)) );	
-	params.SpikyKern = -c;	
+	params.c = CUDART_PI_F / (8.0f * pow(h, 4.0f) * (CUDART_PI_F / 3.0f - 8.0f / CUDART_PI_F + 16.0f / pow(CUDART_PI_F, 2.0f)) );	
+	params.SpikyKern = -params.c;	
 
 	params.Young = 6100000.0f;
 	params.Poisson = 0.49f;
 
-	params.restDensity = 0.0f;
+	params.restDensity = 1000.0f;
 	
 	params.deltaTime = 0.0005f;
     _initialize(numParticles);
@@ -174,10 +171,7 @@ void ParticleSystem::_finalize()
     assert(IsInitialized);
 
     delete [] hPos; 
-	delete [] hVel; 
-	//delete [] hDisplacement;
-
-	//freeArray(dPos);
+	delete [] hVel; 	
 	freeArray(dSortedPos);
 	freeArray(dAcceleration);
 	freeArray(dMeasures);	
@@ -242,12 +236,11 @@ void ParticleSystem::setArray(ParticleArray array, const float* data, int start,
 
 void ParticleSystem::reset()
 {
-    float jitter = params.particleRadius*0.1f;			            	
-	//float spacing = params.particleRadius * 2.0f;
+    float jitter = params.particleRadius*0.1f;			            		
 	float spacing = params.particleRadius * 2.0f;
     uint gridSize[3];    
 	gridSize[0] = 1;
-	gridSize[1] = 4;		
+	gridSize[1] = 3;		
 	gridSize[2] = 1;
     initGrid(gridSize, spacing, jitter, numParticles);
         
@@ -272,11 +265,11 @@ void ParticleSystem::initGrid(uint *size, float spacing, float jitter, uint numP
 				uint i = (z*size[1]*size[0]) + (y*size[0]) + x;
 				if (i < numParticles) {
 					hPos[i*4] =  1 + (spacing * x) + params.particleRadius - 1.0f ;//+ (frand() * 2.0f - 1.0f) * jitter;
-					hPos[i*4+1] = - (spacing * y) - params.particleRadius  + (frand() * 2.0f - 1.0f) * jitter;
+					hPos[i*4+1] = - (spacing * y) - params.particleRadius ;// + (frand() * 2.0f - 1.0f) * jitter;
 					hPos[i*4+2] =1 + (spacing * z) + params.particleRadius - 1.0f ;//+ (frand() * 2.0f - 1.0f) * jitter;					
 					hPos[i*4+3] = i;				
 					
-					hVel[i*4] = 0;	
+					hVel[i*4+0] = 0;	
 					hVel[i*4+1] = 0;					
 					hVel[i*4+2] = 0;															
 					hVel[i*4+3] = 1;
@@ -284,6 +277,9 @@ void ParticleSystem::initGrid(uint *size, float spacing, float jitter, uint numP
 			}
 		}
 	}		
+	hPos[0*4+1] += 0.001;
+	hPos[1*4+1] -= 0.003;
+	hPos[2*4+1] += 0.002;
 }
 void ParticleSystem::preInit()
 {
