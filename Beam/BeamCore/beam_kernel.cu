@@ -222,8 +222,8 @@ __global__ void reorderDataAndFindCellStartD(
 __device__ float sumDensityPart(
 				   int3    gridPos,
                    uint    index,
-                   float3  pos,
-                   float4* oldPos, 
+                   float3  referencePos,
+                   float4* oldReferencePos, 
                    uint*   cellStart,
                    uint*   cellEnd)
 {
@@ -236,10 +236,10 @@ __device__ float sumDensityPart(
         uint endIndex = FETCH(cellEnd, gridHash);
         for(uint j=startIndex; j<endIndex; j++) {
             if (j != index) {             
-	            float3 pos2 = make_float3(FETCH(oldPos, j));
+	            float3 referencePos_j = make_float3(FETCH(oldReferencePos, j));
 				float wpolyExpr = 0.0f;
 
-				float3 relPos = pos2 - pos; 
+				float3 relPos = referencePos_j - referencePos; 
 				float dist = length(relPos);
 
 				if (dist < params.smoothingRadius) {					
@@ -255,7 +255,7 @@ __device__ float sumDensityPart(
 __global__ 
 void calcDensityD(			
 			float4* measures, //output
-			float4* oldPos,	 //input sorted position					
+			float4* oldReferencePos,	 //input sorted position					
 			uint* cellStart,
 			uint* cellEnd,
 			uint numParticles)
@@ -264,8 +264,8 @@ void calcDensityD(
 	uint index = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
     if (index >= numParticles) return;    
 
-	float3 pos = make_float3(FETCH(oldPos, index));
-    int3 gridPos = calcGridPos(pos);
+	float3 referencePos = make_float3(FETCH(oldReferencePos, index));
+    int3 gridPos = calcGridPos(referencePos);
 
     float sum = 0.0f;
 	int cellcount = 1;
@@ -273,7 +273,7 @@ void calcDensityD(
         for(int y=-cellcount; y<=cellcount; y++) {
             for(int x=-cellcount; x<=cellcount; x++) {
                 int3 neighbourPos = gridPos + make_int3(x, y, z);
-                sum += sumDensityPart(neighbourPos, index, pos, oldPos, cellStart, cellEnd);
+                sum += sumDensityPart(neighbourPos, index, referencePos, oldReferencePos, cellStart, cellEnd);
             }
         }
     }	
@@ -347,7 +347,7 @@ __global__ void calcDisplacementGradientD(
 
 	float3 pos = make_float3(FETCH(oldPos, index));
 	float3 referencePos = make_float3(FETCH(oldReferencePos, index));
-    int3 gridPos = calcGridPos(pos);	
+    int3 gridPos = calcGridPos(referencePos);	
 	Matrix buf = make_Matrix();	
 	int cellcount = 1;
     for(int z=-cellcount; z<=cellcount; z++) {
@@ -388,46 +388,43 @@ __device__ float3 sumForcePart(
     uint startIndex = FETCH(cellStart, gridHash);    
 	float3 tmpForce = make_float3(0.0f);	
 	Matrix Sigma = make_Matrix();
-	float3 d = make_float3(0.0f);	
-		
-	//Matrix I = make_Matrix();
-	//I.a11 = 1; I.a22 = 1; I.a33 = 1;		
+	float3 d = make_float3(0.0f);			
+	Matrix I = make_Matrix();
+	I.a11 = 1; I.a22 = 1; I.a33 = 1;		
 	Matrix dUT = make_Matrix();
-	//Matrix J = make_Matrix();	
+	Matrix J = make_Matrix();	
 	Matrix E = make_Matrix();	
 
-	//dUT.a11 = du_i.x;
-	//dUT.a12 = du_i.y;
-	//dUT.a13 = du_i.z;
+	dUT.a11 = du_i.x;
+	dUT.a12 = du_i.y;
+	dUT.a13 = du_i.z;
 
-	//dUT.a21 = dv_i.x;
+	dUT.a21 = dv_i.x;
 	dUT.a22 = dv_i.y;
-	/*dUT.a23 = dv_i.z;
+	dUT.a23 = dv_i.z;
 
 	dUT.a31 = dw_i.x;
 	dUT.a32 = dw_i.y;
-	dUT.a33 = dw_i.z;*/
+	dUT.a33 = dw_i.z;
 
-	//J = I + dUT;				
+	J = I + dUT;				
 	
 	//Green-Saint-Venant strain tensor	
-	//E = 0.5 * ((Transpose(J)*J) - I);	
-	E.a22 = 0.5 * ( (1+dUT.a22)*(1+dUT.a22) - 1);	
+	E = 0.5 * ((Transpose(J)*J) - I);	
+	//E.a22 = 0.5 * ( (1+dUT.a22)*(1+dUT.a22) - 1);	
 
-	//E.a22 = 0.5 * ( (1+J.a22) * (1+J.a22))-1;
-
-	//float t1 = E.a11 - (E.a11 + E.a22 + E.a33)/3;
-	float t2 = E.a22 - E.a22 / 3;
-	//float t3 = E.a33 - (E.a11 + E.a22 + E.a33)/3;
+	float t1 = E.a11;
+	float t2 = E.a22;
+	float t3 = E.a33;
 
 	//Stress tensor
-	//Sigma.a11 = (params.Young / ( 1 + params.Poisson))*(t1 + (params.Poisson / ( 1 - 2 * params.Poisson))*(E.a11 + E.a22 + E.a33));
-	Sigma.a22 = (params.Young / ( 1 + params.Poisson))*(t2 + (params.Poisson / ( 1 - 2 * params.Poisson)) * E.a22); 
-	//Sigma.a33 = (params.Young / ( 1 + params.Poisson))*(t3 + (params.Poisson / ( 1 - 2 * params.Poisson))*(E.a11 + E.a22 + E.a33));
+	Sigma.a11 = (params.Young / ( 1 + params.Poisson))*(t1 + (params.Poisson / ( 1 - 2 * params.Poisson))*(E.a11 + E.a22 + E.a33));
+	Sigma.a22 = (params.Young / ( 1 + params.Poisson))*(t2 + (params.Poisson / ( 1 - 2 * params.Poisson))*(E.a11 + E.a22 + E.a33));
+	Sigma.a33 = (params.Young / ( 1 + params.Poisson))*(t3 + (params.Poisson / ( 1 - 2 * params.Poisson))*(E.a11 + E.a22 + E.a33));
 	
-	//Sigma.a12 = Sigma.a21 = (params.Young / (1 + params.Poisson))*E.a12;
-	//Sigma.a13 = Sigma.a31 = (params.Young / (1 + params.Poisson))*E.a13;
-	//Sigma.a23 = Sigma.a32 = (params.Young / (1 + params.Poisson))*E.a23;		
+	Sigma.a12 = Sigma.a21 = (params.Young / (1 + params.Poisson))*E.a12;
+	Sigma.a13 = Sigma.a31 = (params.Young / (1 + params.Poisson))*E.a13;
+	Sigma.a23 = Sigma.a32 = (params.Young / (1 + params.Poisson))*E.a23;		
 
     if (startIndex != 0xffffffff) {               
         uint endIndex = FETCH(cellEnd, gridHash);
@@ -442,12 +439,12 @@ __device__ float3 sumForcePart(
 				float dist = length(relPos);
 				if (dist < params.smoothingRadius) {					
 					tempExpr = sinf((dist + params.smoothingRadius) * CUDART_PI_F / (2.0f * params.smoothingRadius) );				
-					//d.x = volume_j * params.SpikyKern * (relPos.x / dist) * tempExpr;
+					d.x = volume_j * params.SpikyKern * (relPos.x / dist) * tempExpr;
 					d.y = volume_j * params.SpikyKern * (relPos.y / dist) * tempExpr;
-					//d.z = volume_j * params.SpikyKern * (relPos.z / dist) * tempExpr;																		
+					d.z = volume_j * params.SpikyKern * (relPos.z / dist) * tempExpr;																		
 
-					//tmpForce += -volume_i * (((I + dUT) * Sigma) * d);
-					tmpForce.y += -volume_i * ( (1 + dUT.a22) * Sigma.a22 * d.y );
+					tmpForce += -volume_i * (((I + dUT) * Sigma) * d);
+					//tmpForce.y += -volume_i * ( (1 + dUT.a22) * Sigma.a22 * d.y );
 				}                
             }
         }
@@ -478,7 +475,7 @@ __global__ void calcAccelerationD(
 	float3 dw_i = make_float3(FETCH(oldwDisplacementGradient, index));
 	float volume_i = FETCH(oldMeasures, index).y;
 
-    int3 gridPos = calcGridPos(pos);
+    int3 gridPos = calcGridPos(referencePos);
 	float3 force = make_float3(0.0f);
 	int cellcount = 1;
     for(int z=-cellcount; z<=cellcount; z++) {
@@ -491,7 +488,7 @@ __global__ void calcAccelerationD(
         }
     }    	
 	uint originalIndex = Index[index];
-	float3 acc = force / params.particleMass;			
+	float3 acc = force /  params.particleMass;//make_float3(0,0,0);//
 	acceleration[originalIndex] =  make_float4(acc, 0.0f);
 }
 
@@ -502,7 +499,6 @@ __global__ void integrate(float4* posArray, //input / output
 {
     uint index = __umul24(blockIdx.x,blockDim.x) + threadIdx.x;
     if (index >= numParticles) return;
-	//if (index == 0 ) return;
 
 	volatile float4 posData = posArray[index];
 	volatile float4 velData = velArray[index];	

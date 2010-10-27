@@ -138,7 +138,7 @@ extern "C"
 
 	void calcDensity(			
 			float* measures,
-			float* sortedPos,						
+			float* sortedReferencePos,						
 			uint* cellStart,
 			uint* cellEnd,
 			uint numParticles,
@@ -146,7 +146,7 @@ extern "C"
 	{
 
 		#if USE_TEX
-		cutilSafeCall(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(float4)));
+		cutilSafeCall(cudaBindTexture(0, oldReferencePosTex, sortedReferencePos, numParticles*sizeof(float4)));
 		cutilSafeCall(cudaBindTexture(0, cellStartTex, cellStart, numGridCells*sizeof(uint)));
 		cutilSafeCall(cudaBindTexture(0, cellEndTex, cellEnd, numGridCells*sizeof(uint)));    
 		#endif
@@ -156,7 +156,7 @@ extern "C"
 
 		calcDensityD<<< numBlocks, numThreads >>>(											  
 											  (float4*)measures,
-											  (float4*)sortedPos,                                          											  
+											  (float4*)sortedReferencePos,                                          											  
 											  cellStart,
 											  cellEnd,
 											  numParticles);
@@ -164,7 +164,7 @@ extern "C"
 		cutilCheckMsg("Kernel execution failed");
 
 		#if USE_TEX
-		cutilSafeCall(cudaUnbindTexture(oldPosTex));
+		cutilSafeCall(cudaUnbindTexture(oldReferencePosTex));
 		cutilSafeCall(cudaUnbindTexture(cellStartTex));
 		cutilSafeCall(cudaUnbindTexture(cellEndTex));
 		#endif

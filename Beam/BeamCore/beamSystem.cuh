@@ -35,7 +35,7 @@ extern "C"
 
 	void calcDensity(
 		float* dMeasures, 
-		float* dSortedPos, 
+		float* sortedReferencePos, 
 		uint* dCellStart, 
 		uint* dCellEnd, 
 		uint numParticles, 

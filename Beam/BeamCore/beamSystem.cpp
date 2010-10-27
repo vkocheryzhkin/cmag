@@ -47,18 +47,19 @@ ParticleSystem::ParticleSystem(uint numParticles, uint3 gridSize, bool IsGLEnabl
 
 	params.particleMass = 0.02f;
 	params.smoothingRadius = 3.0f * params.particleRadius;	 	 
-	params.gravity = make_float3(0.0f, -0.01f, 0.0f);    	 	
+	params.gravity = make_float3(0.0f, -10.1f, 0.0f);    	 	
 
 	float h = params.smoothingRadius;
 	params.c = CUDART_PI_F / (8.0f * pow(h, 4.0f) * (CUDART_PI_F / 3.0f - 8.0f / CUDART_PI_F + 16.0f / pow(CUDART_PI_F, 2.0f)) );	
 	params.SpikyKern = -params.c;	
 
-	params.Young = 6100000.0f;
+	params.Young = 610000.0f;	
 	params.Poisson = 0.49f;
 
-	params.restDensity = 1000.0f;
+	//params.restDensity = 1.0f;
 	
-	params.deltaTime = 0.0005f;
+	params.deltaTime = 0.000005f;
+	//params.deltaTime = 0.000005f;
     _initialize(numParticles);
 }
 
@@ -236,19 +237,17 @@ void ParticleSystem::setArray(ParticleArray array, const float* data, int start,
 
 void ParticleSystem::reset()
 {
-    float jitter = params.particleRadius*0.1f;			            		
+    float jitter = params.particleRadius*0.01f;			            		
 	float spacing = params.particleRadius * 2.0f;
     uint gridSize[3];    
-	gridSize[0] = 1;
-	gridSize[1] = 3;		
+	gridSize[0] = 25;
+	gridSize[1] = 5;		
 	gridSize[2] = 1;
     initGrid(gridSize, spacing, jitter, numParticles);
         
     setArray(POSITION, hPos, 0, numParticles);   
 	setArray(REFERENCE_POSITION, hPos, 0, numParticles);   		
 	setArray(VELOCITY, hVel, 0, numParticles);   
-
-	preInit();
 }
 
 inline float frand()
@@ -265,43 +264,20 @@ void ParticleSystem::initGrid(uint *size, float spacing, float jitter, uint numP
 				uint i = (z*size[1]*size[0]) + (y*size[0]) + x;
 				if (i < numParticles) {
 					hPos[i*4] =  1 + (spacing * x) + params.particleRadius - 1.0f ;//+ (frand() * 2.0f - 1.0f) * jitter;
-					hPos[i*4+1] = - (spacing * y) - params.particleRadius ;// + (frand() * 2.0f - 1.0f) * jitter;
+					hPos[i*4+1] = - (spacing * y) - params.particleRadius + (frand() * 2.0f - 1.0f) * jitter;
 					hPos[i*4+2] =1 + (spacing * z) + params.particleRadius - 1.0f ;//+ (frand() * 2.0f - 1.0f) * jitter;					
 					hPos[i*4+3] = i;				
 					
 					hVel[i*4+0] = 0;	
 					hVel[i*4+1] = 0;					
 					hVel[i*4+2] = 0;															
-					hVel[i*4+3] = 1;
+					hVel[i*4+3] = (x ==0 ) ? 0 : 1;
 				}
 			}
 		}
-	}		
-	hPos[0*4+1] += 0.001;
-	hPos[1*4+1] -= 0.003;
-	hPos[2*4+1] += 0.002;
+	}			
 }
-void ParticleSystem::preInit()
-{
-	assert(IsInitialized);
 
-    float *dPos;    
-	if(IsGLEnabled)
-		dPos = (float *) mapGLBufferObject(&cuda_posvbo_resource);
-	else
-		dPos = (float *) cudaPosVBO;
-
-	calcHash(dHash, dIndex, dPos, numParticles);
-
-	cudppSort(sortHandle, dHash, dIndex, gridSortBits, numParticles);
-
-	reorderDataAndFindCellStart(dCellStart, dCellEnd, dSortedPos, dSortedReferencePos, dHash, dIndex, dPos, dReferencePos, numParticles, numGridCells);
-
-	calcDensity(dMeasures, dSortedPos, dCellStart, dCellEnd, numParticles, numGridCells);	
-
-	if(IsGLEnabled)
-    unmapGLBufferObject(cuda_posvbo_resource);  
-}
 
 void ParticleSystem::update()
 {
@@ -318,6 +294,8 @@ void ParticleSystem::update()
 	cudppSort(sortHandle, dHash, dIndex, gridSortBits, numParticles);
 
 	reorderDataAndFindCellStart(dCellStart, dCellEnd, dSortedPos, dSortedReferencePos, dHash, dIndex, dPos, dReferencePos, numParticles, numGridCells);
+
+	calcDensity(dMeasures, dSortedReferencePos, dCellStart, dCellEnd, numParticles, numGridCells);	
 
 	calcDisplacementGradient(
 		duDisplacementGradient,
