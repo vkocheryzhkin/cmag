@@ -33,17 +33,17 @@ float camera_trans_lag[] = {0, 0, -1};
 float camera_rot_lag[] = {0, 0, 0};
 const float inertia = 0.1;
 
-uint numParticles = 1*5*25;
+uint numParticles = 20*1*1;
 uint3 gridSize;
 
-ParticleSystem *psystem = 0;
+BeamSystem *psystem = 0;
 ParticleRenderer *renderer = 0;
 
 extern "C" void cudaGLInit(int argc, char **argv);
 
 void initParticleSystem(int numParticles, uint3 gridSize)
 {
-    psystem = new ParticleSystem(numParticles, gridSize, true); 
+    psystem = new BeamSystem(numParticles, gridSize, true); 
     psystem->reset();
     
     renderer = new ParticleRenderer;
@@ -84,8 +84,7 @@ void initGL(int argc, char **argv)
     glutReportErrors();
 }
 void computeFPS()
-{
-	//frameCount++;
+{	
 	fpsCount++;
 
 	if (fpsCount == fpsLimit) {
@@ -98,11 +97,19 @@ void computeFPS()
 		cutilCheckError(cutResetTimer(timer));          
 	}
 }
-
+//todo: remve it
+bool isFirstTime = true;
 void display()
 {    
 	cutilCheckError(cutStartTimer(timer));  
 
+	if(isFirstTime)
+	{
+		isFirstTime = false;
+		psystem->update(); 
+		if (renderer) 
+			renderer->setVertexBuffer(psystem->getCurrentReadBuffer(), psystem->getNumParticles());
+	}
 	if (!bPause)
     {
 		psystem->update(); 

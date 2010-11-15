@@ -2,7 +2,7 @@
 #include "beamSystem.cuh"
 #include "beam_kernel.cuh"
 
-#include <cutil_inline.h>//cutilSafeCall cudaMalloc
+#include <cutil_inline.h>
 #include "vector_functions.h"
 #include <memory.h>
 #include <math.h>
@@ -10,18 +10,14 @@
 #include <assert.h>
 #include <GL/glew.h>
 
-#ifndef CUDART_PI_F 
-#define CUDART_PI_F           3.141592654f
-#endif
 
-ParticleSystem::ParticleSystem(uint numParticles, uint3 gridSize, bool IsGLEnabled) :
+BeamSystem::BeamSystem(uint numParticles, uint3 gridSize, bool IsGLEnabled) :
     IsInitialized(false),   
 	IsGLEnabled(IsGLEnabled),
     numParticles(numParticles),
 	gridSize(gridSize),
     hPos(0),  
-	hVel(0),	
-    //dPos(0),
+	hVel(0),	    
 	dSortedPos(0),
 	dVelocity(0),
 	dReferencePos(0),
@@ -38,38 +34,35 @@ ParticleSystem::ParticleSystem(uint numParticles, uint3 gridSize, bool IsGLEnabl
 {    	
 	srand(1973);
 	numGridCells = gridSize.x*gridSize.y*gridSize.z;
-	gridSortBits = 15;//18;
+	gridSortBits = 18;
 
 	params.worldOrigin = make_float3(-1.0f, -1.0f, -1.0f);
 	params.gridSize = gridSize;
 	params.particleRadius = 1.0f / 64.0f;
 	params.cellSize = make_float3(params.particleRadius * 2.0f, params.particleRadius * 2.0f, params.particleRadius * 2.0f);
 
-	params.particleMass = 0.02f;
+	params.particleMass = 0.08f;
 	params.smoothingRadius = 3.0f * params.particleRadius;	 	 
-	params.gravity = make_float3(0.0f, -10.1f, 0.0f);    	 	
+	params.gravity = make_float3(0.0f, -9.8f, 0.0f);    	 	
 
 	float h = params.smoothingRadius;
-	params.c = CUDART_PI_F / (8.0f * pow(h, 4.0f) * (CUDART_PI_F / 3.0f - 8.0f / CUDART_PI_F + 16.0f / pow(CUDART_PI_F, 2.0f)) );	
-	params.SpikyKern = -params.c;	
-
-	params.Young = 610000.0f;	
-	params.Poisson = 0.49f;
-
-	//params.restDensity = 1.0f;
+	params.Poly6Kern = 315.0f / (64.0f * CUDART_PI_F * pow(h, 9.0f));
+	params.SpikyKern = -45.0f /(CUDART_PI_F * pow(h, 6.0f));
 	
-	params.deltaTime = 0.000005f;
-	//params.deltaTime = 0.000005f;
+	params.Young = 10000.0f;	
+	params.Poisson = 0.49f;	
+	
+	params.deltaTime = 0.00005f;
     _initialize(numParticles);
 }
 
-ParticleSystem::~ParticleSystem()
+BeamSystem::~BeamSystem()
 {
     _finalize();
     numParticles = 0;
 }
 
-uint ParticleSystem::createVBO(uint size)
+uint BeamSystem::createVBO(uint size)
 {
     GLuint vbo;
     glGenBuffers(1, &vbo);
@@ -104,7 +97,7 @@ void colorRamp(float t, float *r)
     r[2] = lerp(c[i][2], c[i+1][2], u);
 }
 
-void ParticleSystem::_initialize(int _numParticles)
+void BeamSystem::_initialize(int _numParticles)
 {
     assert(!IsInitialized);
     numParticles = _numParticles;
@@ -167,7 +160,7 @@ void ParticleSystem::_initialize(int _numParticles)
     IsInitialized = true;
 }
 
-void ParticleSystem::_finalize()
+void BeamSystem::_finalize()
 {
     assert(IsInitialized);
 
@@ -203,7 +196,7 @@ void ParticleSystem::_finalize()
 
 	cudppDestroyPlan(sortHandle);
 }
-void ParticleSystem::setArray(ParticleArray array, const float* data, int start, int count)
+void BeamSystem::setArray(ParticleArray array, const float* data, int start, int count)
 {
     assert(IsInitialized);
  
@@ -235,13 +228,13 @@ void ParticleSystem::setArray(ParticleArray array, const float* data, int start,
     }  	 
 }
 
-void ParticleSystem::reset()
+void BeamSystem::reset()
 {
     float jitter = params.particleRadius*0.01f;			            		
 	float spacing = params.particleRadius * 2.0f;
     uint gridSize[3];    
-	gridSize[0] = 25;
-	gridSize[1] = 5;		
+	gridSize[0] = 20;
+	gridSize[1] = 1;		
 	gridSize[2] = 1;
     initGrid(gridSize, spacing, jitter, numParticles);
         
@@ -255,7 +248,7 @@ inline float frand()
     return rand() / (float) RAND_MAX;
 }
 
-void ParticleSystem::initGrid(uint *size, float spacing, float jitter, uint numParticles)
+void BeamSystem::initGrid(uint *size, float spacing, float jitter, uint numParticles)
 {
 	
 	for(uint z=0; z<size[2]; z++) {
@@ -263,15 +256,15 @@ void ParticleSystem::initGrid(uint *size, float spacing, float jitter, uint numP
 			for(uint x=0; x<size[0]; x++) {
 				uint i = (z*size[1]*size[0]) + (y*size[0]) + x;
 				if (i < numParticles) {
-					hPos[i*4] =  1 + (spacing * x) + params.particleRadius - 1.0f ;//+ (frand() * 2.0f - 1.0f) * jitter;
+					hPos[i*4] =  1 + (spacing * x) + params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;
 					hPos[i*4+1] = - (spacing * y) - params.particleRadius + (frand() * 2.0f - 1.0f) * jitter;
-					hPos[i*4+2] =1 + (spacing * z) + params.particleRadius - 1.0f ;//+ (frand() * 2.0f - 1.0f) * jitter;					
+					hPos[i*4+2] =1 + (spacing * z) + params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;					
 					hPos[i*4+3] = i;				
 					
 					hVel[i*4+0] = 0;	
 					hVel[i*4+1] = 0;					
 					hVel[i*4+2] = 0;															
-					hVel[i*4+3] = (x ==0 ) ? 0 : 1;
+					hVel[i*4+3] = (x == 0 && y ==0 ) ? 0 : 1;
 				}
 			}
 		}
@@ -279,7 +272,7 @@ void ParticleSystem::initGrid(uint *size, float spacing, float jitter, uint numP
 }
 
 
-void ParticleSystem::update()
+void BeamSystem::update()
 {
     assert(IsInitialized);
 
@@ -289,7 +282,7 @@ void ParticleSystem::update()
 	else
 		dPos = (float *) cudaPosVBO;
 
-	calcHash(dHash, dIndex, dPos, numParticles);
+	calcHash(dHash, dIndex, dReferencePos, numParticles);
 
 	cudppSort(sortHandle, dHash, dIndex, gridSortBits, numParticles);
 

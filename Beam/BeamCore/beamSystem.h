@@ -5,11 +5,11 @@
 #include "cudpp/cudpp.h"
 
 // Particle system class
-class ParticleSystem
+class BeamSystem
 {
 public:
-    ParticleSystem(uint numParticles, uint3 gridSize, bool IsGLEnabled);
-    ~ParticleSystem(); 
+    BeamSystem(uint numParticles, uint3 gridSize, bool IsGLEnabled);
+    ~BeamSystem(); 
 
 	enum ParticleArray
     {
@@ -44,7 +44,7 @@ public:
 	void * getCudaCellStart()        const {return (void *)dCellStart;}
 	void * getCudaCellEnd()        const {return (void *)dCellEnd;}
 protected: // methods
-    ParticleSystem() {}
+    BeamSystem() {}
 	uint createVBO(uint size);
 
     void _initialize(int numParticles);

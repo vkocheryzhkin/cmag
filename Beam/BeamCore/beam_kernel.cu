@@ -243,8 +243,8 @@ __device__ float sumDensityPart(
 				float dist = length(relPos);
 
 				if (dist < params.smoothingRadius) {					
-					wpolyExpr = params.c * 2 * params.smoothingRadius / CUDART_PI_F;					
-					sum += wpolyExpr * cos( 0.5 * (dist + params.smoothingRadius) * CUDART_PI_F / params.smoothingRadius) + wpolyExpr;
+					 wpolyExpr = pow(params.smoothingRadius, 2) - pow(dist, 2);
+                     sum += pow(wpolyExpr, 3);
 				}                
             }
         }
@@ -277,7 +277,7 @@ void calcDensityD(
             }
         }
     }	
-	float dens = sum * params.particleMass + params.restDensity;
+	float dens = sum * params.particleMass * params.Poly6Kern;
     measures[index].x = dens;	//density	
 	measures[index].y = params.particleMass / dens;	//volume
 }
@@ -311,18 +311,18 @@ __device__ Matrix sumDisplacementGradientPart(
 				
 
 				if (dist < params.smoothingRadius) {				
-					float tempExpr =  sinf((dist + params.smoothingRadius) * CUDART_PI_F / (2.0f * params.smoothingRadius) );			
-					gradient.a11 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * tempExpr * (relPos.x / dist);
-					gradient.a12 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * tempExpr * (relPos.y / dist);
-					gradient.a13 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * tempExpr * (relPos.z / dist);
+					float tempExpr =  params.smoothingRadius - dist;			
+					gradient.a11 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * tempExpr * tempExpr * (relPos.x / dist);
+					gradient.a12 += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.SpikyKern * tempExpr * tempExpr * (relPos.x / dist);
+					gradient.a13 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.SpikyKern * tempExpr * tempExpr * (relPos.x / dist);
 					
-					gradient.a21 += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.SpikyKern * tempExpr * (relPos.x / dist);
-					gradient.a22 += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.SpikyKern * tempExpr * (relPos.y / dist);
-					gradient.a23 += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.SpikyKern * tempExpr * (relPos.z / dist);
+					gradient.a21 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * tempExpr * tempExpr * (relPos.y / dist);
+					gradient.a22 += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.SpikyKern * tempExpr * tempExpr * (relPos.y / dist);
+					gradient.a23 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.SpikyKern * tempExpr * tempExpr * (relPos.y / dist);
 
-					gradient.a31 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.SpikyKern * tempExpr * (relPos.x / dist);
-					gradient.a32 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.SpikyKern * tempExpr * (relPos.y / dist);
-					gradient.a33 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.SpikyKern * tempExpr * (relPos.z / dist);																				
+					gradient.a31 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * tempExpr * tempExpr * (relPos.z / dist);
+					gradient.a32 += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.SpikyKern * tempExpr * tempExpr * (relPos.z / dist);
+					gradient.a33 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.SpikyKern * tempExpr * tempExpr * (relPos.z / dist);																				
 				}                
             }
         }
@@ -374,12 +374,12 @@ __global__ void calcDisplacementGradientD(
 __device__ float3 sumForcePart(
 				   int3    gridPos,
                    uint    index,
-                   float3  referencePos_i,
+                   float3  referencePos_j,
                    float4* oldReferencePos, 
-				   float3  du_i,
-				   float3  dv_i,
-				   float3  dw_i,
-                   float   volume_i, 
+				   float4*  olduDisplacementGradient,
+				   float4*  oldvDisplacementGradient,
+				   float4*  oldwDisplacementGradient,
+                   float   volume_j, 
 				   float4* oldMeasures,
                    uint*   cellStart,
                    uint*   cellEnd)
@@ -387,64 +387,63 @@ __device__ float3 sumForcePart(
 	uint gridHash = calcGridHash(gridPos);
     uint startIndex = FETCH(cellStart, gridHash);    
 	float3 tmpForce = make_float3(0.0f);	
-	Matrix Sigma = make_Matrix();
-	float3 d = make_float3(0.0f);			
-	Matrix I = make_Matrix();
-	I.a11 = 1; I.a22 = 1; I.a33 = 1;		
-	Matrix dUT = make_Matrix();
-	Matrix J = make_Matrix();	
-	Matrix E = make_Matrix();	
-
-	dUT.a11 = du_i.x;
-	dUT.a12 = du_i.y;
-	dUT.a13 = du_i.z;
-
-	dUT.a21 = dv_i.x;
-	dUT.a22 = dv_i.y;
-	dUT.a23 = dv_i.z;
-
-	dUT.a31 = dw_i.x;
-	dUT.a32 = dw_i.y;
-	dUT.a33 = dw_i.z;
-
-	J = I + dUT;				
-	
-	//Green-Saint-Venant strain tensor	
-	E = 0.5 * ((Transpose(J)*J) - I);	
-	//E.a22 = 0.5 * ( (1+dUT.a22)*(1+dUT.a22) - 1);	
-
-	float t1 = E.a11;
-	float t2 = E.a22;
-	float t3 = E.a33;
-
-	//Stress tensor
-	Sigma.a11 = (params.Young / ( 1 + params.Poisson))*(t1 + (params.Poisson / ( 1 - 2 * params.Poisson))*(E.a11 + E.a22 + E.a33));
-	Sigma.a22 = (params.Young / ( 1 + params.Poisson))*(t2 + (params.Poisson / ( 1 - 2 * params.Poisson))*(E.a11 + E.a22 + E.a33));
-	Sigma.a33 = (params.Young / ( 1 + params.Poisson))*(t3 + (params.Poisson / ( 1 - 2 * params.Poisson))*(E.a11 + E.a22 + E.a33));
-	
-	Sigma.a12 = Sigma.a21 = (params.Young / (1 + params.Poisson))*E.a12;
-	Sigma.a13 = Sigma.a31 = (params.Young / (1 + params.Poisson))*E.a13;
-	Sigma.a23 = Sigma.a32 = (params.Young / (1 + params.Poisson))*E.a23;		
-
+			
     if (startIndex != 0xffffffff) {               
         uint endIndex = FETCH(cellEnd, gridHash);
         for(uint j=startIndex; j<endIndex; j++) {
             if (j != index) {             
-	            float3 referencePos_j = make_float3(FETCH(oldReferencePos, j));
+	            float3 referencePos_i = make_float3(FETCH(oldReferencePos, j));
 				float4 measure = FETCH(oldMeasures, j);				
-				float volume_j = measure.y;
+				float volume_i = measure.y;
 				float tempExpr = 0.0f;
 				float3 relPos = referencePos_i - referencePos_j;
 
 				float dist = length(relPos);
 				if (dist < params.smoothingRadius) {					
-					tempExpr = sinf((dist + params.smoothingRadius) * CUDART_PI_F / (2.0f * params.smoothingRadius) );				
-					d.x = volume_j * params.SpikyKern * (relPos.x / dist) * tempExpr;
-					d.y = volume_j * params.SpikyKern * (relPos.y / dist) * tempExpr;
-					d.z = volume_j * params.SpikyKern * (relPos.z / dist) * tempExpr;																		
+					tempExpr = params.smoothingRadius - dist;	
 
-					tmpForce += -volume_i * (((I + dUT) * Sigma) * d);
-					//tmpForce.y += -volume_i * ( (1 + dUT.a22) * Sigma.a22 * d.y );
+					Matrix Sigma = make_Matrix();
+					float3 d = make_float3(0.0f);			
+					Matrix I = make_Matrix();
+					I.a11 = 1; I.a22 = 1; I.a33 = 1;		
+					Matrix dU = make_Matrix();
+					Matrix J = make_Matrix();	
+					Matrix E = make_Matrix();	
+
+					float3 du_i = make_float3(FETCH(olduDisplacementGradient, j));
+					float3 dv_i = make_float3(FETCH(oldvDisplacementGradient, j));
+					float3 dw_i = make_float3(FETCH(oldwDisplacementGradient, j));
+
+					dU.a11 = du_i.x;
+					dU.a12 = du_i.y;
+					dU.a13 = du_i.z;
+
+					dU.a21 = dv_i.x;
+					dU.a22 = dv_i.y;
+					dU.a23 = dv_i.z;
+
+					dU.a31 = dw_i.x;
+					dU.a32 = dw_i.y;
+					dU.a33 = dw_i.z;
+
+					J = I + Transpose(dU);				
+					
+					//Green-Saint-Venant strain tensor	
+					E = 0.5 * ((Transpose(J)*J) - I);		
+					//Stress tensor
+					Sigma.a11 = (params.Young / ( 1 + params.Poisson))*(E.a11 + (params.Poisson / ( 1 - 2 * params.Poisson))*(E.a11 + E.a22 + E.a33));
+					Sigma.a22 = (params.Young / ( 1 + params.Poisson))*(E.a22 + (params.Poisson / ( 1 - 2 * params.Poisson))*(E.a11 + E.a22 + E.a33));
+					Sigma.a33 = (params.Young / ( 1 + params.Poisson))*(E.a33 + (params.Poisson / ( 1 - 2 * params.Poisson))*(E.a11 + E.a22 + E.a33));
+					
+					Sigma.a12 = Sigma.a21 = (params.Young / (1 + params.Poisson))*E.a12;
+					Sigma.a13 = Sigma.a31 = (params.Young / (1 + params.Poisson))*E.a13;
+					Sigma.a23 = Sigma.a32 = (params.Young / (1 + params.Poisson))*E.a23;
+
+					d.x = volume_j * params.SpikyKern * (relPos.x / dist) * tempExpr * tempExpr;
+					d.y = volume_j * params.SpikyKern * (relPos.y / dist) * tempExpr * tempExpr;
+					d.z = volume_j * params.SpikyKern * (relPos.z / dist) * tempExpr * tempExpr;																		
+
+					tmpForce += -volume_i * (((I + Transpose(dU)) * Sigma) * d);					
 				}                
             }
         }
@@ -469,26 +468,32 @@ __global__ void calcAccelerationD(
     if (index >= numParticles) return;    
 
 	float3 pos = make_float3(FETCH(oldPos, index));
-	float3 referencePos = make_float3(FETCH(oldReferencePos, index));
-	float3 du_i = make_float3(FETCH(olduDisplacementGradient, index));
-	float3 dv_i = make_float3(FETCH(oldvDisplacementGradient, index));
-	float3 dw_i = make_float3(FETCH(oldwDisplacementGradient, index));
-	float volume_i = FETCH(oldMeasures, index).y;
+	float3 referencePos_j = make_float3(FETCH(oldReferencePos, index));	
+	float volume_j = FETCH(oldMeasures, index).y;
 
-    int3 gridPos = calcGridPos(referencePos);
+    int3 gridPos = calcGridPos(referencePos_j);
 	float3 force = make_float3(0.0f);
 	int cellcount = 1;
     for(int z=-cellcount; z<=cellcount; z++) {
         for(int y=-cellcount; y<=cellcount; y++) {
             for(int x=-cellcount; x<=cellcount; x++) {
-                int3 neighbourPos = gridPos + make_int3(x, y, z);
-				//!!! -=
-                force -= sumForcePart(neighbourPos, index, referencePos, oldReferencePos, du_i, dv_i, dw_i, volume_i, oldMeasures, cellStart, cellEnd);
+                int3 neighbourPos = gridPos + make_int3(x, y, z);				
+                force += sumForcePart(neighbourPos,
+					index, 
+					referencePos_j,
+					oldReferencePos,
+					olduDisplacementGradient,
+					oldvDisplacementGradient,
+					oldwDisplacementGradient,
+					volume_j,
+					oldMeasures,
+					cellStart,
+					cellEnd);
             }
         }
     }    	
 	uint originalIndex = Index[index];
-	float3 acc = force /  params.particleMass;//make_float3(0,0,0);//
+	float3 acc = force /  params.particleMass;
 	acceleration[originalIndex] =  make_float4(acc, 0.0f);
 }
 
@@ -512,7 +517,6 @@ __global__ void integrate(float4* posArray, //input / output
     pos += vel * params.deltaTime;  
 
 	posArray[index] = make_float4(pos, posData.w);
-	velArray[index] = make_float4(vel, velData.w);
-	//accArray[index] = make_float4(0.0f);
+	velArray[index] = make_float4(vel, velData.w);	
 }
 #endif
