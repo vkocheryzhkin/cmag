@@ -41,15 +41,15 @@ BeamSystem::BeamSystem(uint numParticles, uint3 gridSize, bool IsGLEnabled) :
 	params.particleRadius = 1.0f / 64.0f;
 	params.cellSize = make_float3(params.particleRadius * 2.0f, params.particleRadius * 2.0f, params.particleRadius * 2.0f);
 
-	params.particleMass = 0.08f;
-	params.smoothingRadius = 3.0f * params.particleRadius;	 	 
+	params.particleMass = 0.01f;
+	params.smoothingRadius = 4.0f * params.particleRadius;	 	 
 	params.gravity = make_float3(0.0f, -9.8f, 0.0f);    	 	
 
 	float h = params.smoothingRadius;
 	params.Poly6Kern = 315.0f / (64.0f * CUDART_PI_F * pow(h, 9.0f));
 	params.SpikyKern = -45.0f /(CUDART_PI_F * pow(h, 6.0f));
 	
-	params.Young = 10000.0f;	
+	params.Young = 3000.0f;	
 	params.Poisson = 0.49f;	
 	
 	params.deltaTime = 0.00005f;
@@ -256,9 +256,9 @@ void BeamSystem::initGrid(uint *size, float spacing, float jitter, uint numParti
 			for(uint x=0; x<size[0]; x++) {
 				uint i = (z*size[1]*size[0]) + (y*size[0]) + x;
 				if (i < numParticles) {
-					hPos[i*4] =  1 + (spacing * x) + params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;
-					hPos[i*4+1] = - (spacing * y) - params.particleRadius + (frand() * 2.0f - 1.0f) * jitter;
-					hPos[i*4+2] =1 + (spacing * z) + params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;					
+					hPos[i*4] =  1 + (spacing * x) + params.particleRadius - 1.0f ;//+ (frand() * 2.0f - 1.0f) * jitter;
+					hPos[i*4+1] = - (spacing * y) - params.particleRadius ;//+ (frand() * 2.0f - 1.0f) * jitter;
+					hPos[i*4+2] =1 + (spacing * z) + params.particleRadius - 1.0f;// + (frand() * 2.0f - 1.0f) * jitter;					
 					hPos[i*4+3] = i;				
 					
 					hVel[i*4+0] = 0;	

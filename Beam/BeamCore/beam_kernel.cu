@@ -313,15 +313,15 @@ __device__ Matrix sumDisplacementGradientPart(
 				if (dist < params.smoothingRadius) {				
 					float tempExpr =  params.smoothingRadius - dist;			
 					gradient.a11 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * tempExpr * tempExpr * (relPos.x / dist);
-					gradient.a12 += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.SpikyKern * tempExpr * tempExpr * (relPos.x / dist);
-					gradient.a13 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.SpikyKern * tempExpr * tempExpr * (relPos.x / dist);
+					gradient.a12 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * tempExpr * tempExpr * (relPos.y / dist);
+					gradient.a13 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * tempExpr * tempExpr * (relPos.z / dist);
 					
-					gradient.a21 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * tempExpr * tempExpr * (relPos.y / dist);
+					gradient.a21 += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.SpikyKern * tempExpr * tempExpr * (relPos.x / dist);
 					gradient.a22 += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.SpikyKern * tempExpr * tempExpr * (relPos.y / dist);
-					gradient.a23 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.SpikyKern * tempExpr * tempExpr * (relPos.y / dist);
+					gradient.a23 += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.SpikyKern * tempExpr * tempExpr * (relPos.z / dist);
 
-					gradient.a31 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * tempExpr * tempExpr * (relPos.z / dist);
-					gradient.a32 += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.SpikyKern * tempExpr * tempExpr * (relPos.z / dist);
+					gradient.a31 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.SpikyKern * tempExpr * tempExpr * (relPos.x / dist);
+					gradient.a32 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.SpikyKern * tempExpr * tempExpr * (relPos.y / dist);
 					gradient.a33 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.SpikyKern * tempExpr * tempExpr * (relPos.z / dist);																				
 				}                
             }
@@ -429,11 +429,13 @@ __device__ float3 sumForcePart(
 					J = I + Transpose(dU);				
 					
 					//Green-Saint-Venant strain tensor	
-					E = 0.5 * ((Transpose(J)*J) - I);		
-					//Stress tensor
-					Sigma.a11 = (params.Young / ( 1 + params.Poisson))*(E.a11 + (params.Poisson / ( 1 - 2 * params.Poisson))*(E.a11 + E.a22 + E.a33));
-					Sigma.a22 = (params.Young / ( 1 + params.Poisson))*(E.a22 + (params.Poisson / ( 1 - 2 * params.Poisson))*(E.a11 + E.a22 + E.a33));
-					Sigma.a33 = (params.Young / ( 1 + params.Poisson))*(E.a33 + (params.Poisson / ( 1 - 2 * params.Poisson))*(E.a11 + E.a22 + E.a33));
+					E = 0.5 * ((Transpose(J)*J) - I);	
+
+					float cf = params.Young / ((1 + params.Poisson) * (1 - 2 * params.Poisson));
+					//Stress tensor					
+					Sigma.a11 = cf * ((1 - params.Poisson) * E.a11 + params.Poisson * (E.a22 + E.a33));
+					Sigma.a22 = cf * ((1 - params.Poisson) * E.a22 + params.Poisson * (E.a11 + E.a33));
+					Sigma.a33 = cf * ((1 - params.Poisson) * E.a33 + params.Poisson * (E.a11 + E.a22));
 					
 					Sigma.a12 = Sigma.a21 = (params.Young / (1 + params.Poisson))*E.a12;
 					Sigma.a13 = Sigma.a31 = (params.Young / (1 + params.Poisson))*E.a13;
