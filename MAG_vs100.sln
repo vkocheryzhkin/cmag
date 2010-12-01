@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BeamCore", "Beam\BeamCore\BeamCore_vs100.vcxproj", "{EC410E30-D8C6-455D-B444-5EE26F78ED5B}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Beam", "Beam\Beam\Beam_vs100.vcxproj", "{49471FD3-ED32-40CE-9416-30161594F74D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EC410E30-D8C6-455D-B444-5EE26F78ED5B}.Debug|Win32.ActiveCfg = Debug|Win32
+		{EC410E30-D8C6-455D-B444-5EE26F78ED5B}.Debug|Win32.Build.0 = Debug|Win32
+		{EC410E30-D8C6-455D-B444-5EE26F78ED5B}.Release|Win32.ActiveCfg = Release|Win32
+		{EC410E30-D8C6-455D-B444-5EE26F78ED5B}.Release|Win32.Build.0 = Release|Win32
+		{49471FD3-ED32-40CE-9416-30161594F74D}.Debug|Win32.ActiveCfg = Debug|Win32
+		{49471FD3-ED32-40CE-9416-30161594F74D}.Debug|Win32.Build.0 = Debug|Win32
+		{49471FD3-ED32-40CE-9416-30161594F74D}.Release|Win32.ActiveCfg = Release|Win32
+		{49471FD3-ED32-40CE-9416-30161594F74D}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

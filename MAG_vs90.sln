@@ -1,15 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual Studio 2008
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Beam", "Beam\Beam.vcproj", "{DBE27AEF-0987-48EA-B5F4-0D9B4FE0B201}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MAG", "Beam\Beam\Beam_vs90.vcproj", "{DBE27AEF-0987-48EA-B5F4-0D9B4FE0B201}"
 	ProjectSection(ProjectDependencies) = postProject
 		{3170EE41-EE0A-4D07-A779-7EB5C9A5D82A} = {3170EE41-EE0A-4D07-A779-7EB5C9A5D82A}
 		{58B9B588-B3EF-446E-A3F4-2AAF4A0D13AC} = {58B9B588-B3EF-446E-A3F4-2AAF4A0D13AC}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BeamCore", "BeamCore\BeamCore.vcproj", "{3170EE41-EE0A-4D07-A779-7EB5C9A5D82A}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BeamCore", "Beam\BeamCore\BeamCore_vs90.vcproj", "{3170EE41-EE0A-4D07-A779-7EB5C9A5D82A}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BeamTest", "BeamTest\BeamTest.vcproj", "{58B9B588-B3EF-446E-A3F4-2AAF4A0D13AC}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BeamTest", "Beam\BeamTest\BeamTest_vs90.vcproj", "{58B9B588-B3EF-446E-A3F4-2AAF4A0D13AC}"
 	ProjectSection(ProjectDependencies) = postProject
 		{3170EE41-EE0A-4D07-A779-7EB5C9A5D82A} = {3170EE41-EE0A-4D07-A779-7EB5C9A5D82A}
 	EndProjectSection
