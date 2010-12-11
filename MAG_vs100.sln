@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BeamCore", "Beam\BeamCore\BeamCore_vs100.vcxproj", "{EC410E30-D8C6-455D-B444-5EE26F78ED5B}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MAG.CUDA.BeamCore", "MAG.CUDA.BeamCore\MAG.CUDA.BeamCore_vs100.vcxproj", "{EC410E30-D8C6-455D-B444-5EE26F78ED5B}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Beam", "Beam\Beam\Beam_vs100.vcxproj", "{49471FD3-ED32-40CE-9416-30161594F74D}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MAG.CUDA.Beam", "MAG.CUDA.Beam\MAG.CUDA.Beam_vs100.vcxproj", "{49471FD3-ED32-40CE-9416-30161594F74D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
