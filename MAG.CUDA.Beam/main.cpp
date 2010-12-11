@@ -15,7 +15,6 @@
 
 #define GRID_SIZE 64
 
-// fps
 static int fpsCount = 0;
 static int fpsLimit = 1;
 unsigned int timer;
