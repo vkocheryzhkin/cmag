@@ -1,4 +1,6 @@
 #include "beamSystem.h"
+//#include "beamSystem.cuh"
+//#include "beam_kernel.cuh"
 #include "beamSystem.cuh"
 #include "beam_kernel.cuh"
 
@@ -42,15 +44,15 @@ BeamSystem::BeamSystem(uint numParticles, uint3 gridSize, bool IsGLEnabled) :
 	params.cellSize = make_float3(params.particleRadius * 2.0f, params.particleRadius * 2.0f, params.particleRadius * 2.0f);
 
 	params.particleMass = 0.01f;
-	params.smoothingRadius = 4.0f * params.particleRadius;	 	 
+	params.smoothingRadius = 3.0f * params.particleRadius;	 	 
 	params.gravity = make_float3(0.0f, -9.8f, 0.0f);    	 	
 
 	float h = params.smoothingRadius;
 	params.Poly6Kern = 315.0f / (64.0f * CUDART_PI_F * pow(h, 9.0f));
 	params.SpikyKern = -45.0f /(CUDART_PI_F * pow(h, 6.0f));
 	
-	params.Young = 3000.0f;	
-	params.Poisson = 0.49f;	
+	params.Young = 10000.0f;	
+	params.Poisson = 0.45f;	
 	
 	params.deltaTime = 0.00005f;
     _initialize(numParticles);
@@ -120,7 +122,7 @@ void BeamSystem::_initialize(int _numParticles)
 		float *ptr = data;
 		for(uint i = 0; i < numParticles; i++) 
 		{
-			float t = 0.7f;
+			float t = 0.2f;
 			colorRamp(t, ptr);
 			ptr+=3;
 			*ptr++ = 1.0f;
@@ -264,7 +266,7 @@ void BeamSystem::initGrid(uint *size, float spacing, float jitter, uint numParti
 					hVel[i*4+0] = 0;	
 					hVel[i*4+1] = 0;					
 					hVel[i*4+2] = 0;															
-					hVel[i*4+3] = (x == 0 && y ==0 ) ? 0 : 1;
+					hVel[i*4+3] = (x == 0 ) ? 0 : 1;
 				}
 			}
 		}

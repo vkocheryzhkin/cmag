@@ -11,6 +11,10 @@
 #include <cutil_inline.h>
 
 #include "beamSystem.h"
+//
+#include "beamSystem.cuh"
+#include "beam_kernel.cuh"
+//
 #include "render_particles.h"
 
 #define GRID_SIZE 64

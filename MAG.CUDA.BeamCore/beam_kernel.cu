@@ -402,7 +402,7 @@ __device__ float3 sumForcePart(
 				if (dist < params.smoothingRadius) {					
 					tempExpr = params.smoothingRadius - dist;	
 
-					Matrix Sigma = make_Matrix();
+					Matrix Stress = make_Matrix();
 					float3 d = make_float3(0.0f);			
 					Matrix I = make_Matrix();
 					I.a11 = 1; I.a22 = 1; I.a33 = 1;		
@@ -431,21 +431,22 @@ __device__ float3 sumForcePart(
 					//Green-Saint-Venant strain tensor	
 					E = 0.5 * ((Transpose(J)*J) - I);	
 
-					float cf = params.Young / ((1 + params.Poisson) * (1 - 2 * params.Poisson));
+					float a11 = params.Young / ((1 + params.Poisson) * (1 - 2 * params.Poisson));
+					float a12 = params.Young / (1 + params.Poisson);
 					//Stress tensor					
-					Sigma.a11 = cf * ((1 - params.Poisson) * E.a11 + params.Poisson * (E.a22 + E.a33));
-					Sigma.a22 = cf * ((1 - params.Poisson) * E.a22 + params.Poisson * (E.a11 + E.a33));
-					Sigma.a33 = cf * ((1 - params.Poisson) * E.a33 + params.Poisson * (E.a11 + E.a22));
+					Stress.a11 = a11 * ((1 - params.Poisson) * E.a11 + params.Poisson * (E.a22 + E.a33));
+					Stress.a22 = a11 * ((1 - params.Poisson) * E.a22 + params.Poisson * (E.a11 + E.a33));
+					Stress.a33 = a11 * ((1 - params.Poisson) * E.a33 + params.Poisson * (E.a11 + E.a22));
 					
-					Sigma.a12 = Sigma.a21 = (params.Young / (1 + params.Poisson))*E.a12;
-					Sigma.a13 = Sigma.a31 = (params.Young / (1 + params.Poisson))*E.a13;
-					Sigma.a23 = Sigma.a32 = (params.Young / (1 + params.Poisson))*E.a23;
+					Stress.a12 = Stress.a21 = a12 * E.a12;
+					Stress.a13 = Stress.a31 = a12 * E.a13;
+					Stress.a23 = Stress.a32 = a12 * E.a23;
 
 					d.x = volume_j * params.SpikyKern * (relPos.x / dist) * tempExpr * tempExpr;
 					d.y = volume_j * params.SpikyKern * (relPos.y / dist) * tempExpr * tempExpr;
 					d.z = volume_j * params.SpikyKern * (relPos.z / dist) * tempExpr * tempExpr;																		
 
-					tmpForce += -volume_i * (((I + Transpose(dU)) * Sigma) * d);					
+					tmpForce += -volume_i * (((I + Transpose(dU)) * Stress) * d);					
 				}                
             }
         }

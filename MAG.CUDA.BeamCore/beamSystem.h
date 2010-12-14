@@ -2,6 +2,7 @@
 #define __PARTICLESYSTEM_H__
 
 #include "beam_kernel.cuh"
+
 #include "cudpp/cudpp.h"
 
 // Particle system class
