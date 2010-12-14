@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="windows-1251"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9.00"
+	Version="9,00"
 	Name="MAG.CUDA.Beam"
 	ProjectGUID="{DBE27AEF-0987-48EA-B5F4-0D9B4FE0B201}"
 	RootNamespace="Beam"
@@ -43,7 +43,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(CUDA_PATH)/include&quot;;&quot;$(NVSDKCOMPUTE_ROOT)\C\common\inc&quot;;../MAG.CUDA.BeamCore"
+				AdditionalIncludeDirectories="&quot;$(CUDA_PATH)/include&quot;;&quot;$(NVSDKCOMPUTE_ROOT)\C\common\inc&quot;;../MAG.CUDA.BeamCore;../MAG.CUDA.Infrastructure"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -310,22 +310,6 @@
 	<Files>
 		<File
 			RelativePath=".\main.cpp"
-			>
-		</File>
-		<File
-			RelativePath=".\render_particles.cpp"
-			>
-		</File>
-		<File
-			RelativePath=".\render_particles.h"
-			>
-		</File>
-		<File
-			RelativePath=".\shaders.cpp"
-			>
-		</File>
-		<File
-			RelativePath=".\shaders.h"
 			>
 		</File>
 	</Files>

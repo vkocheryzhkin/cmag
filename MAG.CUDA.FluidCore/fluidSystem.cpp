@@ -364,43 +364,14 @@ inline float frand()
 }
 
 void
-FluidSystem::reset(ParticleConfig config)
+FluidSystem::reset()
 {
-	switch(config)
-	{
-	default:
-	case CONFIG_RANDOM:
-		{
-			int p = 0, v = 0;
-			for(uint i=0; i < m_numParticles; i++) 
-			{
-				float point[3];
-				point[0] = frand();
-				point[1] = frand();
-				point[2] = frand();
-				m_hPos[p++] = 2 * (point[0] - 0.5f);
-				m_hPos[p++] = 2 * (point[1] - 0.5f);
-				m_hPos[p++] = 2 * (point[2] - 0.5f);
-				m_hPos[p++] = 1.0f; // radius
-				m_hVel[v++] = 0.0f;
-				m_hVel[v++] = 0.0f;
-				m_hVel[v++] = 0.0f;
-				m_hVel[v++] = 0.0f;
-			}
-		}
-		break;
-
-    case CONFIG_GRID:
-        {
-            float jitter = m_params.particleRadius*0.01f;			            
-			uint s = (int) (powf((float) m_numParticles, 1.0f / 3.0f));
-			float spacing = m_params.particleRadius * 2.0f;
-            uint gridSize[3];
-            gridSize[0] = gridSize[1] = gridSize[2] = s;
-            initGrid(gridSize, spacing, jitter, m_numParticles);
-        }
-        break;
-	}
+	float jitter = m_params.particleRadius*0.01f;			            
+	uint s = (int) (powf((float) m_numParticles, 1.0f / 3.0f));
+	float spacing = m_params.particleRadius * 2.0f;
+	uint gridSize[3];
+	gridSize[0] = gridSize[1] = gridSize[2] = s;
+	initGrid(gridSize, spacing, jitter, m_numParticles);
 
     setArray(POSITION, m_hPos, 0, m_numParticles);
     setArray(VELOCITY, m_hVel, 0, m_numParticles);	

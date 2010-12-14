@@ -34,10 +34,8 @@ float camera_rot[]   = {0, 0, 0};
 float camera_trans_lag[] = {0, 0, -1};
 float camera_rot_lag[] = {0, 0, 0};
 const float inertia = 0.1;
-ParticleRenderer::DisplayMode displayMode = ParticleRenderer::PARTICLE_SPHERES;
 
 int mode = 0;
-bool displayEnabled = true;
 bool bPause = false;
 bool wireframe = false;
 bool demoMode = false;
@@ -83,7 +81,7 @@ extern "C" void copyArrayFromDevice(void* host, const void* device, unsigned int
 void initParticleSystem(int numParticles, uint3 gridSize, bool bUseOpenGL)
 {
     psystem = new FluidSystem(numParticles, gridSize, bUseOpenGL); 
-    psystem->reset(FluidSystem::CONFIG_GRID);
+    psystem->reset();
 
     if (bUseOpenGL) {
         renderer = new ParticleRenderer;
@@ -200,8 +198,8 @@ void display()
 
 	glEnd();
 
-    if (renderer && displayEnabled)
-        renderer->display(displayMode);
+    if (renderer)
+        renderer->display();
 
     cutilCheckError(cutStopTimer(timer));  
     
@@ -337,23 +335,8 @@ void key(unsigned char key, int /*x*/, int /*y*/)
         break;
     case 'm':
         mode = M_MOVE;
-        break;
-    case 'p':
-        displayMode = (ParticleRenderer::DisplayMode)
-                      ((displayMode + 1) % ParticleRenderer::PARTICLE_NUM_MODES);
-        break;    
-    case 'r':
-        displayEnabled = !displayEnabled;
-        break;
-
-    case '1':
-        psystem->reset(FluidSystem::CONFIG_GRID);
-        break;
-    case '2':
-        psystem->reset(FluidSystem::CONFIG_RANDOM);
-        break;    
-	case '3':
-		//psystem->reset(ParticleSystem::CONFIG_RANDOM);
+        break;        
+	case '3':		
 		psystem->changeGravity();
 		break;   
     case '4':
@@ -426,11 +409,7 @@ void initMenus()
     glutAttachMenu(GLUT_RIGHT_BUTTON);
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Program main
-////////////////////////////////////////////////////////////////////////////////
-int
-main(int argc, char** argv) 
+int main(int argc, char** argv) 
 {
     numParticles = NUM_PARTICLES;
     uint gridDim = GRID_SIZE;

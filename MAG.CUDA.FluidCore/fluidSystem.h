@@ -11,13 +11,6 @@ public:
     FluidSystem(uint numParticles, uint3 gridSize, bool bUseOpenGL);
     ~FluidSystem();
 
-    enum ParticleConfig
-    {
-	    CONFIG_RANDOM,
-	    CONFIG_GRID,
-	    _NUM_CONFIGS
-    };
-
     enum ParticleArray
     {
         POSITION,
@@ -28,7 +21,7 @@ public:
     };
 
     void update();
-    void reset(ParticleConfig config);
+    void reset();
 
     float* getArray(ParticleArray array);
     void   setArray(ParticleArray array, const float* data, int start, int count);
