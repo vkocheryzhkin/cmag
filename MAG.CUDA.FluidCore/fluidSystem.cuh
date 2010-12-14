@@ -1,5 +1,4 @@
- 
- extern "C"
+extern "C"
 {
 void cudaInit(int argc, char **argv);
 
@@ -18,27 +17,30 @@ void unmapGLBufferObject(struct cudaGraphicsResource *cuda_vbo_resource);
 
 void setParameters(SimParams *hostParams);
 
-void integrateSystem(float* pos,
-                     float* vel,  
-					 float* velLeapFrog,
-					 float* acc,
-                     uint numParticles);
+void integrateSystem(
+			 float* pos,
+             float* vel,  
+			 float* velLeapFrog,
+			 float* acc,
+             uint numParticles);
 
-void calcHash(uint*  gridParticleHash,
-              uint*  gridParticleIndex,
-              float* pos, 
-              int    numParticles);
+void calcHash(
+			  uint*  gridParticleHash,
+			  uint*  gridParticleIndex,
+			  float* pos, 
+			  int    numParticles);
 
-void reorderDataAndFindCellStart(uint*  cellStart,
-							     uint*  cellEnd,
-							     float* sortedPos,
-							     float* sortedVel,
-                                 uint*  gridParticleHash,
-                                 uint*  gridParticleIndex,
-							     float* oldPos,
-							     float* oldVel,
-							     uint   numParticles,
-							     uint   numCells);
+void reorderDataAndFindCellStart(
+			 uint*  cellStart,
+		     uint*  cellEnd,
+		     float* sortedPos,
+		     float* sortedVel,
+             uint*  gridParticleHash,
+             uint*  gridParticleIndex,
+		     float* oldPos,
+		     float* oldVel,
+		     uint   numParticles,
+		     uint   numCells);
 
 void calcDensityAndPressure(			
 			float* measures,
@@ -59,6 +61,5 @@ void calcAndApplyAcceleration(
 			uint* cellEnd,
 			uint numParticles,
 			uint numGridCells);
-
 }
 

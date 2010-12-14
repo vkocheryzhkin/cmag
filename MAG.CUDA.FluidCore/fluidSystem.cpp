@@ -16,7 +16,7 @@
 #define CUDART_PI_F         3.141592654f
 #endif
 
-ParticleSystem::ParticleSystem(uint numParticles, uint3 gridSize, bool bUseOpenGL) :
+FluidSystem::FluidSystem(uint numParticles, uint3 gridSize, bool bUseOpenGL) :
     m_bInitialized(false),
     m_bUseOpenGL(bUseOpenGL),
     m_numParticles(numParticles),
@@ -39,19 +39,12 @@ ParticleSystem::ParticleSystem(uint numParticles, uint3 gridSize, bool bUseOpenG
     m_params.numCells = m_numGridCells;
     m_params.numBodies = m_numParticles;
     
-	m_params.particleRadius = 1.0f / 64.0f;	//0.045733898168439972
-	//m_params.restDensity = 600.0f;//998.29f
-	//m_params.particleMass = 0.0283;// 0.02
-	//m_params.gasConstant = 0.9f; //3.0f
-	//m_params.viscosity = 0.02f; //3.5
-	//m_params.deltaTime = 0.005f; // 0.01
-	//m_params.particleRadius = 0.045733898168439972f;
-	//m_params.restDensity = 998.29f;
+	m_params.particleRadius = 1.0f / 64.0f;		
 	m_params.restDensity = 600.0f;
 	m_params.particleMass = 0.02f;
 	m_params.gasConstant =3.0f;
 	m_params.viscosity = 3.5f;
-	m_params.deltaTime = 0.005f; // 0.01
+	m_params.deltaTime = 0.005f;
 	m_params.smoothingRadius = 3.0f * m_params.particleRadius;
 	m_params.accelerationLimit = 200;//remove
     	
@@ -59,7 +52,7 @@ ParticleSystem::ParticleSystem(uint numParticles, uint3 gridSize, bool bUseOpenG
     float cellSize = m_params.particleRadius * 2.0f;  
     m_params.cellSize = make_float3(cellSize, cellSize, cellSize);
     
-    m_params.boundaryDamping = -0.5f;
+    m_params.boundaryDamping = -1.0f;
 
     m_params.gravity = make_float3(0.0f, -6.8f, 0.0f);    	  
 	m_params.Poly6Kern = 315.0f / (64.0f * CUDART_PI_F * pow(m_params.smoothingRadius, 9.0f));
@@ -68,14 +61,13 @@ ParticleSystem::ParticleSystem(uint numParticles, uint3 gridSize, bool bUseOpenG
     _initialize(numParticles);
 }
 
-ParticleSystem::~ParticleSystem()
+FluidSystem::~FluidSystem()
 {
     _finalize();
     m_numParticles = 0;
 }
 
-uint
-ParticleSystem::createVBO(uint size)
+uint FluidSystem::createVBO(uint size)
 {
     GLuint vbo;
     glGenBuffers(1, &vbo);
@@ -90,7 +82,6 @@ inline float lerp(float a, float b, float t)
     return a + t*(b-a);
 }
 
-// create a color ramp
 void colorRamp(float t, float *r)
 {
     const int ncolors = 7;
@@ -112,13 +103,12 @@ void colorRamp(float t, float *r)
 }
 
 void
-ParticleSystem::_initialize(int numParticles)
+FluidSystem::_initialize(int numParticles)
 {
     assert(!m_bInitialized);
 
     m_numParticles = numParticles;
 
-    // allocate host storage
     m_hPos = new float[m_numParticles*4];
     m_hVel = new float[m_numParticles*4];
 	hVelLeapFrog = new float[m_numParticles*4];		
@@ -135,7 +125,6 @@ ParticleSystem::_initialize(int numParticles)
     m_hCellEnd = new uint[m_numGridCells];
     memset(m_hCellEnd, 0, m_numGridCells*sizeof(uint));
 
-    // allocate GPU data
     unsigned int memSize = sizeof(float) * 4 * m_numParticles;
 
     if (m_bUseOpenGL) {
@@ -200,7 +189,7 @@ ParticleSystem::_initialize(int numParticles)
 }
 
 void
-ParticleSystem::_finalize()
+FluidSystem::_finalize()
 {
     assert(m_bInitialized);
 
@@ -235,15 +224,14 @@ ParticleSystem::_finalize()
 
     cudppDestroyPlan(m_sortHandle);
 }
-void ParticleSystem::changeGravity() 
+void FluidSystem::changeGravity() 
 { 
 	m_params.gravity.y *= -1.0f; 
 	setParameters(&m_params);  
 }
 
 // step the simulation
-void 
-ParticleSystem::update()
+void FluidSystem::update()
 {
     assert(m_bInitialized);
 
@@ -255,21 +243,12 @@ ParticleSystem::update()
         dPos = (float *) m_cudaPosVBO;
     }
 
-    // update constants
     setParameters(&m_params); 
 	
-    // calculate grid hash
-    calcHash(
-        m_dGridParticleHash,
-        m_dGridParticleIndex,
-        dPos,
-        m_numParticles);
+    calcHash(m_dGridParticleHash, m_dGridParticleIndex, dPos, m_numParticles);
 
-    // sort particles based on hash
     cudppSort(m_sortHandle, m_dGridParticleHash, m_dGridParticleIndex, m_gridSortBits, m_numParticles);
 
-	// reorder particle arrays into sorted order and
-	// find start and end of each cell
 	reorderDataAndFindCellStart(
         m_dCellStart,
         m_dCellEnd,
@@ -277,13 +256,11 @@ ParticleSystem::update()
 		m_dSortedVel,
         m_dGridParticleHash,
         m_dGridParticleIndex,
-		dPos,
-		//m_dVel,
+		dPos,		
 		dVelLeapFrog,
 		m_numParticles,
 		m_numGridCells);
 	
-	//rename to measure
 	calcDensityAndPressure(		
 		dMeasures,
 		m_dSortedPos,			
@@ -304,7 +281,6 @@ ParticleSystem::update()
 		m_numParticles,
 		m_numGridCells);    
 
-	// integrate
 	integrateSystem(
 		dPos,
 		m_dVel,	
@@ -312,14 +288,13 @@ ParticleSystem::update()
 		dAcceleration,
 		m_numParticles);
 	
-    // note: do unmap at end here to avoid unnecessary graphics/CUDA context switch
     if (m_bUseOpenGL) {
         unmapGLBufferObject(m_cuda_posvbo_resource);
     }
 }
 
 float* 
-ParticleSystem::getArray(ParticleArray array)
+FluidSystem::getArray(ParticleArray array)
 {
     assert(m_bInitialized);
  
@@ -347,7 +322,7 @@ ParticleSystem::getArray(ParticleArray array)
 }
 
 void
-ParticleSystem::setArray(ParticleArray array, const float* data, int start, int count)
+FluidSystem::setArray(ParticleArray array, const float* data, int start, int count)
 {
     assert(m_bInitialized);
  
@@ -389,7 +364,7 @@ inline float frand()
 }
 
 void
-ParticleSystem::reset(ParticleConfig config)
+FluidSystem::reset(ParticleConfig config)
 {
 	switch(config)
 	{
@@ -419,7 +394,6 @@ ParticleSystem::reset(ParticleConfig config)
         {
             float jitter = m_params.particleRadius*0.01f;			            
 			uint s = (int) (powf((float) m_numParticles, 1.0f / 3.0f));
-			//float spacing = pow (m_params.particleMass / m_params.restDensity, 1/3.0f );
 			float spacing = m_params.particleRadius * 2.0f;
             uint gridSize[3];
             gridSize[0] = gridSize[1] = gridSize[2] = s;
@@ -435,7 +409,7 @@ ParticleSystem::reset(ParticleConfig config)
 	setArray(VELOCITYLEAPFROG, hVelLeapFrog, 0, m_numParticles);
 }
 
-void ParticleSystem::initGrid(uint *size, float spacing, float jitter, uint numParticles)
+void FluidSystem::initGrid(uint *size, float spacing, float jitter, uint numParticles)
 {
 	srand(1973);
 	for(uint z=0; z<size[2]; z++) {

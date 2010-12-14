@@ -56,7 +56,7 @@ float gravity = 0.0003f;
 int iterations = 1;
 int ballr = 10;
 
-ParticleSystem *psystem = 0;
+FluidSystem *psystem = 0;
 
 // fps
 static int fpsCount = 0;
@@ -82,8 +82,8 @@ extern "C" void copyArrayFromDevice(void* host, const void* device, unsigned int
 // initialize particle system
 void initParticleSystem(int numParticles, uint3 gridSize, bool bUseOpenGL)
 {
-    psystem = new ParticleSystem(numParticles, gridSize, bUseOpenGL); 
-    psystem->reset(ParticleSystem::CONFIG_GRID);
+    psystem = new FluidSystem(numParticles, gridSize, bUseOpenGL); 
+    psystem->reset(FluidSystem::CONFIG_GRID);
 
     if (bUseOpenGL) {
         renderer = new ParticleRenderer;
@@ -347,10 +347,10 @@ void key(unsigned char key, int /*x*/, int /*y*/)
         break;
 
     case '1':
-        psystem->reset(ParticleSystem::CONFIG_GRID);
+        psystem->reset(FluidSystem::CONFIG_GRID);
         break;
     case '2':
-        psystem->reset(ParticleSystem::CONFIG_RANDOM);
+        psystem->reset(FluidSystem::CONFIG_RANDOM);
         break;    
 	case '3':
 		//psystem->reset(ParticleSystem::CONFIG_RANDOM);

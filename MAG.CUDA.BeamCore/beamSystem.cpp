@@ -1,6 +1,4 @@
 #include "beamSystem.h"
-//#include "beamSystem.cuh"
-//#include "beam_kernel.cuh"
 #include "beamSystem.cuh"
 #include "beam_kernel.cuh"
 
@@ -51,7 +49,7 @@ BeamSystem::BeamSystem(uint numParticles, uint3 gridSize, bool IsGLEnabled) :
 	params.Poly6Kern = 315.0f / (64.0f * CUDART_PI_F * pow(h, 9.0f));
 	params.SpikyKern = -45.0f /(CUDART_PI_F * pow(h, 6.0f));
 	
-	params.Young = 10000.0f;	
+	params.Young = 200000.0f;	
 	params.Poisson = 0.45f;	
 	
 	params.deltaTime = 0.00005f;
@@ -236,8 +234,8 @@ void BeamSystem::reset()
 	float spacing = params.particleRadius * 2.0f;
     uint gridSize[3];    
 	gridSize[0] = 20;
-	gridSize[1] = 1;		
-	gridSize[2] = 1;
+	gridSize[1] = 5;		
+	gridSize[2] = 5;
     initGrid(gridSize, spacing, jitter, numParticles);
         
     setArray(POSITION, hPos, 0, numParticles);   
@@ -290,7 +288,22 @@ void BeamSystem::update()
 
 	reorderDataAndFindCellStart(dCellStart, dCellEnd, dSortedPos, dSortedReferencePos, dHash, dIndex, dPos, dReferencePos, numParticles, numGridCells);
 
-	calcDensity(dMeasures, dSortedReferencePos, dCellStart, dCellEnd, numParticles, numGridCells);	
+	calcDensity(
+		dMeasures,
+		dSortedReferencePos,
+		dCellStart,
+		dCellEnd,
+		numParticles,
+		numGridCells);	
+
+	//used to normalize density
+	calcDensityDenominator(
+		dMeasures,
+		dSortedReferencePos,
+		dCellStart,
+		dCellEnd,
+		numParticles,
+		numGridCells);	
 
 	calcDisplacementGradient(
 		duDisplacementGradient,

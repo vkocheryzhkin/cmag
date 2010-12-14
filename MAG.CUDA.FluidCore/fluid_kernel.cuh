@@ -14,7 +14,6 @@
 #include "vector_types.h"
 typedef unsigned int uint;
 
-// simulation parameters
 struct SimParams {     
     float3 gravity;
     float globalDamping;
@@ -41,7 +40,7 @@ struct SimParams {
 	float deltaTime;
 	float smoothingRadius;
 
-	//todo staff
+	//todo: remove it
 	float accelerationLimit;
 };
 

@@ -59,25 +59,19 @@ protected: // data
 	uint numParticles;
 
     // CPU data
-    float* hPos;    
-	//float* hReferencePos;
-	float* hVel;    
-	//float* hDisplacement; //remove
+    float* hPos;    	
+	float* hVel;    	
 
-    // GPU data
-    //float* dPos;   
-	float* dSortedPos; //sorted
-	float* dVelocity;
-	//float* dDisplacement;		  //remove
-	//float* dSortedDisplacement; //remove
+    // GPU data    
+	float* dSortedPos; 
+	float* dVelocity;	
 	float* dReferencePos;
-	float* dSortedReferencePos;
-
+	float* dSortedReferencePos;	 
 	float* duDisplacementGradient;
 	float* dvDisplacementGradient;
 	float* dwDisplacementGradient;
-	float* dAcceleration;
-	float* dMeasures; // dendity and volume
+	float* dAcceleration;		  
+	float* dMeasures;			  //(float4) [density, denominator, 0, normalized volume]
 
 	uint*  dHash; 
 	uint*  dIndex;
@@ -86,13 +80,13 @@ protected: // data
 
 	uint   gridSortBits;
 
-	uint   posVbo;            // vertex buffer object for particle positions
-    uint   colorVBO;          // vertex buffer object for colors
+	uint   posVbo;            
+    uint   colorVBO;          
 	float *cudaPosVBO;        
     float *cudaColorVBO; 
 
-	struct cudaGraphicsResource *cuda_posvbo_resource; // handles OpenGL-CUDA exchange
-    struct cudaGraphicsResource *cuda_colorvbo_resource; // handles OpenGL-CUDA exchange
+	struct cudaGraphicsResource *cuda_posvbo_resource; 
+    struct cudaGraphicsResource *cuda_colorvbo_resource; 
 
 	CUDPPHandle sortHandle;
 
@@ -101,4 +95,4 @@ protected: // data
 	uint numGridCells;
 };
 
-#endif // __PARTICLESYSTEM_H__
+#endif //__PARTICLESYSTEM_H__

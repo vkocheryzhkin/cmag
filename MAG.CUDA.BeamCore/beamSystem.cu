@@ -170,6 +170,40 @@ extern "C"
 		#endif
 	}
 
+	void calcDensityDenominator(			
+			float* measures,
+			float* sortedReferencePos,						
+			uint* cellStart,
+			uint* cellEnd,
+			uint numParticles,
+			uint numGridCells)
+	{
+
+		#if USE_TEX
+		cutilSafeCall(cudaBindTexture(0, oldReferencePosTex, sortedReferencePos, numParticles*sizeof(float4)));
+		cutilSafeCall(cudaBindTexture(0, cellStartTex, cellStart, numGridCells*sizeof(uint)));
+		cutilSafeCall(cudaBindTexture(0, cellEndTex, cellEnd, numGridCells*sizeof(uint)));    
+		#endif
+
+		uint numThreads, numBlocks;
+		computeGridSize(numParticles, 64, numBlocks, numThreads);
+
+		calcDensityDenominatorD<<< numBlocks, numThreads >>>(											  
+											  (float4*)measures,
+											  (float4*)sortedReferencePos,                                          											  
+											  cellStart,
+											  cellEnd,
+											  numParticles);
+
+		cutilCheckMsg("Kernel execution failed");
+
+		#if USE_TEX
+		cutilSafeCall(cudaUnbindTexture(oldReferencePosTex));
+		cutilSafeCall(cudaUnbindTexture(cellStartTex));
+		cutilSafeCall(cudaUnbindTexture(cellEndTex));
+		#endif
+	}
+
 	void calcDisplacementGradient(
 				float* udisplacementGradient, 
 				float* vdisplacementGradient, 

@@ -1,20 +1,15 @@
-
 #ifndef __FLUIDSYSTEM_H__
 #define __FLUIDSYSTEM_H__
-
-#define DEBUG_GRID 0
-#define DO_TIMING 0
 
 #include "fluid_kernel.cuh"
 #include "vector_functions.h"
 #include "cudpp/cudpp.h"
 
-// Particle system class
-class ParticleSystem
+class FluidSystem
 {
 public:
-    ParticleSystem(uint numParticles, uint3 gridSize, bool bUseOpenGL);
-    ~ParticleSystem();
+    FluidSystem(uint numParticles, uint3 gridSize, bool bUseOpenGL);
+    ~FluidSystem();
 
     enum ParticleConfig
     {
@@ -56,7 +51,7 @@ public:
     float3 getWorldOrigin() { return m_params.worldOrigin; }
     float3 getCellSize() { return m_params.cellSize; }
 protected: // methods
-    ParticleSystem() {}
+    FluidSystem() {}
     uint createVBO(uint size);
 
     void _initialize(int numParticles);
@@ -120,4 +115,4 @@ protected: // data
     uint m_solverIterations;
 };
 
-#endif // __PARTICLESYSTEM_H__
+#endif //__FLUIDSYSTEM_H__

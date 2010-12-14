@@ -36,7 +36,7 @@ float camera_trans_lag[] = {0, 0, -1};
 float camera_rot_lag[] = {0, 0, 0};
 const float inertia = 0.1;
 
-uint numParticles = 20*1*1;
+uint numParticles = 20*5*5;
 uint3 gridSize;
 
 BeamSystem *psystem = 0;

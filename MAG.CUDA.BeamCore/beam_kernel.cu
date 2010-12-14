@@ -15,7 +15,6 @@ texture<uint, 1, cudaReadModeElementType> cellEndTex;
 
 __constant__ SimParams params;
 
-
 struct Matrix
 {
   float a11,a12,a13;
@@ -154,9 +153,9 @@ __device__ uint calcGridHash(int3 gridPos)
     return __umul24(__umul24(gridPos.z, params.gridSize.y), params.gridSize.x) + __umul24(gridPos.y, params.gridSize.x) + gridPos.x;
 }
 
-__global__ void calcHashD(uint* Hash,  // output
-               uint* Index, // output
-               float4* pos, // input
+__global__ void calcHashD(uint* Hash,   // output
+               uint* Index,				// output
+               float4* pos,				// input
                uint    numParticles)
 {
     uint index = __umul24(blockIdx.x, blockDim.x) + threadIdx.x;
@@ -172,13 +171,13 @@ __global__ void calcHashD(uint* Hash,  // output
 }
 
 __global__ void reorderDataAndFindCellStartD(
-								  uint*   cellStart,// output: 
+								  uint*   cellStart,		   // output: 
 							      uint*   cellEnd,             // output: 
 								  float4* sortedPos,		   // output;
   							      float4* sortedReferencePos,  // output:						  
                                   uint *  Hash,				   // input: 
                                   uint *  Index,			   // input: 
-								  float4* oldPos,		   // input;
+								  float4* oldPos,			   // input;
 								  float4* oldReferencePos,
 							      uint    numParticles)
 {
@@ -234,19 +233,17 @@ __device__ float sumDensityPart(
     float sum = 0.0f;
     if (startIndex != 0xffffffff) {                
         uint endIndex = FETCH(cellEnd, gridHash);
-        for(uint j=startIndex; j<endIndex; j++) {
-            if (j != index) {             
-	            float3 referencePos_j = make_float3(FETCH(oldReferencePos, j));
-				float wpolyExpr = 0.0f;
+        for(uint j=startIndex; j<endIndex; j++) {                  
+            float3 referencePos_j = make_float3(FETCH(oldReferencePos, j));
+			float wpolyExpr = 0.0f;
 
-				float3 relPos = referencePos_j - referencePos; 
-				float dist = length(relPos);
+			float3 relPos = referencePos_j - referencePos; 
+			float dist = length(relPos);
 
-				if (dist < params.smoothingRadius) {					
-					 wpolyExpr = pow(params.smoothingRadius, 2) - pow(dist, 2);
-                     sum += pow(wpolyExpr, 3);
-				}                
-            }
+			if (dist < params.smoothingRadius) {					
+				 wpolyExpr = pow(params.smoothingRadius, 2) - pow(dist, 2);
+                 sum += pow(wpolyExpr, 3);
+			}                
         }
     }
     return sum;
@@ -254,8 +251,8 @@ __device__ float sumDensityPart(
 
 __global__ 
 void calcDensityD(			
-			float4* measures, //output
-			float4* oldReferencePos,	 //input sorted position					
+			float4* measures,			 //output
+			float4* oldReferencePos,	 //input
 			uint* cellStart,
 			uint* cellEnd,
 			uint numParticles)
@@ -278,8 +275,64 @@ void calcDensityD(
         }
     }	
 	float dens = sum * params.particleMass * params.Poly6Kern;
-    measures[index].x = dens;	//density	
-	measures[index].y = params.particleMass / dens;	//volume
+    measures[index].x = dens;	//density		
+	measures[index].y = 0.0f; //clear it will be filled in calcDensityDenominatorD
+}
+
+__device__ void sumDensityDenominator(
+				   int3    gridPos,
+                   uint    index,
+                   float3  referencePos,
+                   float4* oldReferencePos, 
+				   float4* measures,
+                   uint*   cellStart,
+                   uint*   cellEnd)
+{
+    uint gridHash = calcGridHash(gridPos);
+    uint startIndex = FETCH(cellStart, gridHash);
+    
+    if (startIndex != 0xffffffff) {                
+        uint endIndex = FETCH(cellEnd, gridHash);
+        for(uint j=startIndex; j<endIndex; j++) {                  
+            float3 referencePos_j = make_float3(FETCH(oldReferencePos, j));			
+			float3 relPos = referencePos_j - referencePos; 
+			float dist = length(relPos);
+
+			if (dist < params.smoothingRadius) {									 
+				 float wpolyExpr = pow(params.smoothingRadius, 2) - pow(dist, 2);
+				 volatile float4 measure = measures[j];
+                 measures[index].y += (params.particleMass / measure.x) * params.Poly6Kern * pow(wpolyExpr, 3);
+			}                
+        }
+    }    
+}
+
+__global__ 
+void calcDensityDenominatorD(			
+			float4* measures,			//input, output
+			float4* oldReferencePos,	//input
+			uint* cellStart,
+			uint* cellEnd,
+			uint numParticles)
+			
+{
+	uint index = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
+    if (index >= numParticles) return;    
+
+	float3 referencePos = make_float3(FETCH(oldReferencePos, index));
+    int3 gridPos = calcGridPos(referencePos);
+    
+	int cellcount = 1;
+    for(int z=-cellcount; z<=cellcount; z++) {
+        for(int y=-cellcount; y<=cellcount; y++) {
+            for(int x=-cellcount; x<=cellcount; x++) {
+                int3 neighbourPos = gridPos + make_int3(x, y, z);
+                sumDensityDenominator(neighbourPos, index, referencePos, oldReferencePos, measures, cellStart, cellEnd);
+            }
+        }
+    }		
+	volatile float4 measure = measures[index];	
+	measures[index].w = params.particleMass / (measure.x / measure.y); //volume
 }
 
 __device__ Matrix sumDisplacementGradientPart(
@@ -304,12 +357,10 @@ __device__ Matrix sumDisplacementGradientPart(
             if (j != index) {             
 	            float3 pos_j = make_float3(FETCH(oldPos, j));				
 				float3 referencePos_j = make_float3(FETCH(oldReferencePos,j));
-				float volume_j = FETCH(oldMeasures, j).y;
+				float volume_j = FETCH(oldMeasures, j).w;
 
 				float3 relPos = referencePos_i - referencePos_j;
-				float dist = length(relPos);
-				
-
+				float dist = length(relPos);				
 				if (dist < params.smoothingRadius) {				
 					float tempExpr =  params.smoothingRadius - dist;			
 					gradient.a11 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * tempExpr * tempExpr * (relPos.x / dist);
@@ -394,7 +445,7 @@ __device__ float3 sumForcePart(
             if (j != index) {             
 	            float3 referencePos_i = make_float3(FETCH(oldReferencePos, j));
 				float4 measure = FETCH(oldMeasures, j);				
-				float volume_i = measure.y;
+				float volume_i = measure.w;
 				float tempExpr = 0.0f;
 				float3 relPos = referencePos_i - referencePos_j;
 
@@ -433,6 +484,7 @@ __device__ float3 sumForcePart(
 
 					float a11 = params.Young / ((1 + params.Poisson) * (1 - 2 * params.Poisson));
 					float a12 = params.Young / (1 + params.Poisson);
+
 					//Stress tensor					
 					Stress.a11 = a11 * ((1 - params.Poisson) * E.a11 + params.Poisson * (E.a22 + E.a33));
 					Stress.a22 = a11 * ((1 - params.Poisson) * E.a22 + params.Poisson * (E.a11 + E.a33));
@@ -472,7 +524,7 @@ __global__ void calcAccelerationD(
 
 	float3 pos = make_float3(FETCH(oldPos, index));
 	float3 referencePos_j = make_float3(FETCH(oldReferencePos, index));	
-	float volume_j = FETCH(oldMeasures, index).y;
+	float volume_j = FETCH(oldMeasures, index).w;
 
     int3 gridPos = calcGridPos(referencePos_j);
 	float3 force = make_float3(0.0f);
@@ -496,7 +548,7 @@ __global__ void calcAccelerationD(
         }
     }    	
 	uint originalIndex = Index[index];
-	float3 acc = force /  params.particleMass;
+	float3 acc = force / params.particleMass;
 	acceleration[originalIndex] =  make_float4(acc, 0.0f);
 }
 

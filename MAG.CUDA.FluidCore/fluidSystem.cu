@@ -2,15 +2,8 @@
 #include <cstdlib>
 #include <cstdio>
 #include <string.h>
-
-#if defined(__APPLE__) || defined(MACOSX)
-#include <GLUT/glut.h>
-#else
 #include <GL/glut.h>
-#endif
-
 #include <cuda_gl_interop.h>
-
 #include "fluid_kernel.cu"
 
 extern "C"
@@ -18,7 +11,6 @@ extern "C"
 
 void cudaInit(int argc, char **argv)
 {   
-    // use command-line specified CUDA device, otherwise use device with highest Gflops/s
     if( cutCheckCmdLineFlag(argc, (const char**)argv, "device") ) {
         cutilDeviceInit(argc, argv);
     } else {
@@ -28,7 +20,6 @@ void cudaInit(int argc, char **argv)
 
 void cudaGLInit(int argc, char **argv)
 {   
-    // use command-line specified CUDA device, otherwise use device with highest Gflops/s
     if( cutCheckCmdLineFlag(argc, (const char**)argv, "device") ) {
         cutilDeviceInit(argc, argv);
     } else {
@@ -96,16 +87,13 @@ void copyArrayFromDevice(void* host, const void* device,
 
 void setParameters(SimParams *hostParams)
 {
-    // copy parameters to constant memory
     cutilSafeCall( cudaMemcpyToSymbol(params, hostParams, sizeof(SimParams)) );
 }
 
-//Round a / b to nearest higher integer value
 uint iDivUp(uint a, uint b){
     return (a % b != 0) ? (a / b + 1) : (a / b);
 }
 
-// compute grid and thread block size for a given number of elements
 void computeGridSize(uint n, uint blockSize, uint &numBlocks, uint &numThreads)
 {
     numThreads = min(blockSize, n);
@@ -121,14 +109,12 @@ void integrateSystem(float *pos,
     uint numThreads, numBlocks;
     computeGridSize(numParticles, 256, numBlocks, numThreads);
 
-    // execute the kernel
     integrate<<< numBlocks, numThreads >>>((float4*)pos,
                                            (float4*)vel,
 										   (float4*)velLeapFrog,
 										   (float4*)acc,
                                            numParticles);
     
-    // check if kernel invocation generated an error
     cutilCheckMsg("integrate kernel execution failed");
 }
 
@@ -140,13 +126,11 @@ void calcHash(uint*  gridParticleHash,
     uint numThreads, numBlocks;
     computeGridSize(numParticles, 256, numBlocks, numThreads);
 
-    // execute the kernel
     calcHashD<<< numBlocks, numThreads >>>(gridParticleHash,
                                            gridParticleIndex,
                                            (float4 *) pos,
                                            numParticles);
     
-    // check if kernel invocation generated an error
     cutilCheckMsg("Kernel execution failed");
 }
 
@@ -164,7 +148,6 @@ void reorderDataAndFindCellStart(uint*  cellStart,
     uint numThreads, numBlocks;
     computeGridSize(numParticles, 256, numBlocks, numThreads);
 
-    // set all cells to empty
 	cutilSafeCall(cudaMemset(cellStart, 0xffffffff, numCells*sizeof(uint)));
 
 	#if USE_TEX
@@ -210,10 +193,7 @@ void calcDensityAndPressure(
 	uint numThreads, numBlocks;
     computeGridSize(numParticles, 64, numBlocks, numThreads);
 
-    // execute the kernel
-    calcDensityAndPressureD<<< numBlocks, numThreads >>>(
-										  /*(float*)density,
-										  (float*)pressure,*/
+    calcDensityAndPressureD<<< numBlocks, numThreads >>>(										  
 										  (float4*)measures,
                                           (float4*)sortedPos,                                          
                                           gridParticleIndex,
@@ -221,7 +201,6 @@ void calcDensityAndPressure(
                                           cellEnd,
                                           numParticles);
 
-    // check if kernel invocation generated an error
     cutilCheckMsg("Kernel execution failed");
 
 	#if USE_TEX
@@ -253,12 +232,9 @@ void calcAndApplyAcceleration(
 	uint numThreads, numBlocks;
     computeGridSize(numParticles, 64, numBlocks, numThreads);
 
-    // execute the kernel
     calcAndApplyAccelerationD<<< numBlocks, numThreads >>>(
 										  (float4*)acceleration,
-										  (float4*)sortedMeasures,
-										  /*(float*)density,
-										  (float*)pressure,*/
+										  (float4*)sortedMeasures,										  
                                           (float4*)sortedPos,                                          
 										  (float4*)sortedVel, 
                                           gridParticleIndex,
@@ -266,7 +242,6 @@ void calcAndApplyAcceleration(
                                           cellEnd,
                                           numParticles);
 
-    // check if kernel invocation generated an error
     cutilCheckMsg("Kernel execution failed");
 
 	#if USE_TEX
@@ -277,4 +252,4 @@ void calcAndApplyAcceleration(
     cutilSafeCall(cudaUnbindTexture(cellEndTex));
 	#endif
 }
-}   // extern "C"
+}// extern "C"

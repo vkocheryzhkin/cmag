@@ -41,6 +41,14 @@ extern "C"
 		uint numParticles, 
 		uint numGridCells);
 
+	void calcDensityDenominator(
+		float* dMeasures, 
+		float* sortedReferencePos, 
+		uint* dCellStart, 
+		uint* dCellEnd, 
+		uint numParticles, 
+		uint numGridCells);	
+
 	void calcDisplacementGradient(
 		float* duDisplacementGradient,
 		float* dvDisplacementGradient,
