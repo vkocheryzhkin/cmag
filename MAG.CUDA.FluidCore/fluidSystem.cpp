@@ -27,14 +27,12 @@ FluidSystem::FluidSystem(uint numParticles, uint3 gridSize, bool bUseOpenGL) :
     m_dVel(0),
 	dMeasures(0),	
     m_gridSize(gridSize),
-    m_timer(0),
-    m_solverIterations(1)
+    m_timer(0)
 {
     m_numGridCells = m_gridSize.x*m_gridSize.y*m_gridSize.z;
 
-    m_gridSortBits = 18;    // increase this for larger grids
+    m_gridSortBits = 18;//see radix sort for details
 
-    // set simulation parameters
     m_params.gridSize = m_gridSize;
     m_params.numCells = m_numGridCells;
     m_params.numBodies = m_numParticles;

@@ -134,14 +134,20 @@ void display()
     glGetFloatv(GL_MODELVIEW_MATRIX, modelView);
 
     // cube
-    glColor3f(1.0, 1.0, 1.0);
-    glutWireCube(2.0);
+    /*glColor3f(1.0, 1.0, 1.0);
+    glutWireCube(2.0);*/
+	glBegin(GL_LINES);
+	glVertex3f(-0.29,0,0);
+	glVertex3f(1,0,0);
+	glEnd();
 
-	//
-	/*glBegin(GL_LINES);	
-	glVertex3f(0, 0, 0);
-	glVertex3f(-1, -1, -1);	
-	glEnd();*/
+	glColor3f(1, 0.75, 0.5);
+	glBegin(GL_QUADS);
+	glVertex3f(-0.29, -0.3, -0.2f);
+	glVertex3f(-0.29, 0.1, -0.2f);
+	glVertex3f(-0.29, 0.1, 0.3f);
+	glVertex3f(-0.29, -0.3, 0.3f);
+	glEnd();
 
 	if (renderer)
 		renderer->display();

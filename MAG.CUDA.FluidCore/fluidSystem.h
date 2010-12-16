@@ -104,8 +104,6 @@ protected: // data
     uint m_numGridCells;
 
     uint m_timer;
-
-    uint m_solverIterations;
 };
 
 #endif //__FLUIDSYSTEM_H__

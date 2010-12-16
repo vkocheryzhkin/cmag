@@ -1,4 +1,3 @@
-// Graphics includes
 #include <GL/glew.h>
 #if defined (_WIN32)
 #include <GL/wglew.h>
@@ -6,7 +5,6 @@
 
 #include <GL/glut.h>
 
-// Utilities and system includes
 #include <cutil_inline.h>
 #include <cutil_gl_inline.h>
 #include <cstdlib>
@@ -33,19 +31,9 @@ float camera_trans_lag[] = {0, 0, -1};
 float camera_rot_lag[] = {0, 0, 0};
 const float inertia = 0.1;
 
-int mode = 0;
 bool bPause = false;
-int idleCounter = 0;
-const int idleDelay = 2000;
-enum { M_VIEW = 0, M_MOVE };
-
 uint numParticles = 0;
 uint3 gridSize;
-
-float damping = 1.0f;
-float gravity = 0.0003f;
-int iterations = 1;
-int ballr = 10;
 
 FluidSystem *psystem = 0;
 
@@ -56,10 +44,7 @@ unsigned int timer;
 ParticleRenderer *renderer = 0;
 
 float modelView[16];
-
-const int frameCheckNumber = 4;
 unsigned int frameCount = 0;
-unsigned int g_TotalErrors = 0;
 
 #define MAX(a,b) ((a > b) ? a : b)
 
@@ -177,7 +162,7 @@ void display()
 	glVertex3f(1, 0, b);
 	glVertex3f(1, -1, b);
 	glVertex3f(1, -1, -1);
-	glEnd();
+	glEnd();	
 
     if (renderer)
         renderer->display();
@@ -194,7 +179,6 @@ inline float frand()
 {
     return rand() / (float) RAND_MAX;
 }
-
 
 void reshape(int w, int h)
 {
@@ -229,34 +213,7 @@ void mouse(int button, int state, int x, int y)
 
     ox = x; oy = y;
 
-    idleCounter = 0;
     glutPostRedisplay();
-}
-
-// transfrom vector by matrix
-void xform(float *v, float *r, GLfloat *m)
-{
-  r[0] = v[0]*m[0] + v[1]*m[4] + v[2]*m[8] + m[12];
-  r[1] = v[0]*m[1] + v[1]*m[5] + v[2]*m[9] + m[13];
-  r[2] = v[0]*m[2] + v[1]*m[6] + v[2]*m[10] + m[14];
-}
-
-// transform vector by transpose of matrix
-void ixform(float *v, float *r, GLfloat *m)
-{
-  r[0] = v[0]*m[0] + v[1]*m[1] + v[2]*m[2];
-  r[1] = v[0]*m[4] + v[1]*m[5] + v[2]*m[6];
-  r[2] = v[0]*m[8] + v[1]*m[9] + v[2]*m[10];
-}
-
-void ixformPoint(float *v, float *r, GLfloat *m)
-{
-    float x[4];
-    x[0] = v[0] - m[12];
-    x[1] = v[1] - m[13];
-    x[2] = v[2] - m[14];
-    x[3] = 1.0f;
-    ixform(x, r, m);
 }
 
 void motion(int x, int y)
@@ -264,30 +221,21 @@ void motion(int x, int y)
     float dx, dy;
     dx = x - ox;
     dy = y - oy;
-
-    switch(mode) 
-    {
-    case M_VIEW:
-        if (buttonState == 3) {
-            // left+middle = zoom
-            camera_trans[2] += (dy / 100.0) * 0.5 * fabs(camera_trans[2]);
-        } 
-        else if (buttonState & 2) {
-            // middle = translate
-            camera_trans[0] += dx / 100.0;
-            camera_trans[1] -= dy / 100.0;
-        }
-        else if (buttonState & 1) {
-            // left = rotate
-            camera_rot[0] += dy / 5.0;
-            camera_rot[1] += dx / 5.0;
-        }
-        break;    
+    if (buttonState == 3) {
+        // left+middle = zoom
+        camera_trans[2] += (dy / 100.0) * 0.5 * fabs(camera_trans[2]);
+    } 
+    else if (buttonState & 2) {
+        // middle = translate
+        camera_trans[0] += dx / 100.0;
+        camera_trans[1] -= dy / 100.0;
     }
-
+    else if (buttonState & 1) {
+        // left = rotate
+        camera_rot[0] += dy / 5.0;
+        camera_rot[1] += dx / 5.0;
+    }       
     ox = x; oy = y;
-
-    idleCounter = 0;
 
     glutPostRedisplay();
 }
@@ -310,26 +258,15 @@ void key(unsigned char key, int , int)
     case '\033':
     case 'q':
         exit(0);
-        break;
-    case 'v':
-        mode = M_VIEW;
-        break;
-    case 'm':
-        mode = M_MOVE;
         break;        
 	case '3':		
 		psystem->changeGravity();
 		break;     
     }
 
-    idleCounter = 0;
     glutPostRedisplay();
 }
 
-void special(int k, int x, int y)
-{   
-    idleCounter = 0;
-}
 
 void idle(void)
 {    
@@ -357,8 +294,7 @@ int main(int argc, char** argv)
     glutReshapeFunc(reshape);
     glutMouseFunc(mouse);
     glutMotionFunc(motion);
-    glutKeyboardFunc(key);
-    glutSpecialFunc(special);
+    glutKeyboardFunc(key);    
     glutIdleFunc(idle);
 
     atexit(cleanup);
