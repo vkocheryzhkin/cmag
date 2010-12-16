@@ -23,13 +23,11 @@
 #define GRID_SIZE       64
 #define NUM_PARTICLES   15625
 
-
 const uint width = 1024, height = 768;
 
-// view params
 int ox, oy;
 int buttonState = 0;
-float camera_trans[] = {0.0, 0.0, -3.0};
+float camera_trans[] = {0.0, 0.0, -1.6};
 float camera_rot[]   = {0, 0, 0};
 float camera_trans_lag[] = {0, 0, -1};
 float camera_rot_lag[] = {0, 0, 0};
@@ -37,18 +35,13 @@ const float inertia = 0.1;
 
 int mode = 0;
 bool bPause = false;
-bool wireframe = false;
-bool demoMode = false;
 int idleCounter = 0;
-int demoCounter = 0;
 const int idleDelay = 2000;
 enum { M_VIEW = 0, M_MOVE };
 
 uint numParticles = 0;
 uint3 gridSize;
-int numIterations = 0; // run until exit
 
-// simulation parameters
 float damping = 1.0f;
 float gravity = 0.0003f;
 int iterations = 1;
@@ -56,7 +49,6 @@ int ballr = 10;
 
 FluidSystem *psystem = 0;
 
-// fps
 static int fpsCount = 0;
 static int fpsLimit = 1;
 unsigned int timer;
@@ -71,13 +63,10 @@ unsigned int g_TotalErrors = 0;
 
 #define MAX(a,b) ((a > b) ? a : b)
 
-const char *sSDKsample = "SPH Simulation";
-
 extern "C" void cudaInit(int argc, char **argv);
 extern "C" void cudaGLInit(int argc, char **argv);
 extern "C" void copyArrayFromDevice(void* host, const void* device, unsigned int vbo, int size);
 
-// initialize particle system
 void initParticleSystem(int numParticles, uint3 gridSize, bool bUseOpenGL)
 {
     psystem = new FluidSystem(numParticles, gridSize, bUseOpenGL); 
@@ -97,7 +86,6 @@ void cleanup()
 	cutilCheckError( cutDeleteTimer( timer));    
 }
 
-// initialize OpenGL
 void initGL(int argc, char **argv)
 {  
     glutInit(&argc, argv);
@@ -144,7 +132,6 @@ void display()
 {
     cutilCheckError(cutStartTimer(timer));  
 
-    // update the simulation
     if (!bPause)
     {
         psystem->update(); 
@@ -152,10 +139,8 @@ void display()
             renderer->setVertexBuffer(psystem->getCurrentReadBuffer(), psystem->getNumParticles());
     }
 
-    // render
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);  
 
-    // view transform
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     for (int c = 0; c < 3; ++c)
@@ -170,32 +155,28 @@ void display()
     glGetFloatv(GL_MODELVIEW_MATRIX, modelView);
 
     // cube
-    /*glColor3f(1.0, 1.0, 1.0);
-    glutWireCube(2.0);	*/
+    //glColor3f(1.0, 1.0, 1.0);
+    //glutWireCube(2.0);	
 	//
-	glBegin(GL_LINE_LOOP);
-	float x = (powf((float) NUM_PARTICLES, 1.0f / 3.0f) * 2)/GRID_SIZE -1.0f;
+	glBegin(GL_LINE_STRIP);
+	float b = (powf((float) NUM_PARTICLES, 1.0f / 3.0f) * 2)/GRID_SIZE -1.0f;
 	float y = 0.0f;
-	glVertex3f(x, -1, -1);
-	glVertex3f(x, -1, 1);
-	glVertex3f(x, y , 1);
-	glVertex3f(x,y, -1);
-	glVertex3f(x, -1, -1);
-
 	glVertex3f(-1, -1, -1);
-	glVertex3f(-1, -1, 1);
-	glVertex3f(-1, y, 1);
-	glVertex3f(-1, y, -1);
+	glVertex3f(1, -1, -1);
+	glVertex3f(1, 0, -1);
+	glVertex3f(-1, 0, -1);
 	glVertex3f(-1, -1, -1);
-
-	glVertex3f(-1, -1, -1);
-	glVertex3f(-1, y, -1);
-	glVertex3f(x, y, -1);
-	glVertex3f(x, y, 1);
-	glVertex3f(-1, y, 1);
-	glVertex3f(-1, -1, 1);
-	glVertex3f(x, -1, 1);
-
+	glVertex3f(-1, -1, b);	
+	glVertex3f(1, -1, b);
+	glVertex3f(1, 0, b);
+	glVertex3f(-1, 0, b);
+	glVertex3f(-1, -1, b);
+	glVertex3f(-1, 0, b);
+	glVertex3f(-1, 0, -1);
+	glVertex3f(1, 0, -1);
+	glVertex3f(1, 0, b);
+	glVertex3f(1, -1, b);
+	glVertex3f(1, -1, -1);
 	glEnd();
 
     if (renderer)
@@ -248,7 +229,6 @@ void mouse(int button, int state, int x, int y)
 
     ox = x; oy = y;
 
-    demoMode = false;
     idleCounter = 0;
     glutPostRedisplay();
 }
@@ -307,14 +287,12 @@ void motion(int x, int y)
 
     ox = x; oy = y;
 
-    demoMode = false;
     idleCounter = 0;
 
     glutPostRedisplay();
 }
 
-// commented out to remove unused parameter warnings in Linux
-void key(unsigned char key, int /*x*/, int /*y*/)
+void key(unsigned char key, int , int)
 {
     switch (key) 
     {
@@ -326,6 +304,9 @@ void key(unsigned char key, int /*x*/, int /*y*/)
         if (renderer)
             renderer->setVertexBuffer(psystem->getCurrentReadBuffer(), psystem->getNumParticles());
         break;
+	case '1':
+		psystem->reset();
+		break;
     case '\033':
     case 'q':
         exit(0);
@@ -338,53 +319,20 @@ void key(unsigned char key, int /*x*/, int /*y*/)
         break;        
 	case '3':		
 		psystem->changeGravity();
-		break;   
-    case '4':
-        {
-            // shoot ball from camera
-            float pr = psystem->getParticleRadius();
-            float vel[4], velw[4], pos[4], posw[4];
-            vel[0] = 0.0f;
-            vel[1] = 0.0f;
-            vel[2] = -0.05f;
-            vel[3] = 0.0f;
-            ixform(vel, velw, modelView);
-
-            pos[0] = 0.0f;
-            pos[1] = 0.0f;
-            pos[2] = -2.5f;
-            pos[3] = 1.0;
-            ixformPoint(pos, posw, modelView);
-            posw[3] = 0.0f;            
-        }
-        break;
-
-    case 'w':
-        wireframe = !wireframe;
-        break;
+		break;     
     }
 
-    demoMode = false;
     idleCounter = 0;
     glutPostRedisplay();
 }
 
 void special(int k, int x, int y)
 {   
-    demoMode = false;
     idleCounter = 0;
 }
 
 void idle(void)
 {    
-    if (demoMode) {
-        camera_rot[1] += 0.1f;
-        if (demoCounter++ > 1000) {
-            ballr = 10 + (rand() % 10);            
-            demoCounter = 0;
-        }
-    }
-
     glutPostRedisplay();
 }
 
@@ -393,27 +341,10 @@ void mainMenu(int i)
     key((unsigned char) i, 0, 0);
 }
 
-void initMenus()
-{
-    glutCreateMenu(mainMenu);
-    glutAddMenuEntry("Reset block [1]", '1');
-    glutAddMenuEntry("Reset random [2]", '2');
-    glutAddMenuEntry("Add sphere [3]", '3');
-    glutAddMenuEntry("View mode [v]", 'v');
-    glutAddMenuEntry("Move cursor mode [m]", 'm');
-    glutAddMenuEntry("Toggle point rendering [p]", 'p');
-    glutAddMenuEntry("Toggle animation [ ]", ' ');
-    glutAddMenuEntry("Step animation [ret]", 13);
-    glutAddMenuEntry("Toggle sliders [h]", 'h');
-    glutAddMenuEntry("Quit (esc)", '\033');
-    glutAttachMenu(GLUT_RIGHT_BUTTON);
-}
-
 int main(int argc, char** argv) 
 {
     numParticles = NUM_PARTICLES;
     uint gridDim = GRID_SIZE;
-    numIterations = 0;
 
     gridSize.x = gridSize.y = gridSize.z = gridDim;
     
@@ -421,7 +352,6 @@ int main(int argc, char** argv)
     cudaGLInit(argc, argv);
 
     initParticleSystem(numParticles, gridSize, true);
-    initMenus();
      
     glutDisplayFunc(display);
     glutReshapeFunc(reshape);

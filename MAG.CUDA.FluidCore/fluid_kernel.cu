@@ -295,11 +295,11 @@ void integrate(float4* posArray,		 // input, output
     vel = nextVel;   	
     pos += vel * params.deltaTime;   
 
-	float xb =(25 * 2)/64.0f -1.0f;
-	if (pos.x > xb - params.particleRadius) { pos.x = xb - params.particleRadius; vel.x *= params.boundaryDamping; }
+	float bound =(25 * 2)/64.0f -1.0f;	
+	if (pos.x > 1.0f - params.particleRadius) { pos.x = 1.0f - params.particleRadius; vel.x *= params.boundaryDamping; }
     if (pos.x < -1.0f + params.particleRadius) { pos.x = -1.0f + params.particleRadius; vel.x *= params.boundaryDamping;}
     if (pos.y > 1.0f - params.particleRadius) { pos.y = 1.0f - params.particleRadius; vel.y *= params.boundaryDamping; }    
-    if (pos.z > 1.0f - params.particleRadius) { pos.z = 1.0f - params.particleRadius; vel.z *= params.boundaryDamping; }
+    if (pos.z > bound - params.particleRadius) { pos.z = bound - params.particleRadius; vel.z *= params.boundaryDamping; }
     if (pos.z < -1.0f + params.particleRadius) { pos.z = -1.0f + params.particleRadius; vel.z *= params.boundaryDamping;}
     if (pos.y < -1.0f + params.particleRadius) { pos.y = -1.0f + params.particleRadius; vel.y *= params.boundaryDamping;}		
     

@@ -256,7 +256,7 @@ void BeamSystem::initGrid(uint *size, float spacing, float jitter, uint numParti
 			for(uint x=0; x<size[0]; x++) {
 				uint i = (z*size[1]*size[0]) + (y*size[0]) + x;
 				if (i < numParticles) {
-					hPos[i*4] =  1 + (spacing * x) + params.particleRadius - 1.0f ;//+ (frand() * 2.0f - 1.0f) * jitter;
+					hPos[i*4] =  0.7 + (spacing * x) + params.particleRadius - 1.0f ;//+ (frand() * 2.0f - 1.0f) * jitter;
 					hPos[i*4+1] = - (spacing * y) - params.particleRadius ;//+ (frand() * 2.0f - 1.0f) * jitter;
 					hPos[i*4+2] =1 + (spacing * z) + params.particleRadius - 1.0f;// + (frand() * 2.0f - 1.0f) * jitter;					
 					hPos[i*4+3] = i;				

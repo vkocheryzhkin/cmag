@@ -110,7 +110,7 @@ extern "C"
 		uint numThreads, numBlocks;
 		computeGridSize(numParticles, 256, numBlocks, numThreads);
 
-		cutilSafeCall(cudaMemset(cellStart, 0xffffffff, numCells*sizeof(uint)));
+		cutilSafeCall(cudaMemset(cellStart, 0xffffffff, numCells*sizeof(uint)));		
 
 		#if USE_TEX
 			cutilSafeCall(cudaBindTexture(0, oldPosTex, oldPos, numParticles*sizeof(float4)));

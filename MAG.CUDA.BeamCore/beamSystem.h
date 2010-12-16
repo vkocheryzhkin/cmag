@@ -71,7 +71,7 @@ protected: // data
 	float* dvDisplacementGradient;
 	float* dwDisplacementGradient;
 	float* dAcceleration;		  
-	float* dMeasures;			  //(float4) [density, denominator, 0, normalized volume]
+	float* dMeasures;			  //(float4) [density, denominator for normalized density, 0, normalized volume]
 
 	uint*  dHash; 
 	uint*  dIndex;
