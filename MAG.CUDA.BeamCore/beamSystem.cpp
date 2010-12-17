@@ -42,15 +42,16 @@ BeamSystem::BeamSystem(uint numParticles, uint3 gridSize, bool IsGLEnabled) :
 	params.cellSize = make_float3(params.particleRadius * 2.0f, params.particleRadius * 2.0f, params.particleRadius * 2.0f);
 
 	params.particleMass = 0.01f;
-	params.smoothingRadius = 3.0f * params.particleRadius;	 	 
+	params.smoothingRadius = 2.1f * params.particleRadius;	 	 
 	params.gravity = make_float3(0.0f, -9.8f, 0.0f);    	 	
 
 	float h = params.smoothingRadius;
-	params.Poly6Kern = 315.0f / (64.0f * CUDART_PI_F * pow(h, 9.0f));
-	params.SpikyKern = -45.0f /(CUDART_PI_F * pow(h, 6.0f));
+	params.Poly6Kern = 315.0f / (64.0f * CUDART_PI_F * pow(h, 9.0f));	
+	params.c = CUDART_PI_F / ( 8 * pow(h, 4.0f) * (CUDART_PI_F / 3 - 8 / CUDART_PI_F + 16 / (pow(CUDART_PI_F,2))));
 	
-	params.Young = 200000.0f;	
-	params.Poisson = 0.45f;	
+	params.Young = 4500000.0f;	
+	params.Poisson = 0.49f;		
+	params.accelerationLimit = 100;
 	
 	params.deltaTime = 0.00005f;
     _initialize(numParticles);

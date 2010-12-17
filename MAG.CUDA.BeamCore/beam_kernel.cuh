@@ -29,12 +29,12 @@ struct SimParams
 	float3 cellSize;
 
 	//Kernels
-	float Poly6Kern;
-	float SpikyKern;
+	float Poly6Kern;	
+	float c;		//kernel from "A Unified Particle Model for Fluid-Solid Interactions" (Solenthaler et al.)
 	//Material
 	float Young;
 	float Poisson;
-	float restDensity;	
+	float accelerationLimit;
 };
 
 

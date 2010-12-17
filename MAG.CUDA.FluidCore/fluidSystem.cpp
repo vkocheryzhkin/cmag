@@ -43,8 +43,8 @@ FluidSystem::FluidSystem(uint numParticles, uint3 gridSize, bool bUseOpenGL) :
 	m_params.gasConstant =3.0f;
 	m_params.viscosity = 3.5f;
 	m_params.deltaTime = 0.005f;
-	m_params.smoothingRadius = 3.0f * m_params.particleRadius;
-	m_params.accelerationLimit = 200;//remove
+	m_params.smoothingRadius = 3.0f * m_params.particleRadius;	
+	m_params.accelerationLimit = 100;
     	
 	m_params.worldOrigin = make_float3(-1.0f, -1.0f, -1.0f);
     float cellSize = m_params.particleRadius * 2.0f;  

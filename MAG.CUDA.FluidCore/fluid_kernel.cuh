@@ -40,7 +40,7 @@ struct SimParams {
 	float deltaTime;
 	float smoothingRadius;
 
-	//todo: remove it
+	//todo: investigate and remove it
 	float accelerationLimit;
 };
 

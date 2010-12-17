@@ -15,6 +15,7 @@ texture<uint, 1, cudaReadModeElementType> cellEndTex;
 
 __constant__ SimParams params;
 
+//todo: take this math away
 struct Matrix
 {
   float a11,a12,a13;
@@ -362,18 +363,19 @@ __device__ Matrix sumDisplacementGradientPart(
 				float3 relPos = referencePos_i - referencePos_j;
 				float dist = length(relPos);				
 				if (dist < params.smoothingRadius) {				
-					float tempExpr =  params.smoothingRadius - dist;			
-					gradient.a11 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * tempExpr * tempExpr * (relPos.x / dist);
-					gradient.a12 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * tempExpr * tempExpr * (relPos.y / dist);
-					gradient.a13 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.SpikyKern * tempExpr * tempExpr * (relPos.z / dist);
+					float tempExpr = sinf((dist + params.smoothingRadius) * CUDART_PI_F / (2 * params.smoothingRadius));			
+					//todo: introduce vector operations
+					gradient.a11 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.c * tempExpr * (relPos.x / dist);
+					gradient.a12 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.c * tempExpr * (relPos.y / dist);
+					gradient.a13 += volume_j * (pos_j.x - pos_i.x - (referencePos_j.x - referencePos_i.x)) * params.c * tempExpr * (relPos.z / dist);
 					
-					gradient.a21 += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.SpikyKern * tempExpr * tempExpr * (relPos.x / dist);
-					gradient.a22 += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.SpikyKern * tempExpr * tempExpr * (relPos.y / dist);
-					gradient.a23 += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.SpikyKern * tempExpr * tempExpr * (relPos.z / dist);
+					gradient.a21 += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.c * tempExpr * (relPos.x / dist);
+					gradient.a22 += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.c * tempExpr * (relPos.y / dist);
+					gradient.a23 += volume_j * (pos_j.y - pos_i.y - (referencePos_j.y - referencePos_i.y)) * params.c * tempExpr * (relPos.z / dist);
 
-					gradient.a31 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.SpikyKern * tempExpr * tempExpr * (relPos.x / dist);
-					gradient.a32 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.SpikyKern * tempExpr * tempExpr * (relPos.y / dist);
-					gradient.a33 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.SpikyKern * tempExpr * tempExpr * (relPos.z / dist);																				
+					gradient.a31 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.c * tempExpr * (relPos.x / dist);
+					gradient.a32 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.c * tempExpr * (relPos.y / dist);
+					gradient.a33 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.c * tempExpr * (relPos.z / dist);																				
 				}                
             }
         }
@@ -446,12 +448,11 @@ __device__ float3 sumForcePart(
 	            float3 referencePos_i = make_float3(FETCH(oldReferencePos, j));
 				float4 measure = FETCH(oldMeasures, j);				
 				float volume_i = measure.w;
-				float tempExpr = 0.0f;
 				float3 relPos = referencePos_i - referencePos_j;
 
 				float dist = length(relPos);
 				if (dist < params.smoothingRadius) {					
-					tempExpr = params.smoothingRadius - dist;	
+					float tempExpr = sinf((dist + params.smoothingRadius) * CUDART_PI_F / (2 * params.smoothingRadius));	
 
 					Matrix Stress = make_Matrix();
 					float3 d = make_float3(0.0f);			
@@ -494,9 +495,9 @@ __device__ float3 sumForcePart(
 					Stress.a13 = Stress.a31 = a12 * E.a13;
 					Stress.a23 = Stress.a32 = a12 * E.a23;
 
-					d.x = volume_j * params.SpikyKern * (relPos.x / dist) * tempExpr * tempExpr;
-					d.y = volume_j * params.SpikyKern * (relPos.y / dist) * tempExpr * tempExpr;
-					d.z = volume_j * params.SpikyKern * (relPos.z / dist) * tempExpr * tempExpr;																		
+					d.x = volume_j * params.c * (relPos.x / dist) * tempExpr;
+					d.y = volume_j * params.c * (relPos.y / dist) * tempExpr;
+					d.z = volume_j * params.c * (relPos.z / dist) * tempExpr;																		
 
 					tmpForce += -volume_i * (((I + Transpose(dU)) * Stress) * d);					
 				}                
@@ -549,6 +550,10 @@ __global__ void calcAccelerationD(
     }    	
 	uint originalIndex = Index[index];
 	float3 acc = force / params.particleMass;
+	float speed = dot(acc,acc);
+	if(speed > params.accelerationLimit * params.accelerationLimit)
+		acc *= params.accelerationLimit / sqrt(speed);
+
 	acceleration[originalIndex] =  make_float4(acc, 0.0f);
 }
 
