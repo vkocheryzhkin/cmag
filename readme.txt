@@ -1,3 +1,5 @@
+SPH implementation of the following dynamic problems:
+
 1. Fluid (incompressible Navier–Stokes equations modeled)
 	+ normalized density
 	- acceleration limit	

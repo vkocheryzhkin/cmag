@@ -25,7 +25,7 @@ const uint width = 1024, height = 768;
 
 int ox, oy;
 int buttonState = 0;
-float camera_trans[] = {0.0, 0.0, -1.6};
+float camera_trans[] = {0.0, 0.0, -2.2};
 float camera_rot[]   = {0, 0, 0};
 float camera_trans_lag[] = {0, 0, -1};
 float camera_rot_lag[] = {0, 0, 0};
