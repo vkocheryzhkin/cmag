@@ -51,7 +51,7 @@ BeamSystem::BeamSystem(uint numParticles, uint3 gridSize, bool IsGLEnabled) :
 	
 	params.Young = 4500000.0f;	
 	params.Poisson = 0.49f;		
-	params.accelerationLimit = 100;
+	//params.accelerationLimit = 100;
 	
 	params.deltaTime = 0.00005f;
     _initialize(numParticles);

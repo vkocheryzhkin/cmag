@@ -8,4 +8,4 @@ SPH implementation of the following dynamic problems:
 	- not stable(wait ~30 sec to see) 	
 	
 3. Fluid + Beam
-	prototype is under construction. check out vs2010 solution
+	prototype is under construction. 

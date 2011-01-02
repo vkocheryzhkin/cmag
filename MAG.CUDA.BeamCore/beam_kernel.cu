@@ -550,9 +550,9 @@ __global__ void calcAccelerationD(
     }    	
 	uint originalIndex = Index[index];
 	float3 acc = force / params.particleMass;
-	float speed = dot(acc,acc);
+	/*float speed = dot(acc,acc);
 	if(speed > params.accelerationLimit * params.accelerationLimit)
-		acc *= params.accelerationLimit / sqrt(speed);
+		acc *= params.accelerationLimit / sqrt(speed);*/
 
 	acceleration[originalIndex] =  make_float4(acc, 0.0f);
 }
