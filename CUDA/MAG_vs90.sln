@@ -9,7 +9,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MAG.Beam", "MAG.Beam\MAG.Be
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MAG.BeamCore", "MAG.BeamCore\MAG.BeamCore_vs90.vcproj", "{3170EE41-EE0A-4D07-A779-7EB5C9A5D82A}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Test", "MAG.Test\MAG.Test_vs90.vcproj", "{58B9B588-B3EF-446E-A3F4-2AAF4A0D13AC}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MAG.Test", "MAG.Test\MAG.Test_vs90.vcproj", "{58B9B588-B3EF-446E-A3F4-2AAF4A0D13AC}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MAG.FluidCore", "MAG.FluidCore\MAG.FluidCore_vs90.vcproj", "{F6A3E97B-56F7-4A9D-9887-D70B5403D80D}"
 EndProject
@@ -25,6 +25,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		readme.txt = readme.txt
 	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MAG.FluidBeam", "MAG.FluidBeam\MAG.FluidBeam.vcproj", "{B6AEFAC6-A6B0-4435-BA5A-CBB81D9D2F10}"
+	ProjectSection(ProjectDependencies) = postProject
+		{CD4AD911-D384-4528-96B8-4454AC35141C} = {CD4AD911-D384-4528-96B8-4454AC35141C}
+		{F88FC515-0509-4058-8D54-5B9C18F13C65} = {F88FC515-0509-4058-8D54-5B9C18F13C65}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MAG.FluidBeamCore", "MAG.FluidBeamCore\MAG.FluidBeamCore.vcproj", "{F88FC515-0509-4058-8D54-5B9C18F13C65}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -73,6 +81,18 @@ Global
 		{CD4AD911-D384-4528-96B8-4454AC35141C}.Release|Win32.ActiveCfg = Release|Win32
 		{CD4AD911-D384-4528-96B8-4454AC35141C}.Release|Win32.Build.0 = Release|Win32
 		{CD4AD911-D384-4528-96B8-4454AC35141C}.Release|x64.ActiveCfg = Release|Win32
+		{B6AEFAC6-A6B0-4435-BA5A-CBB81D9D2F10}.Debug|Win32.ActiveCfg = Debug|Win32
+		{B6AEFAC6-A6B0-4435-BA5A-CBB81D9D2F10}.Debug|Win32.Build.0 = Debug|Win32
+		{B6AEFAC6-A6B0-4435-BA5A-CBB81D9D2F10}.Debug|x64.ActiveCfg = Debug|Win32
+		{B6AEFAC6-A6B0-4435-BA5A-CBB81D9D2F10}.Release|Win32.ActiveCfg = Release|Win32
+		{B6AEFAC6-A6B0-4435-BA5A-CBB81D9D2F10}.Release|Win32.Build.0 = Release|Win32
+		{B6AEFAC6-A6B0-4435-BA5A-CBB81D9D2F10}.Release|x64.ActiveCfg = Release|Win32
+		{F88FC515-0509-4058-8D54-5B9C18F13C65}.Debug|Win32.ActiveCfg = Debug|Win32
+		{F88FC515-0509-4058-8D54-5B9C18F13C65}.Debug|Win32.Build.0 = Debug|Win32
+		{F88FC515-0509-4058-8D54-5B9C18F13C65}.Debug|x64.ActiveCfg = Debug|Win32
+		{F88FC515-0509-4058-8D54-5B9C18F13C65}.Release|Win32.ActiveCfg = Release|Win32
+		{F88FC515-0509-4058-8D54-5B9C18F13C65}.Release|Win32.Build.0 = Release|Win32
+		{F88FC515-0509-4058-8D54-5B9C18F13C65}.Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
