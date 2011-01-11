@@ -10,6 +10,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MAG.BeamCore", "MAG.BeamCore\MAG.BeamCore_vs90.vcproj", "{3170EE41-EE0A-4D07-A779-7EB5C9A5D82A}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MAG.Test", "MAG.Test\MAG.Test_vs90.vcproj", "{58B9B588-B3EF-446E-A3F4-2AAF4A0D13AC}"
+	ProjectSection(ProjectDependencies) = postProject
+		{3170EE41-EE0A-4D07-A779-7EB5C9A5D82A} = {3170EE41-EE0A-4D07-A779-7EB5C9A5D82A}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MAG.FluidCore", "MAG.FluidCore\MAG.FluidCore_vs90.vcproj", "{F6A3E97B-56F7-4A9D-9887-D70B5403D80D}"
 EndProject

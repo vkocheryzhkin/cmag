@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="windows-1251"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9.00"
+	Version="9,00"
 	Name="MAG.Test"
 	ProjectGUID="{58B9B588-B3EF-446E-A3F4-2AAF4A0D13AC}"
 	RootNamespace="BeamTest"
@@ -43,12 +43,12 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="$(BOOST_ROOT); ..\BeamCore;$(CUDA_PATH)/include;$(NVSDKCOMPUTE_ROOT)\C\common\inc"
+				AdditionalIncludeDirectories="$(BOOST_ROOT); ..\MAG.BeamCore;$(CUDA_PATH)/include;$(NVSDKCOMPUTE_ROOT)\C\common\inc"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
 				WarningLevel="3"
-				DebugInformationFormat="4"
+				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
