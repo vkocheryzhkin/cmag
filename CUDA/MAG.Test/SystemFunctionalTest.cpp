@@ -28,7 +28,7 @@ BOOST_AUTO_TEST_CASE(Check_system)
 	}
 		copyArrayFromDevice(hPos,psystem->getCudaSortedPosition(),0, sizeof(float)*4*psystem->getNumParticles());
 		//copyArrayFromDevice(hrPos,psystem->getCudaSortedReferencePosition(),0, sizeof(float)*4*psystem->getNumParticles());
-		copyArrayFromDevice(htemp,psystem->getCudaUDisplacementGradient(),0, sizeof(float)*4*psystem->getNumParticles());	
+		copyArrayFromDevice(htemp,psystem->getCudaAcceleration(),0, sizeof(float)*4*psystem->getNumParticles());	
 		//copyArrayFromDevice(hacc,psystem->getCudaAcceleration(),0, sizeof(float)*4*psystem->getNumParticles());			
 		copyArrayFromDevice(hHash,psystem->getCudaHash(),0, sizeof(uint)*psystem->getNumParticles());
 		copyArrayFromDevice(hIndex,psystem->getCudaIndex(),0, sizeof(uint)*psystem->getNumParticles());			

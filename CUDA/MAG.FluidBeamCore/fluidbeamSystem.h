@@ -39,6 +39,7 @@ public:
 	void * getCudaUDisplacementGradient()        const {return (void *)duDisplacementGradient;}
 	void * getCudaVDisplacementGradient()        const {return (void *)dvDisplacementGradient;}
 	void * getCudaWDisplacementGradient()        const {return (void *)dwDisplacementGradient;}
+	void * getCudaAcceleration()        const {return (void *)dAcceleration;}	
 
     void changeGravity();
 

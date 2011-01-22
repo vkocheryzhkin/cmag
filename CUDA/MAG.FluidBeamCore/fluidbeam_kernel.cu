@@ -136,9 +136,9 @@ __device__ float sumDensity(
 				float3 velocityJ = make_float3(FETCH(oldVel, j));
 				float3 relPosition = position - positionJ; 				
 				float distance = length(relPosition);
-				if (distance < params.smoothingRadius) {
+				if ((distance < params.smoothingRadius) && (distance != 0.0f)) {
 					float temp = params.smoothingRadius - distance;						
-					sum += temp * temp * dot(velocity - velocityJ, normalize(relPosition));
+					sum +=temp * temp * dot(velocity - velocityJ, normalize(relPosition));
 				}                
             }
         }
@@ -173,9 +173,10 @@ __global__ void CalculateDensityAndPressureD(
             }
         }
     }		
-	float deviation = sum * params.particleMass * params.SpikyKern;
-    measures[index].x = params.restDensity + params.deltaTime * deviation;	
-	measures[index].y = 0;//(dens - params.restDensity) * params.gasConstant; 	
+	float density = params.restDensity + params.deltaTime * sum * params.particleMass * params.SpikyKern;
+    measures[index].x = density;	
+	measures[index].y = (density - params.restDensity) * params.gasConstant; 	
+	//measures[index].y = (density - params.restDensity) * 1000000; 	
 }
 
 __device__ Matrix sumDisplacementGradient(
@@ -264,64 +265,144 @@ __global__ void calcDisplacementGradientD(
 }
 
 
-__device__
-float3 sumNavierStokesForces(
-				   int3    gridPos,
-                   uint    index,
-                   float3  pos,
+//__device__
+//float3 sumNavierStokesForces(
+//				   int3    gridPos,
+//                   uint    index,
+//                   float3  pos,
+//                   float4* oldPos, 
+//				   float3  vel,
+//				   float4* oldVel,
+//				   float pressure,				   
+//				   float4* oldMeasures,
+//                   uint*   cellStart,
+//                   uint*   cellEnd)
+//{
+//    uint gridHash = calcGridHash(gridPos);
+//
+//    uint startIndex = FETCH(cellStart, gridHash);
+//    
+//	float3 tmpForce = make_float3(0.0f);
+//	float texp = 0.0f;
+//	float pexp = 0.0f;
+//    if (startIndex != 0xffffffff) {               
+//        uint endIndex = FETCH(cellEnd, gridHash);
+//        for(uint j=startIndex; j<endIndex; j++) {
+//            if (j != index) {             
+//	            float3 pos2 = make_float3(FETCH(oldPos, j));
+//				float3 vel2 = make_float3(FETCH(oldVel, j));				
+//				float4 measure = FETCH(oldMeasures, j);
+//				float density2 = measure.x;
+//				float pressure2 = measure.y;				
+//				float tempExpr = 0.0f;
+//
+//				float3 relPos = pos - pos2;
+//				float dist = length(relPos);
+//
+//				if (dist < params.smoothingRadius) {
+//					tempExpr =  (params.smoothingRadius - dist);					
+//					pexp = pressure + pressure2;
+//					texp = tempExpr / density2;					
+//					tmpForce.x += texp * (params.SpikyKern * (relPos.x / dist) * tempExpr * pexp + params.LapKern * (vel2.x - vel.x));
+//					tmpForce.y += texp * (params.SpikyKern * (relPos.y / dist) * tempExpr * pexp + params.LapKern * (vel2.y - vel.y));
+//					tmpForce.z += texp * (params.SpikyKern * (relPos.z / dist) * tempExpr * pexp + params.LapKern * (vel2.z - vel.z));					
+//				}                
+//            }
+//        }
+//    }
+//	return tmpForce;				
+//}
+
+__device__ float3 ElasticForce(
+	float4  referencePos_i,
+	float4  referencePos_j,
+	uint j,
+	float4*  olduDisplacementGradient,
+    float4*  oldvDisplacementGradient,
+    float4*  oldwDisplacementGradient)
+{
+	float volume_i = params.particleMass / params.restDensity;
+	float volume_j = volume_i;
+	float3 relPos = make_float3(referencePos_i - referencePos_j);
+	float distance = length(relPos);
+	if (distance < params.smoothingRadius) {					
+		float temp = params.smoothingRadius - distance;
+		Matrix Stress = make_Matrix();
+		float3 d = make_float3(0.0f);			
+		Matrix I = make_Matrix();
+		I.a11 = 1; I.a22 = 1; I.a33 = 1;		
+		Matrix dU = make_Matrix();
+		Matrix J = make_Matrix();	
+		Matrix E = make_Matrix();	
+		float3 du_i = make_float3(FETCH(olduDisplacementGradient, j));
+		float3 dv_i = make_float3(FETCH(oldvDisplacementGradient, j));
+		float3 dw_i = make_float3(FETCH(oldwDisplacementGradient, j));
+		dU.a11 = du_i.x; dU.a12 = du_i.y; dU.a13 = du_i.z;
+		dU.a21 = dv_i.x; dU.a22 = dv_i.y; dU.a23 = dv_i.z;
+		dU.a31 = dw_i.x; dU.a32 = dw_i.y; dU.a33 = dw_i.z;
+		J = I + Transpose(dU);											
+		//Green-Saint-Venant strain tensor	
+		E = 0.5 * ((Transpose(J)*J) - I);	
+
+		float a11 = params.Young / ((1 + params.Poisson) * (1 - 2 * params.Poisson));
+		float a12 = params.Young / (1 + params.Poisson);
+
+		//Stress tensor					
+		Stress.a11 = a11 * ((1 - params.Poisson) * E.a11 + params.Poisson * (E.a22 + E.a33));
+		Stress.a22 = a11 * ((1 - params.Poisson) * E.a22 + params.Poisson * (E.a11 + E.a33));
+		Stress.a33 = a11 * ((1 - params.Poisson) * E.a33 + params.Poisson * (E.a11 + E.a22));
+		
+		Stress.a12 = Stress.a21 = a12 * E.a12;
+		Stress.a13 = Stress.a31 = a12 * E.a13;
+		Stress.a23 = Stress.a32 = a12 * E.a23;							
+		d = volume_j * params.SpikyKern * temp * temp * normalize(relPos);
+		return  -volume_i * (((I + Transpose(dU)) * Stress) * d);
+	}
+	return make_float3(0.0f);
+}
+
+__device__ float3 NavierStokesForces(
+	uint j,
+    float4  pos,
+    float4 pos_j, 
+	float3  vel,
+	float4* oldVel,
+	float pressure,				   
+	float4* oldMeasures)    
+{           
+    float3 pos2 = make_float3(pos_j);
+	float3 vel2 = make_float3(FETCH(oldVel, j));				
+	float4 measure = FETCH(oldMeasures, j);
+	float density2 = measure.x;
+	float pressure2 = measure.y;					
+
+	float3 relPos = make_float3(pos) - pos2;
+	float dist = length(relPos);
+
+	if (dist < params.smoothingRadius) {
+		float temp =  (params.smoothingRadius - dist);							
+		return -0.5f * (pressure + pressure2) / density2 * normalize(relPos) * temp * temp +
+			params.LapKern * (vel2 - vel) * temp / density2;
+	}                          
+	return make_float3(0.0f);	
+}
+
+__device__ float3 sumForce(
+				   int3 gridPos,
+                   uint index,
+				   float4  pos,
                    float4* oldPos, 
 				   float3  vel,
 				   float4* oldVel,
 				   float pressure,				   
 				   float4* oldMeasures,
-                   uint*   cellStart,
-                   uint*   cellEnd)
-{
-    uint gridHash = calcGridHash(gridPos);
-
-    uint startIndex = FETCH(cellStart, gridHash);
-    
-	float3 tmpForce = make_float3(0.0f);
-	float texp = 0.0f;
-	float pexp = 0.0f;
-    if (startIndex != 0xffffffff) {               
-        uint endIndex = FETCH(cellEnd, gridHash);
-        for(uint j=startIndex; j<endIndex; j++) {
-            if (j != index) {             
-	            float3 pos2 = make_float3(FETCH(oldPos, j));
-				float3 vel2 = make_float3(FETCH(oldVel, j));				
-				float4 measure = FETCH(oldMeasures, j);
-				float density2 = measure.x;
-				float pressure2 = measure.y;				
-				float tempExpr = 0.0f;
-
-				float3 relPos = pos - pos2;
-				float dist = length(relPos);
-
-				if (dist < params.smoothingRadius) {
-					tempExpr =  (params.smoothingRadius - dist);					
-					pexp = pressure + pressure2;
-					texp = tempExpr / density2;					
-					tmpForce.x += texp * (params.SpikyKern * (relPos.x / dist) * tempExpr * pexp + params.LapKern * (vel2.x - vel.x));
-					tmpForce.y += texp * (params.SpikyKern * (relPos.y / dist) * tempExpr * pexp + params.LapKern * (vel2.y - vel.y));
-					tmpForce.z += texp * (params.SpikyKern * (relPos.z / dist) * tempExpr * pexp + params.LapKern * (vel2.z - vel.z));					
-				}                
-            }
-        }
-    }
-	return tmpForce;				
-}
-
-__device__ float3 sumElasticForce(
-				   int3    gridPos,
-                   uint    index,
-                   float3  referencePos_j,
+                   float4  referencePos_j,
                    float4* oldReferencePos, 
-				   float4*  olduDisplacementGradient,
-				   float4*  oldvDisplacementGradient,
-				   float4*  oldwDisplacementGradient,                   				   
-                   uint*   cellStart,
-                   uint*   cellEnd)
+				   float4* olduDisplacementGradient,
+				   float4* oldvDisplacementGradient,
+				   float4* oldwDisplacementGradient,                   				   
+                   uint* cellStart,
+                   uint* cellEnd)
 {
 	uint gridHash = calcGridHash(gridPos);
     uint startIndex = FETCH(cellStart, gridHash);    
@@ -329,68 +410,36 @@ __device__ float3 sumElasticForce(
 			
     if (startIndex != 0xffffffff) {               
         uint endIndex = FETCH(cellEnd, gridHash);
-        for(uint j=startIndex; j<endIndex; j++) {
-            if (j != index) {             
-	            float3 referencePos_i = make_float3(FETCH(oldReferencePos, j));							
-				float volume_i = params.particleMass / params.restDensity;
-				float volume_j = volume_i;
-				float3 relPos = referencePos_i - referencePos_j;
-
-				float distance = length(relPos);
-				if (distance < params.smoothingRadius) {					
-					float temp = params.smoothingRadius - distance;
-
-					Matrix Stress = make_Matrix();
-					float3 d = make_float3(0.0f);			
-					Matrix I = make_Matrix();
-					I.a11 = 1; I.a22 = 1; I.a33 = 1;		
-					Matrix dU = make_Matrix();
-					Matrix J = make_Matrix();	
-					Matrix E = make_Matrix();	
-
-					float3 du_i = make_float3(FETCH(olduDisplacementGradient, j));
-					float3 dv_i = make_float3(FETCH(oldvDisplacementGradient, j));
-					float3 dw_i = make_float3(FETCH(oldwDisplacementGradient, j));
-
-					dU.a11 = du_i.x;
-					dU.a12 = du_i.y;
-					dU.a13 = du_i.z;
-
-					dU.a21 = dv_i.x;
-					dU.a22 = dv_i.y;
-					dU.a23 = dv_i.z;
-
-					dU.a31 = dw_i.x;
-					dU.a32 = dw_i.y;
-					dU.a33 = dw_i.z;
-
-					J = I + Transpose(dU);				
-					
-					//Green-Saint-Venant strain tensor	
-					E = 0.5 * ((Transpose(J)*J) - I);	
-
-					float a11 = params.Young / ((1 + params.Poisson) * (1 - 2 * params.Poisson));
-					float a12 = params.Young / (1 + params.Poisson);
-
-					//Stress tensor					
-					Stress.a11 = a11 * ((1 - params.Poisson) * E.a11 + params.Poisson * (E.a22 + E.a33));
-					Stress.a22 = a11 * ((1 - params.Poisson) * E.a22 + params.Poisson * (E.a11 + E.a33));
-					Stress.a33 = a11 * ((1 - params.Poisson) * E.a33 + params.Poisson * (E.a11 + E.a22));
-					
-					Stress.a12 = Stress.a21 = a12 * E.a12;
-					Stress.a13 = Stress.a31 = a12 * E.a13;
-					Stress.a23 = Stress.a32 = a12 * E.a23;
-
-					/*d.x = volume_j * params.c * (relPos.x / dist) * tempExpr;
-					d.y = volume_j * params.c * (relPos.y / dist) * tempExpr;
-					d.z = volume_j * params.c * (relPos.z / dist) * tempExpr;	*/
-					d = volume_j * params.SpikyKern * temp * temp * normalize(relPos);
-
-					tmpForce += -volume_i * (((I + Transpose(dU)) * Stress) * d);					
+        for(uint j = startIndex; j < endIndex; j++) {
+            if (j != index) {         
+					float4 referencePos_i = FETCH(oldReferencePos, j);
+					float4 pos_j = FETCH(oldPos, j);				
+					//float4 measure = FETCH(oldMeasures,index);
+					//float density = measure.x;
+					/*if((referencePos_i.w == 1.0f) && (referencePos_j.w == 1.0f)){
+						tmpForce +=	ElasticForce(
+							referencePos_i,
+							referencePos_j,
+							j,
+							olduDisplacementGradient,
+							oldvDisplacementGradient,
+							oldwDisplacementGradient);						
+					}*/
+					if((pos.w == -1.0f) && (pos_j.w == -1.0f)){
+					/*	tmpForce += params.particleMass / density * NavierStokesForces(
+							j,
+							pos,
+							pos_j,
+							vel,
+							oldVel,
+							pressure,
+							oldMeasures
+							);		*/										
+							tmpForce.x += 0.1f;
+					}						
 				}                
             }
-        }
-    }
+        }    
 	return tmpForce;
 }
 
@@ -410,76 +459,48 @@ void calcAccelerationD(
 			uint* cellEnd,
 			uint numParticles)			
 {
-	/*uint index = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
-    if (index >= numParticles) return;    
-
-	float3 pos = make_float3(FETCH(oldPos, index));
-	float3 vel = make_float3(FETCH(oldVel, index));
-	float4 measure = FETCH(oldMeasures,index);
-	float density = measure.x;
-	float pressure = measure.y;
-
-    int3 gridPos = calcGridPos(pos);
-
-    float3 nvForce = make_float3(0.0f);
-	
-    for(int z = -params.cellcount; z <= params.cellcount; z++) {
-        for(int y = -params.cellcount; y <= params.cellcount; y++) {
-            for(int x= -params.cellcount; x <= params.cellcount; x++) {
-                int3 neighbourPos = gridPos + make_int3(x, y, z);
-                nvForce += sumNavierStokesForces(
-					neighbourPos, 
-					index, 
-					pos, 
-					oldPos,
-					vel,
-					oldVel,
-					pressure,					
-					oldMeasures,
-					cellStart, 
-					cellEnd);
-            }
-        }
-    }
-	uint originalIndex = gridParticleIndex[index];					
-
-	float3 acc = params.particleMass * nvForce / density;
-	float speed = dot(acc,acc);
-	if(speed > params.accelerationLimit * params.accelerationLimit)
-		acc *= params.accelerationLimit / sqrt(speed);
-
-	acceleration[originalIndex] =  make_float4(acc, 0.0f);*/
-
 	uint index = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
     if (index >= numParticles) return;    
 
-	float3 pos = make_float3(FETCH(oldPos, index));
-	float3 referencePos_j = make_float3(FETCH(oldReferencePos, index));	
-	float volume_j = FETCH(oldMeasures, index).w;
+	float4 pos = FETCH(oldPos, index);
+	float3 vel = make_float3(FETCH(oldVel, index));
+	float4 referencePos_j = FETCH(oldReferencePos, index);	
+	float4 measure = FETCH(oldMeasures,index);
+	float density = measure.x;
+	float pressure = measure.y;	
 
-    int3 gridPos = calcGridPos(referencePos_j);
+    int3 gridPos = calcGridPos(make_float3(referencePos_j));
 	float3 force = make_float3(0.0f);
 	int cellcount = 1;
     for(int z=-cellcount; z<=cellcount; z++) {
         for(int y=-cellcount; y<=cellcount; y++) {
             for(int x=-cellcount; x<=cellcount; x++) {
-                int3 neighbourPos = gridPos + make_int3(x, y, z);				
-                force += sumElasticForce(
+                int3 neighbourPos = gridPos + make_int3(x, y, z);				             
+				force +=sumForce(
 					neighbourPos,
 					index, 
+					pos,
+					oldPos,
+					vel,
+					oldVel,
+					pressure,					
+					oldMeasures,
 					referencePos_j,
 					oldReferencePos,
 					olduDisplacementGradient,
 					oldvDisplacementGradient,
 					oldwDisplacementGradient,					
 					cellStart,
-					cellEnd);
+					cellEnd);				
             }
         }
     }    	
 	uint originalIndex = gridParticleIndex[index];
-	float3 acc = force / params.particleMass;	
+	float3 acc = force;			
 	acceleration[originalIndex] =  make_float4(acc, 0.0f);
+	/*uint originalIndex = gridParticleIndex[index];
+	float3 acc = force / params.particleMass;		
+	acceleration[originalIndex] =  make_float4(acc, 0.0f);*/
 }
 
 __global__
@@ -502,7 +523,8 @@ void integrate(float4* posArray,		 // input, output
 	float3 acc = make_float3(accData.x, accData.y, accData.z);
 
 	//float3 nextVel = vel + (params.gravity + acc) * params.deltaTime;
-	float3 nextVel = vel + (params.gravity + acc) * params.deltaTime * velData.w;
+	//float3 nextVel = vel + (params.gravity + acc) * params.deltaTime * velData.w;
+	float3 nextVel = vel + acc * params.deltaTime * velData.w;
 
 	float3 velLeapFrog = vel + nextVel;
 	velLeapFrog *= 0.5;
@@ -510,13 +532,13 @@ void integrate(float4* posArray,		 // input, output
     vel = nextVel;   	
     pos += vel * params.deltaTime;   
 
-	/*float bound =(25 * 2)/64.0f -1.0f;	
+	float bound =(25 * 2)/64.0f -1.0f;	
 	if (pos.x > 1.0f - params.particleRadius) { pos.x = 1.0f - params.particleRadius; vel.x *= params.boundaryDamping; }
     if (pos.x < -1.0f + params.particleRadius) { pos.x = -1.0f + params.particleRadius; vel.x *= params.boundaryDamping;}
     if (pos.y > 1.0f - params.particleRadius) { pos.y = 1.0f - params.particleRadius; vel.y *= params.boundaryDamping; }    
     if (pos.z > bound - params.particleRadius) { pos.z = bound - params.particleRadius; vel.z *= params.boundaryDamping; }
     if (pos.z < -1.0f + params.particleRadius) { pos.z = -1.0f + params.particleRadius; vel.z *= params.boundaryDamping;}
-    if (pos.y < -1.0f + params.particleRadius) { pos.y = -1.0f + params.particleRadius; vel.y *= params.boundaryDamping;}		*/
+    if (pos.y < -1.0f + params.particleRadius) { pos.y = -1.0f + params.particleRadius; vel.y *= params.boundaryDamping;}		
 	
 	//float ybound = -2 * params.particleRadius;// -1.0f;	
 	//if (pos.y > ybound) return;	 

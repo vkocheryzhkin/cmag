@@ -67,8 +67,8 @@ FluidBeamSystem::FluidBeamSystem(uint numFluidParticles,uint numBeamParticles, u
 
 	m_params.Young = 4500000.0f;	
 	m_params.Poisson = 0.49f;	
-	//m_params.deltaTime = 0.005f;
-	m_params.deltaTime = 0.00005f;
+	m_params.deltaTime = 0.005f;
+	//m_params.deltaTime = 0.00005f;
 
     _initialize(numParticles);
 }
@@ -415,9 +415,9 @@ void FluidBeamSystem::reset()
 	initFluidGrid( spacing, jitter);
 	initBeamGrid(spacing, jitter);
 
-    setArray(POSITION, hPos, 0, numParticles);
+	setArray(POSITION, hPos, 0, numParticles);
 	setArray(REFERENCE_POSITION, hPos, 0, numParticles);   		
-    setArray(VELOCITY, hVel, 0, numParticles);	
+	setArray(VELOCITY, hVel, 0, numParticles);	
 	setArray(MEASURES, hMeasures, 0, numParticles);
 	setArray(ACCELERATION, hAcceleration, 0, numParticles);
 	setArray(VELOCITYLEAPFROG, hVelLeapFrog, 0, numParticles);
@@ -437,12 +437,12 @@ void FluidBeamSystem::initFluidGrid(float spacing, float jitter)
 					hPos[i*4] = (spacing * x) + m_params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;
 					hPos[i*4+1] = (spacing * y) + m_params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;
 					hPos[i*4+2] = (spacing * z) + m_params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;					
-					hPos[i*4+3] = 1.0f;
+					hPos[i*4+3] = -1.0f;
 
 					hVel[i*4] = 0.0f;
 					hVel[i*4+1] = 0.0f;
 					hVel[i*4+2] = 0.0f;
-					hVel[i*4+3] = 0.0f;
+					hVel[i*4+3] = 1.0f;
 				}
 			}
 		}
@@ -475,23 +475,26 @@ void FluidBeamSystem::initFluidGrid(float spacing, float jitter)
 
 void FluidBeamSystem::initBeamGrid(float spacing, float jitter)
 {	
-	int xsize = 20;
+	/*int xsize = 20;
 	int ysize = 1;
-	int zsize = 5;
+	int zsize = 5;*/
+	int xsize = 0;
+	int ysize = 0;
+	int zsize = 0;
 	for(uint z=0; z < zsize; z++) {
 		for(uint y=0; y < ysize; y++) {	
 			for(uint x=0; x < xsize; x++) {
-				uint i = (z* ysize * xsize) + (y * xsize) + x;
+				uint i = numFluidParticles + (z* ysize * xsize) + (y * xsize) + x;
 				if (i < numParticles) {
 					hPos[i*4] =  0.7 + (spacing * x) + m_params.particleRadius - 1.0f ;//+ (frand() * 2.0f - 1.0f) * jitter;
 					hPos[i*4+1] = - (spacing * y) - m_params.particleRadius ;//+ (frand() * 2.0f - 1.0f) * jitter;
-					hPos[i*4+2] =1 + (spacing * z) + m_params.particleRadius - 1.0f;// + (frand() * 2.0f - 1.0f) * jitter;					
-					hPos[i*4+3] = i;				
+					hPos[i*4+2] = 1 + (spacing * z) + m_params.particleRadius - 1.0f;// + (frand() * 2.0f - 1.0f) * jitter;					
+					hPos[i*4+3] = 1.0f;				
 
 					hVel[i*4+0] = 0;	
 					hVel[i*4+1] = 0;					
 					hVel[i*4+2] = 0;															
-					hVel[i*4+3] = (x == 0 ) ? 0 : 1;
+					hVel[i*4+3] = (x == 0) ? 0 : 1;
 				}
 			}
 		}

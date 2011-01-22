@@ -19,8 +19,8 @@
 #define THRESHOLD         0.30f
 
 #define GRID_SIZE       64
-#define NUM_FLUID_PARTICLES 0//25 * 25 * 25
-#define NUM_BEAM_PARTICLES 1 * 5 * 20//25 * 32
+#define NUM_FLUID_PARTICLES 25 * 25 * 25
+#define NUM_BEAM_PARTICLES 0//1 * 5 * 20//25 * 32
 
 const uint width = 1024, height = 768;
 
