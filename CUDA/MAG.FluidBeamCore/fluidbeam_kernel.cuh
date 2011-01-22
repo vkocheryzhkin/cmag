@@ -38,10 +38,15 @@ struct SimParams {
 	float gasConstant;
 	float viscosity;
 	float deltaTime;
-	float smoothingRadius;
+	float smoothingRadius;	
 
 	//todo: investigate and remove it
 	float accelerationLimit;
+
+	int cellcount;
+
+	float Young;
+	float Poisson;
 };
 
 #endif

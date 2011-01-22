@@ -240,6 +240,10 @@
 			RelativePath=".\fluidbeamSystem.h"
 			>
 		</File>
+		<File
+			RelativePath=".\mag_math.h"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>

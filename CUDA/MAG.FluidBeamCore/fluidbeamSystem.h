@@ -14,6 +14,7 @@ public:
     enum ParticleArray
     {
         POSITION,
+		REFERENCE_POSITION,
         VELOCITY,		
 		MEASURES,
 		ACCELERATION,
@@ -26,16 +27,18 @@ public:
     float* getArray(ParticleArray array);
     void   setArray(ParticleArray array, const float* data, int start, int count);
 
-    int    getNumParticles() const { return m_numParticles; }
+    int    getNumParticles() const { return numParticles; }
 
     unsigned int getCurrentReadBuffer() const { return m_posVbo; }
     unsigned int getColorBuffer()       const { return m_colorVBO; }
 
-    void * getCudaPosVBO()              const { return (void *)m_cudaPosVBO; }
-	void * getCudaVelVBO()              const { return (void *)m_dVel; }
-    void * getCudaColorVBO()            const { return (void *)m_cudaColorVBO; }
-	void * getCudaHash()				const {return (void *)m_dGridParticleHash;}
-	void * getCudaIndex()				const {return (void *)m_dGridParticleIndex;}	
+    void * getCudaSortedPosition()      const { return (void *)dSortedPos; }
+	void * getCudaMeasures()            const { return (void *)dMeasures; }    
+	void * getCudaHash()				const {return (void *)dHash;}
+	void * getCudaIndex()				const {return (void *)dIndex;}	
+	void * getCudaUDisplacementGradient()        const {return (void *)duDisplacementGradient;}
+	void * getCudaVDisplacementGradient()        const {return (void *)dvDisplacementGradient;}
+	void * getCudaWDisplacementGradient()        const {return (void *)dwDisplacementGradient;}
 
     void changeGravity();
 
@@ -55,13 +58,13 @@ protected: // methods
 
 protected: // data
     bool m_bInitialized, m_bUseOpenGL;
-    uint m_numParticles;
+    uint numParticles;
 	uint numFluidParticles;
 	uint numBeamParticles;
 
     // CPU data
-    float* m_hPos;              // particle positions
-    float* m_hVel;              // particle velocities
+    float* hPos;              // particle positions
+    float* hVel;              // particle velocities
 	float* hVelLeapFrog;
 	
 	float* hMeasures;
@@ -73,22 +76,28 @@ protected: // data
 
     // GPU data
     float* m_dPos;
-    float* m_dVel;
+    float* dVel;
 	float* dVelLeapFrog;
 	
 	float* dMeasures;
 	float* dAcceleration;	
 
-    float* m_dSortedPos;
-    float* m_dSortedVel;
+    float* dSortedPos;
+    float* dSortedVel;
+
+	float* dReferencePos;
+	float* dSortedReferencePos;	 
+	float* duDisplacementGradient;
+	float* dvDisplacementGradient;
+	float* dwDisplacementGradient;
 
     // grid data for sorting method
-    uint*  m_dGridParticleHash; // grid hash value for each particle
-    uint*  m_dGridParticleIndex;// particle index for each particle
-    uint*  m_dCellStart;        // index of start of each cell in sorted list
-    uint*  m_dCellEnd;          // index of end of cell
+    uint*  dHash; // grid hash value for each particle
+    uint*  dIndex;// particle index for each particle
+    uint*  dCellStart;        // index of start of each cell in sorted list
+    uint*  dCellEnd;          // index of end of cell
 
-    uint   m_gridSortBits;
+    uint   gridSortBits;
 
     uint   m_posVbo;            // vertex buffer object for particle positions
     uint   m_colorVBO;          // vertex buffer object for colors
@@ -99,12 +108,12 @@ protected: // data
     struct cudaGraphicsResource *m_cuda_posvbo_resource; // handles OpenGL-CUDA exchange
     struct cudaGraphicsResource *m_cuda_colorvbo_resource; // handles OpenGL-CUDA exchange
 
-    CUDPPHandle m_sortHandle;
+    CUDPPHandle sortHandle;
 
     // params
     SimParams m_params;
     uint3 m_gridSize;
-    uint m_numGridCells;
+    uint numGridCells;
 
     uint m_timer;
 };

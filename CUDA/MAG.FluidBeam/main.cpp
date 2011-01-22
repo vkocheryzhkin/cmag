@@ -19,8 +19,8 @@
 #define THRESHOLD         0.30f
 
 #define GRID_SIZE       64
-#define NUM_FLUID_PARTICLES   25 * 25 * 25
-#define NUM_BEAM_PARTICLES   25 * 32
+#define NUM_FLUID_PARTICLES 0//25 * 25 * 25
+#define NUM_BEAM_PARTICLES 1 * 5 * 20//25 * 32
 
 const uint width = 1024, height = 768;
 
@@ -32,7 +32,7 @@ float camera_trans_lag[] = {0, 0, -1};
 float camera_rot_lag[] = {0, 0, 0};
 const float inertia = 0.1;
 
-bool bPause = false;
+bool bPause = true;
 uint numParticles = 0;
 uint3 gridSize;
 
@@ -49,9 +49,7 @@ unsigned int frameCount = 0;
 
 #define MAX(a,b) ((a > b) ? a : b)
 
-extern "C" void cudaInit(int argc, char **argv);
 extern "C" void cudaGLInit(int argc, char **argv);
-extern "C" void copyArrayFromDevice(void* host, const void* device, unsigned int vbo, int size);
 
 void initParticleSystem(int numFluidParticles,int numBeamParticles, uint3 gridSize, bool bUseOpenGL)
 {
@@ -93,7 +91,8 @@ void initGL(int argc, char **argv)
 #endif
 
 	glEnable(GL_DEPTH_TEST);
-	glClearColor(0.25, 0.25, 0.25, 1.0);
+	//glClearColor(0.25, 0.25, 0.25, 1.0);
+	glClearColor(1.0, 1.0, 1.0, 1.0);
 
 	glutReportErrors();
 }
@@ -106,7 +105,7 @@ void computeFPS()
 	if (fpsCount == fpsLimit) {
 		char fps[256];
 		float ifps = 1.f / (cutGetAverageTimerValue(timer) / 1000.f);
-		sprintf(fps, "CUDA Particles (%d particles): %3.1f fps", numParticles, ifps);                  
+		sprintf(fps, "Fluid-Membrane (%d particles): %3.1f fps", numParticles, ifps);                  
 		glutSetWindowTitle(fps);
 		fpsCount = 0;         
 
@@ -114,9 +113,17 @@ void computeFPS()
 	}
 }
 
+bool isFirstTime = true;
 void display()
 {
 	cutilCheckError(cutStartTimer(timer));  
+	if(isFirstTime)
+	{
+		isFirstTime = false;
+		psystem->update(); 
+		if (renderer) 
+			renderer->setVertexBuffer(psystem->getCurrentReadBuffer(), psystem->getNumParticles());
+	}
 
 	if (!bPause)
 	{
@@ -140,10 +147,11 @@ void display()
 
 	glGetFloatv(GL_MODELVIEW_MATRIX, modelView);
 
-	// cube
-	//glColor3f(1.0, 1.0, 1.0);
-	//glutWireCube(2.0);
+	glColor3f(0.0, 0.0, 0.0);
+	// cube	
+	glutWireCube(2.0);
 	//
+	
 	glBegin(GL_LINE_STRIP);
 	float b = (powf((float) NUM_FLUID_PARTICLES, 1.0f / 3.0f) * 2)/GRID_SIZE -1.0f;
 	float y = 0.0f;

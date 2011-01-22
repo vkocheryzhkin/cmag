@@ -19,33 +19,38 @@
 FluidBeamSystem::FluidBeamSystem(uint numFluidParticles,uint numBeamParticles, uint3 gridSize, bool bUseOpenGL) :
     m_bInitialized(false),
     m_bUseOpenGL(bUseOpenGL),
-    m_numParticles(numFluidParticles + numBeamParticles),
+    numParticles(numFluidParticles + numBeamParticles),
 	numFluidParticles(numFluidParticles),
 	numBeamParticles(numBeamParticles),
-    m_hPos(0),
-    m_hVel(0),
+    hPos(0),
+    hVel(0),
 	hMeasures(0),	
     m_dPos(0),
-    m_dVel(0),
+    dVel(0),
+	dReferencePos(0),
+	dSortedReferencePos(0),
+	duDisplacementGradient(0),
+	dvDisplacementGradient(0),
+	dwDisplacementGradient(0),
 	dMeasures(0),	
     m_gridSize(gridSize),
     m_timer(0)
 {
-    m_numGridCells = m_gridSize.x*m_gridSize.y*m_gridSize.z;
+    numGridCells = m_gridSize.x*m_gridSize.y*m_gridSize.z;
 
-    m_gridSortBits = 18;//see radix sort for details
+    gridSortBits = 18;//see radix sort for details
 
     m_params.gridSize = m_gridSize;
-    m_params.numCells = m_numGridCells;
-    m_params.numBodies = m_numParticles;
+    m_params.numCells = numGridCells;
+    m_params.numBodies = numParticles;
     
 	m_params.particleRadius = 1.0f / 64.0f;		
-	m_params.restDensity = 600.0f;
+	m_params.restDensity = 1000.0f;
 	m_params.particleMass = 0.02f;
 	m_params.gasConstant =3.0f;
-	m_params.viscosity = 3.5f;
-	m_params.deltaTime = 0.005f;
+	m_params.viscosity = 3.5f;	
 	m_params.smoothingRadius = 3.0f * m_params.particleRadius;	
+	m_params.cellcount = 2;
 	m_params.accelerationLimit = 100;
     	
 	m_params.worldOrigin = make_float3(-1.0f, -1.0f, -1.0f);
@@ -54,17 +59,24 @@ FluidBeamSystem::FluidBeamSystem(uint numFluidParticles,uint numBeamParticles, u
     
     m_params.boundaryDamping = -1.0f;
 
-    m_params.gravity = make_float3(0.0f, -6.8f, 0.0f);    	  
+    //m_params.gravity = make_float3(0.0f, -6.8f, 0.0f);    	  
+	m_params.gravity = make_float3(0.0f, -9.8f, 0.0f);    	  
 	m_params.Poly6Kern = 315.0f / (64.0f * CUDART_PI_F * pow(m_params.smoothingRadius, 9.0f));
-	m_params.SpikyKern = (-0.5f) * -45.0f /(CUDART_PI_F * pow(m_params.smoothingRadius, 6.0f));
+	m_params.SpikyKern = -45.0f /(CUDART_PI_F * pow(m_params.smoothingRadius, 6.0f));
 	m_params.LapKern = m_params.viscosity * 45.0f / (CUDART_PI_F * pow(m_params.smoothingRadius, 6.0f));	
-    _initialize(m_numParticles);
+
+	m_params.Young = 4500000.0f;	
+	m_params.Poisson = 0.49f;	
+	//m_params.deltaTime = 0.005f;
+	m_params.deltaTime = 0.00005f;
+
+    _initialize(numParticles);
 }
 
 FluidBeamSystem::~FluidBeamSystem()
 {
     _finalize();
-    m_numParticles = 0;
+    numParticles = 0;
 }
 
 uint FluidBeamSystem::createVBO(uint size)
@@ -79,7 +91,7 @@ uint FluidBeamSystem::createVBO(uint size)
 
 inline float lerp(float a, float b, float t)
 {
-    return a + t*(b-a);
+	return a + t*(b-a);
 }
 
 void colorRamp(float t, float *r)
@@ -106,25 +118,25 @@ void FluidBeamSystem::_initialize(int numParticles)
 {
     assert(!m_bInitialized);
 
-    m_numParticles = numParticles;
+    numParticles = numParticles;
 
-    m_hPos = new float[m_numParticles*4];
-    m_hVel = new float[m_numParticles*4];
-	hVelLeapFrog = new float[m_numParticles*4];		
-	hMeasures = new float[m_numParticles*4];
-	hAcceleration = new float[m_numParticles*4];
-    memset(m_hPos, 0, m_numParticles*4*sizeof(float));
-    memset(m_hVel, 0, m_numParticles*4*sizeof(float));
-	memset(hVelLeapFrog, 0, m_numParticles*4*sizeof(float));
-	memset(hAcceleration, 0, m_numParticles*4*sizeof(float));	
-	memset(hMeasures, 0, m_numParticles*4*sizeof(float));
+    hPos = new float[numParticles*4];
+    hVel = new float[numParticles*4];
+	hVelLeapFrog = new float[numParticles*4];		
+	hMeasures = new float[numParticles*4];
+	hAcceleration = new float[numParticles*4];
+    memset(hPos, 0, numParticles*4*sizeof(float));
+    memset(hVel, 0, numParticles*4*sizeof(float));
+	memset(hVelLeapFrog, 0, numParticles*4*sizeof(float));
+	memset(hAcceleration, 0, numParticles*4*sizeof(float));	
+	memset(hMeasures, 0, numParticles*4*sizeof(float));
 
-    m_hCellStart = new uint[m_numGridCells];
-    memset(m_hCellStart, 0, m_numGridCells*sizeof(uint));
-    m_hCellEnd = new uint[m_numGridCells];
-    memset(m_hCellEnd, 0, m_numGridCells*sizeof(uint));
+    m_hCellStart = new uint[numGridCells];
+    memset(m_hCellStart, 0, numGridCells*sizeof(uint));
+    m_hCellEnd = new uint[numGridCells];
+    memset(m_hCellEnd, 0, numGridCells*sizeof(uint));
 
-    unsigned int memSize = sizeof(float) * 4 * m_numParticles;
+    unsigned int memSize = sizeof(float) * 4 * numParticles;
 
     if (m_bUseOpenGL) 
 	{
@@ -134,30 +146,32 @@ void FluidBeamSystem::_initialize(int numParticles)
 	else 
         cutilSafeCall( cudaMalloc( (void **)&m_cudaPosVBO, memSize )) ;
 
-    allocateArray((void**)&m_dVel, memSize);
+    allocateArray((void**)&dVel, memSize);
 	allocateArray((void**)&dVelLeapFrog, memSize);
 	allocateArray((void**)&dAcceleration, memSize);
 	allocateArray((void**)&dMeasures, memSize);
-
-    allocateArray((void**)&m_dSortedPos, memSize);
-    allocateArray((void**)&m_dSortedVel, memSize);
-	
-    allocateArray((void**)&m_dGridParticleHash, m_numParticles*sizeof(uint));
-    allocateArray((void**)&m_dGridParticleIndex, m_numParticles*sizeof(uint));
-
-    allocateArray((void**)&m_dCellStart, m_numGridCells*sizeof(uint));
-    allocateArray((void**)&m_dCellEnd, m_numGridCells*sizeof(uint));
+	allocateArray((void**)&dReferencePos, memSize);
+	allocateArray((void**)&dSortedReferencePos, memSize);			
+    allocateArray((void**)&dSortedPos, memSize);
+    allocateArray((void**)&dSortedVel, memSize);
+	allocateArray((void**)&duDisplacementGradient, memSize); 
+	allocateArray((void**)&dvDisplacementGradient, memSize); 
+	allocateArray((void**)&dwDisplacementGradient, memSize); 	
+    allocateArray((void**)&dHash, numParticles*sizeof(uint));
+    allocateArray((void**)&dIndex, numParticles*sizeof(uint));
+    allocateArray((void**)&dCellStart, numGridCells*sizeof(uint));
+    allocateArray((void**)&dCellEnd, numGridCells*sizeof(uint));
 
     if (m_bUseOpenGL) 
 	{
-        m_colorVBO = createVBO(m_numParticles*4*sizeof(float));
+        m_colorVBO = createVBO(numParticles*4*sizeof(float));
 		registerGLBufferObject(m_colorVBO, &m_cuda_colorvbo_resource);
 
         // fill color buffer
         glBindBufferARB(GL_ARRAY_BUFFER, m_colorVBO);
         float *data = (float *) glMapBufferARB(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
         float *ptr = data;
-        for(uint i=0; i<m_numParticles; i++) 
+        for(uint i=0; i<numParticles; i++) 
 		{
 			float t =0.0f;
 			if(i < numFluidParticles)
@@ -179,7 +193,7 @@ void FluidBeamSystem::_initialize(int numParticles)
     sortConfig.datatype = CUDPP_UINT;
     sortConfig.op = CUDPP_ADD;
     sortConfig.options = CUDPP_OPTION_KEY_VALUE_PAIRS;
-    cudppPlan(&m_sortHandle, sortConfig, numParticles, 1, 0);
+    cudppPlan(&sortHandle, sortConfig, numParticles, 1, 0);
 
     cutilCheckError(cutCreateTimer(&m_timer));
 
@@ -192,25 +206,25 @@ void FluidBeamSystem::_finalize()
 {
     assert(m_bInitialized);
 
-    delete [] m_hPos;
-    delete [] m_hVel;
+    delete [] hPos;
+    delete [] hVel;
 	delete [] hVelLeapFrog;	
 	delete [] hMeasures;
 	delete [] hAcceleration;
     delete [] m_hCellStart;
     delete [] m_hCellEnd;
 
-    freeArray(m_dVel);
+    freeArray(dVel);
 	freeArray(dVelLeapFrog);	
 	freeArray(dMeasures);
 	freeArray(dAcceleration);
-    freeArray(m_dSortedPos);
-    freeArray(m_dSortedVel);
+    freeArray(dSortedPos);
+    freeArray(dSortedVel);
 
-    freeArray(m_dGridParticleHash);
-    freeArray(m_dGridParticleIndex);
-    freeArray(m_dCellStart);
-    freeArray(m_dCellEnd);
+    freeArray(dHash);
+    freeArray(dIndex);
+    freeArray(dCellStart);
+    freeArray(dCellEnd);
 
     if (m_bUseOpenGL) {
         unregisterGLBufferObject(m_cuda_posvbo_resource);
@@ -221,7 +235,7 @@ void FluidBeamSystem::_finalize()
         cutilSafeCall( cudaFree(m_cudaColorVBO) );
     }
 
-    cudppDestroyPlan(m_sortHandle);
+    cudppDestroyPlan(sortHandle);
 }
 void FluidBeamSystem::changeGravity() 
 { 
@@ -244,48 +258,79 @@ void FluidBeamSystem::update()
 
     setParameters(&m_params); 
 	
-    calcHash(m_dGridParticleHash, m_dGridParticleIndex, dPos, m_numParticles);
+    calcHash(dHash, dIndex, dPos, numParticles);
 
-    cudppSort(m_sortHandle, m_dGridParticleHash, m_dGridParticleIndex, m_gridSortBits, m_numParticles);
+    cudppSort(sortHandle, dHash, dIndex, gridSortBits, numParticles);
 
 	reorderDataAndFindCellStart(
-        m_dCellStart,
-        m_dCellEnd,
-		m_dSortedPos,		
-		m_dSortedVel,
-        m_dGridParticleHash,
-        m_dGridParticleIndex,
+        dCellStart,
+        dCellEnd,
+		dSortedPos,
+		dSortedReferencePos,
+		dSortedVel,		
+        dHash,
+        dIndex,
 		dPos,		
+		dReferencePos,
 		dVelLeapFrog,
-		m_numParticles,
-		m_numGridCells);
+		numParticles,
+		numGridCells);
 	
 	calcDensityAndPressure(		
 		dMeasures,
-		m_dSortedPos,			
-		m_dGridParticleIndex,
-		m_dCellStart,
-		m_dCellEnd,
-		m_numParticles,
-		m_numGridCells);
+		dSortedPos,			
+		dSortedVel,
+		dIndex,
+		dCellStart,
+		dCellEnd,
+		numParticles,
+		numGridCells);		
 
-	calcAndApplyAcceleration(
+	calcDisplacementGradient(
+		duDisplacementGradient,
+		dvDisplacementGradient,
+		dwDisplacementGradient,
+		dSortedPos,
+		dSortedReferencePos,		
+		dIndex,
+		dCellStart,
+		dCellEnd,
+		numParticles,
+		numGridCells);    
+	
+
+	/*calcAcceleration(
 		dAcceleration,
 		dMeasures,		
-		m_dSortedPos,			
-		m_dSortedVel,
-		m_dGridParticleIndex,
-		m_dCellStart,
-		m_dCellEnd,
-		m_numParticles,
-		m_numGridCells);    
+		dSortedPos,			
+		dSortedVel,
+		dIndex,
+		dCellStart,
+		dCellEnd,
+		numParticles,
+		numGridCells);   */
+
+	calcAcceleration(
+		dAcceleration,
+		dSortedPos,
+		dSortedReferencePos,
+		duDisplacementGradient,
+		dvDisplacementGradient,
+		dwDisplacementGradient,
+		dSortedVel,
+		dMeasures,
+		dIndex,
+		dCellStart,
+		dCellEnd,
+		numParticles,
+		numGridCells); 
 
 	integrateSystem(
 		dPos,
-		m_dVel,	
+		dVel,	
 		dVelLeapFrog,
 		dAcceleration,
-		m_numParticles);
+		numParticles);
 	
     if (m_bUseOpenGL) {
         unmapGLBufferObject(m_cuda_posvbo_resource);
@@ -305,17 +350,17 @@ float* FluidBeamSystem::getArray(ParticleArray array)
     {
 		default:
 		case POSITION:
-			hdata = m_hPos;
+			hdata = hPos;
 			ddata = m_dPos;
 			vbo = m_posVbo;
 			break;
 		case VELOCITY:
-			hdata = m_hVel;
-			ddata = m_dVel;
+			hdata = hVel;
+			ddata = dVel;
 			break;	
     }
 
-    copyArrayFromDevice(hdata, ddata, vbo, m_numParticles*4*sizeof(float));
+    copyArrayFromDevice(hdata, ddata, vbo, numParticles*4*sizeof(float));
     return hdata;
 }
 
@@ -340,8 +385,11 @@ void FluidBeamSystem::setArray(ParticleArray array, const float* data, int start
 			}
         }
         break;
+	case REFERENCE_POSITION:
+		copyArrayToDevice(dReferencePos, data, start * 4 * sizeof(float), count * 4 * sizeof(float));
+		break;	
     case VELOCITY:
-        copyArrayToDevice(m_dVel, data, start*4*sizeof(float), count*4*sizeof(float));
+        copyArrayToDevice(dVel, data, start*4*sizeof(float), count*4*sizeof(float));
         break;	
 	case MEASURES:
 		copyArrayToDevice(dMeasures, data, start*4*sizeof(float), count*4*sizeof(float));
@@ -367,11 +415,12 @@ void FluidBeamSystem::reset()
 	initFluidGrid( spacing, jitter);
 	initBeamGrid(spacing, jitter);
 
-    setArray(POSITION, m_hPos, 0, m_numParticles);
-    setArray(VELOCITY, m_hVel, 0, m_numParticles);	
-	setArray(MEASURES, hMeasures, 0, m_numParticles);
-	setArray(ACCELERATION, hAcceleration, 0, m_numParticles);
-	setArray(VELOCITYLEAPFROG, hVelLeapFrog, 0, m_numParticles);
+    setArray(POSITION, hPos, 0, numParticles);
+	setArray(REFERENCE_POSITION, hPos, 0, numParticles);   		
+    setArray(VELOCITY, hVel, 0, numParticles);	
+	setArray(MEASURES, hMeasures, 0, numParticles);
+	setArray(ACCELERATION, hAcceleration, 0, numParticles);
+	setArray(VELOCITYLEAPFROG, hVelLeapFrog, 0, numParticles);
 }
 
 void FluidBeamSystem::initFluidGrid(float spacing, float jitter)
@@ -385,41 +434,66 @@ void FluidBeamSystem::initFluidGrid(float spacing, float jitter)
 			for(uint x=0; x<size[0]; x++) {
 				uint i = (z*size[1]*size[0]) + (y*size[0]) + x;
 				if (i < numFluidParticles) {
-					m_hPos[i*4] = (spacing * x) + m_params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;
-					m_hPos[i*4+1] = (spacing * y) + m_params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;
-					m_hPos[i*4+2] = (spacing * z) + m_params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;					
-					m_hPos[i*4+3] = 1.0f;
+					hPos[i*4] = (spacing * x) + m_params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;
+					hPos[i*4+1] = (spacing * y) + m_params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;
+					hPos[i*4+2] = (spacing * z) + m_params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;					
+					hPos[i*4+3] = 1.0f;
 
-					m_hVel[i*4] = 0.0f;
-					m_hVel[i*4+1] = 0.0f;
-					m_hVel[i*4+2] = 0.0f;
-					m_hVel[i*4+3] = 0.0f;
+					hVel[i*4] = 0.0f;
+					hVel[i*4+1] = 0.0f;
+					hVel[i*4+2] = 0.0f;
+					hVel[i*4+3] = 0.0f;
 				}
 			}
 		}
 	}
 }
-void FluidBeamSystem::initBeamGrid(float spacing, float jitter)
-{
-	srand(1973);	
-	//todo: exctract const
-	int zsize = 25;
-	int ysize = 32;
-	for(uint z = 0; z < zsize; z++) {
-		for(uint y = 0; y < ysize; y++) {
-				uint x = 0;
-				uint i = numFluidParticles + (z * ysize) + y;
-				if (i < m_numParticles) {
-					m_hPos[i*4] = (spacing * x) + m_params.particleRadius + 0.7f + (frand() * 2.0f - 1.0f) * jitter;
-					m_hPos[i*4+1] = (spacing * y) + m_params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;
-					m_hPos[i*4+2] = (spacing * z) + m_params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;					
-					m_hPos[i*4+3] = 1.0f;
+//void FluidBeamSystem::initBeamGrid(float spacing, float jitter)
+//{
+//	srand(1973);	
+//	//todo: exctract const
+//	int zsize = 25;
+//	int ysize = 32;
+//	for(uint z = 0; z < zsize; z++) {
+//		for(uint y = 0; y < ysize; y++) {
+//				uint x = 0;
+//				uint i = numFluidParticles + (z * ysize) + y;
+//				if (i < numParticles) {
+//					m_hPos[i*4] = (spacing * x) + m_params.particleRadius + 0.7f + (frand() * 2.0f - 1.0f) * jitter;
+//					m_hPos[i*4+1] = (spacing * y) + m_params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;
+//					m_hPos[i*4+2] = (spacing * z) + m_params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;					
+//					m_hPos[i*4+3] = 1.0f;
+//
+//					m_hVel[i*4] = 0.0f;
+//					m_hVel[i*4+1] = 0.0f;
+//					m_hVel[i*4+2] = 0.0f;
+//					m_hVel[i*4+3] = 0.0f;
+//			}
+//		}
+//	}
+//}
 
-					m_hVel[i*4] = 0.0f;
-					m_hVel[i*4+1] = 0.0f;
-					m_hVel[i*4+2] = 0.0f;
-					m_hVel[i*4+3] = 0.0f;
+void FluidBeamSystem::initBeamGrid(float spacing, float jitter)
+{	
+	int xsize = 20;
+	int ysize = 1;
+	int zsize = 5;
+	for(uint z=0; z < zsize; z++) {
+		for(uint y=0; y < ysize; y++) {	
+			for(uint x=0; x < xsize; x++) {
+				uint i = (z* ysize * xsize) + (y * xsize) + x;
+				if (i < numParticles) {
+					hPos[i*4] =  0.7 + (spacing * x) + m_params.particleRadius - 1.0f ;//+ (frand() * 2.0f - 1.0f) * jitter;
+					hPos[i*4+1] = - (spacing * y) - m_params.particleRadius ;//+ (frand() * 2.0f - 1.0f) * jitter;
+					hPos[i*4+2] =1 + (spacing * z) + m_params.particleRadius - 1.0f;// + (frand() * 2.0f - 1.0f) * jitter;					
+					hPos[i*4+3] = i;				
+
+					hVel[i*4+0] = 0;	
+					hVel[i*4+1] = 0;					
+					hVel[i*4+2] = 0;															
+					hVel[i*4+3] = (x == 0 ) ? 0 : 1;
+				}
 			}
 		}
-	}
+	}	
 }
