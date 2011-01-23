@@ -36,21 +36,20 @@ FluidBeamSystem::FluidBeamSystem(uint numFluidParticles,uint numBeamParticles, u
     m_gridSize(gridSize),
     m_timer(0)
 {
+	srand(1973);
     numGridCells = m_gridSize.x*m_gridSize.y*m_gridSize.z;
-
     gridSortBits = 18;//see radix sort for details
 
     m_params.gridSize = m_gridSize;
-    m_params.numCells = numGridCells;
-    m_params.numBodies = numParticles;
+    m_params.numCells = numGridCells;    
     
 	m_params.particleRadius = 1.0f / 64.0f;		
-	m_params.restDensity = 1000.0f;
+	m_params.restDensity = 600.0f;
 	m_params.particleMass = 0.02f;
 	m_params.gasConstant =3.0f;
 	m_params.viscosity = 3.5f;	
 	m_params.smoothingRadius = 3.0f * m_params.particleRadius;	
-	m_params.cellcount = 2;
+	m_params.cellcount = 1;
 	m_params.accelerationLimit = 100;
     	
 	m_params.worldOrigin = make_float3(-1.0f, -1.0f, -1.0f);
@@ -59,16 +58,18 @@ FluidBeamSystem::FluidBeamSystem(uint numFluidParticles,uint numBeamParticles, u
     
     m_params.boundaryDamping = -1.0f;
 
-    //m_params.gravity = make_float3(0.0f, -6.8f, 0.0f);    	  
-	m_params.gravity = make_float3(0.0f, -9.8f, 0.0f);    	  
+    m_params.gravity = make_float3(0.0f, -6.8f, 0.0f);    	  
+	//m_params.gravity = make_float3(0.0f, -9.8f, 0.0f);    	  
 	m_params.Poly6Kern = 315.0f / (64.0f * CUDART_PI_F * pow(m_params.smoothingRadius, 9.0f));
 	m_params.SpikyKern = -45.0f /(CUDART_PI_F * pow(m_params.smoothingRadius, 6.0f));
 	m_params.LapKern = m_params.viscosity * 45.0f / (CUDART_PI_F * pow(m_params.smoothingRadius, 6.0f));	
 
+	m_params.B = 200 * m_params.restDensity * m_params.gravity.y * (2 * 25 * m_params.particleRadius) / 7;
+
 	m_params.Young = 4500000.0f;	
 	m_params.Poisson = 0.49f;	
+	
 	m_params.deltaTime = 0.005f;
-	//m_params.deltaTime = 0.00005f;
 
     _initialize(numParticles);
 }
@@ -286,7 +287,7 @@ void FluidBeamSystem::update()
 		numParticles,
 		numGridCells);		
 
-	calcDisplacementGradient(
+	/*calcDisplacementGradient(
 		duDisplacementGradient,
 		dvDisplacementGradient,
 		dwDisplacementGradient,
@@ -296,19 +297,7 @@ void FluidBeamSystem::update()
 		dCellStart,
 		dCellEnd,
 		numParticles,
-		numGridCells);    
-	
-
-	/*calcAcceleration(
-		dAcceleration,
-		dMeasures,		
-		dSortedPos,			
-		dSortedVel,
-		dIndex,
-		dCellStart,
-		dCellEnd,
-		numParticles,
-		numGridCells);   */
+		numGridCells);    	*/
 
 	calcAcceleration(
 		dAcceleration,
@@ -410,7 +399,7 @@ inline float frand()
 
 void FluidBeamSystem::reset()
 {
-	float jitter = m_params.particleRadius*0.01f;			            	
+	float jitter = m_params.particleRadius * 0.01f;			            	
 	float spacing = m_params.particleRadius * 2.0f;	
 	initFluidGrid( spacing, jitter);
 	initBeamGrid(spacing, jitter);
@@ -424,8 +413,7 @@ void FluidBeamSystem::reset()
 }
 
 void FluidBeamSystem::initFluidGrid(float spacing, float jitter)
-{
-	srand(1973);
+{	
 	uint size[3];
 	uint s = (int) (powf((float) numFluidParticles, 1.0f / 3.0f));
 	size[0] = size[1] = size[2] = s;
@@ -434,9 +422,9 @@ void FluidBeamSystem::initFluidGrid(float spacing, float jitter)
 			for(uint x=0; x<size[0]; x++) {
 				uint i = (z*size[1]*size[0]) + (y*size[0]) + x;
 				if (i < numFluidParticles) {
-					hPos[i*4] = (spacing * x) + m_params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;
-					hPos[i*4+1] = (spacing * y) + m_params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;
-					hPos[i*4+2] = (spacing * z) + m_params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;					
+					hPos[i*4] = (spacing * x) + m_params.particleRadius - 1.0f ;//+ (frand() * 2.0f - 1.0f) * jitter;
+					hPos[i*4+1] = (spacing * y) + m_params.particleRadius - 1.0f;// + (frand() * 2.0f - 1.0f) * jitter;
+					hPos[i*4+2] = (spacing * z) + m_params.particleRadius - 1.0f;// + (frand() * 2.0f - 1.0f) * jitter;					
 					hPos[i*4+3] = -1.0f;
 
 					hVel[i*4] = 0.0f;
@@ -474,8 +462,8 @@ void FluidBeamSystem::initFluidGrid(float spacing, float jitter)
 //}
 
 void FluidBeamSystem::initBeamGrid(float spacing, float jitter)
-{	
-	/*int xsize = 20;
+{	/*
+	int xsize = 20;
 	int ysize = 1;
 	int zsize = 5;*/
 	int xsize = 0;
@@ -488,7 +476,7 @@ void FluidBeamSystem::initBeamGrid(float spacing, float jitter)
 				if (i < numParticles) {
 					hPos[i*4] =  0.7 + (spacing * x) + m_params.particleRadius - 1.0f ;//+ (frand() * 2.0f - 1.0f) * jitter;
 					hPos[i*4+1] = - (spacing * y) - m_params.particleRadius ;//+ (frand() * 2.0f - 1.0f) * jitter;
-					hPos[i*4+2] = 1 + (spacing * z) + m_params.particleRadius - 1.0f;// + (frand() * 2.0f - 1.0f) * jitter;					
+					hPos[i*4+2] = (spacing * z) + m_params.particleRadius - 1.0f;// + (frand() * 2.0f - 1.0f) * jitter;					
 					hPos[i*4+3] = 1.0f;				
 
 					hVel[i*4+0] = 0;	

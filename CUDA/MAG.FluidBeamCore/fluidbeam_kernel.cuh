@@ -22,10 +22,7 @@ struct SimParams {
     uint3 gridSize;
     uint numCells;
     float3 worldOrigin;
-    float3 cellSize;
-
-    uint numBodies;
-    uint maxParticlesPerCell;
+    float3 cellSize;    
     
     float boundaryDamping;
 
@@ -39,6 +36,7 @@ struct SimParams {
 	float viscosity;
 	float deltaTime;
 	float smoothingRadius;	
+	float B;
 
 	//todo: investigate and remove it
 	float accelerationLimit;
