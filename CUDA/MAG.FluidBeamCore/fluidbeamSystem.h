@@ -8,7 +8,7 @@
 class FluidBeamSystem
 {
 public:
-    FluidBeamSystem(uint numFluidParticles,uint numBeamParticles, uint3 gridSize, bool bUseOpenGL);
+    FluidBeamSystem(uint3 fluidParticlesGrid,uint3 beamParticlesGrid, uint3 gridSize,float particleRadius, bool bUseOpenGL);
     ~FluidBeamSystem();
 
     enum ParticleArray
@@ -62,6 +62,8 @@ protected: // data
     uint numParticles;
 	uint numFluidParticles;
 	uint numBeamParticles;
+	uint3 fluidParticlesGrid;
+	uint3 beamParticlesGrid;
 
     // CPU data
     float* hPos;              // particle positions

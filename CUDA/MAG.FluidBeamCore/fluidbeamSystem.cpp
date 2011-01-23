@@ -16,12 +16,15 @@
 #define CUDART_PI_F         3.141592654f
 #endif
 
-FluidBeamSystem::FluidBeamSystem(uint numFluidParticles,uint numBeamParticles, uint3 gridSize, bool bUseOpenGL) :
-    m_bInitialized(false),
+FluidBeamSystem::FluidBeamSystem(uint3 fluidParticlesGrid, uint3 beamParticlesGrid, uint3 gridSize, float particleRadius, bool bUseOpenGL) :
+    m_bInitialized(false),	
     m_bUseOpenGL(bUseOpenGL),
-    numParticles(numFluidParticles + numBeamParticles),
-	numFluidParticles(numFluidParticles),
-	numBeamParticles(numBeamParticles),
+	numFluidParticles(fluidParticlesGrid.x * fluidParticlesGrid.y * fluidParticlesGrid.z),
+	numBeamParticles(beamParticlesGrid.x * beamParticlesGrid.y * beamParticlesGrid.z),
+    numParticles(fluidParticlesGrid.x * fluidParticlesGrid.y * fluidParticlesGrid.z 
+	+ beamParticlesGrid.x * beamParticlesGrid.y * beamParticlesGrid.z),		
+    fluidParticlesGrid(fluidParticlesGrid),
+	beamParticlesGrid(beamParticlesGrid),
     hPos(0),
     hVel(0),
 	hMeasures(0),	
@@ -36,18 +39,22 @@ FluidBeamSystem::FluidBeamSystem(uint numFluidParticles,uint numBeamParticles, u
     m_gridSize(gridSize),
     m_timer(0)
 {
+	m_params.particleRadius = particleRadius;		
 	srand(1973);
+
     numGridCells = m_gridSize.x*m_gridSize.y*m_gridSize.z;
     gridSortBits = 18;//see radix sort for details
 
     m_params.gridSize = m_gridSize;
     m_params.numCells = numGridCells;    
     
-	m_params.particleRadius = 1.0f / 64.0f;		
+	//m_params.particleRadius = 1.0f / 64.0f;		
+	
 	m_params.restDensity = 600.0f;
-	m_params.particleMass = 0.02f;
-	m_params.gasConstant =3.0f;
+	m_params.particleMass = 0.06f;
+	m_params.gasConstant = 3.0f;
 	m_params.viscosity = 3.5f;	
+	//m_params.viscosity = pow(10.0f,-3.0f);	
 	m_params.smoothingRadius = 3.0f * m_params.particleRadius;	
 	m_params.cellcount = 1;
 	m_params.accelerationLimit = 100;
@@ -264,55 +271,36 @@ void FluidBeamSystem::update()
     cudppSort(sortHandle, dHash, dIndex, gridSortBits, numParticles);
 
 	reorderDataAndFindCellStart(
-        dCellStart,
-        dCellEnd,
-		dSortedPos,
-		dSortedReferencePos,
-		dSortedVel,		
-        dHash,
-        dIndex,
+		dCellStart,
+		dCellEnd,
+		dSortedPos,		
+		dSortedVel,
+		dHash,
+		dIndex,
 		dPos,		
-		dReferencePos,
 		dVelLeapFrog,
 		numParticles,
 		numGridCells);
-	
+
 	calcDensityAndPressure(		
 		dMeasures,
+		dSortedPos,			
+		dIndex,
+		dCellStart,
+		dCellEnd,
+		numParticles,
+		numGridCells);
+
+	calcAndApplyAcceleration(
+		dAcceleration,
+		dMeasures,		
 		dSortedPos,			
 		dSortedVel,
 		dIndex,
 		dCellStart,
 		dCellEnd,
 		numParticles,
-		numGridCells);		
-
-	/*calcDisplacementGradient(
-		duDisplacementGradient,
-		dvDisplacementGradient,
-		dwDisplacementGradient,
-		dSortedPos,
-		dSortedReferencePos,		
-		dIndex,
-		dCellStart,
-		dCellEnd,
-		numParticles,
-		numGridCells);    	*/
-
-	calcAcceleration(
-		dAcceleration,
-		dSortedPos,
-		dSortedReferencePos,
-		duDisplacementGradient,
-		dvDisplacementGradient,
-		dwDisplacementGradient,
-		dSortedVel,
-		dMeasures,
-		dIndex,
-		dCellStart,
-		dCellEnd,
-		numParticles,
-		numGridCells); 
+		numGridCells);    
 
 	integrateSystem(
 		dPos,
@@ -402,10 +390,10 @@ void FluidBeamSystem::reset()
 	float jitter = m_params.particleRadius * 0.01f;			            	
 	float spacing = m_params.particleRadius * 2.0f;	
 	initFluidGrid( spacing, jitter);
-	initBeamGrid(spacing, jitter);
+	//initBeamGrid(spacing, jitter);
 
 	setArray(POSITION, hPos, 0, numParticles);
-	setArray(REFERENCE_POSITION, hPos, 0, numParticles);   		
+	//setArray(REFERENCE_POSITION, hPos, 0, numParticles);   		
 	setArray(VELOCITY, hVel, 0, numParticles);	
 	setArray(MEASURES, hMeasures, 0, numParticles);
 	setArray(ACCELERATION, hAcceleration, 0, numParticles);
@@ -422,9 +410,9 @@ void FluidBeamSystem::initFluidGrid(float spacing, float jitter)
 			for(uint x=0; x<size[0]; x++) {
 				uint i = (z*size[1]*size[0]) + (y*size[0]) + x;
 				if (i < numFluidParticles) {
-					hPos[i*4] = (spacing * x) + m_params.particleRadius - 1.0f ;//+ (frand() * 2.0f - 1.0f) * jitter;
-					hPos[i*4+1] = (spacing * y) + m_params.particleRadius - 1.0f;// + (frand() * 2.0f - 1.0f) * jitter;
-					hPos[i*4+2] = (spacing * z) + m_params.particleRadius - 1.0f;// + (frand() * 2.0f - 1.0f) * jitter;					
+					hPos[i*4] = (spacing * x) + m_params.particleRadius + (frand() * 2.0f - 1.0f) * jitter - 1.0f ;
+					hPos[i*4+1] = (spacing * y) + m_params.particleRadius + (frand() * 2.0f - 1.0f) * jitter - 1.0f;
+					hPos[i*4+2] = (spacing * z) + m_params.particleRadius + (frand() * 2.0f - 1.0f) * jitter - 1.0f;					
 					hPos[i*4+3] = -1.0f;
 
 					hVel[i*4] = 0.0f;

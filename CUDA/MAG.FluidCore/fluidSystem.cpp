@@ -40,7 +40,7 @@ FluidSystem::FluidSystem(uint numParticles, uint3 gridSize, bool bUseOpenGL) :
 	m_params.particleRadius = 1.0f / 64.0f;		
 	m_params.restDensity = 600.0f;
 	m_params.particleMass = 0.02f;
-	m_params.gasConstant =3.0f;
+	m_params.gasConstant = 3.0f;
 	m_params.viscosity = 3.5f;
 	m_params.deltaTime = 0.005f;
 	m_params.smoothingRadius = 3.0f * m_params.particleRadius;	

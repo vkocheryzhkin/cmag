@@ -22,6 +22,13 @@ void unmapGLBufferObject(struct cudaGraphicsResource *cuda_vbo_resource);
 
 void setParameters(SimParams *hostParams);
 
+void integrateSystem(
+			 float* pos,
+             float* vel,  
+			 float* velLeapFrog,
+			 float* acc,
+             uint numParticles);
+
 void calcHash(
 			  uint*  gridParticleHash,
 			  uint*  gridParticleIndex,
@@ -32,59 +39,33 @@ void reorderDataAndFindCellStart(
 			 uint*  cellStart,
 		     uint*  cellEnd,
 		     float* sortedPos,
-			 float* sortedReferencePos,
 		     float* sortedVel,
              uint*  gridParticleHash,
              uint*  gridParticleIndex,
 		     float* oldPos,
-			 float* oldReferencePos,
 		     float* oldVel,
 		     uint   numParticles,
 		     uint   numCells);
 
 void calcDensityAndPressure(			
 			float* measures,
-			float* sortedPositions,			
-			float* sortedVelocities,	
+			float* sortedPos,			
 			uint* gridParticleIndex,
 			uint* cellStart,
 			uint* cellEnd,
 			uint numParticles,
 			uint numGridCells);
 
-void calcDisplacementGradient(
-	float* duDisplacementGradient,
-	float* dvDisplacementGradient,
-	float* dwDisplacementGradient, 
-	float* sortedPos, 
-	float* sortedReferencePos,	
-	uint* Index,
-	uint* cellStart,
-	uint* cellEnd,
-	uint numParticles,
-	uint numGridCells);
-
-void calcAcceleration(	
-	float* acceleration,
-	float* sortedPos,
-	float* sortedReferencePos,
-	float* uDisplacementGradient,
-	float* vDisplacementGradient,
-	float* wDisplacementGradient, 
-	float* sortedVel,
-	float* measures,		
-	uint* Index,
-	uint* cellStart,
-	uint* cellEnd,
-	uint numParticles,
-	uint numGridCells);
-
-void integrateSystem(
-	 float* pos,
-     float* vel,  
-	 float* velLeapFrog,
-	 float* acc,
-     uint numParticles);
+void calcAndApplyAcceleration(	
+			float* acceleration,			
+			float* measures,
+			float* sortedPos,			
+			float* sortedVel,
+			uint* gridParticleIndex,
+			uint* cellStart,
+			uint* cellEnd,
+			uint numParticles,
+			uint numGridCells);
 }
 
 #endif

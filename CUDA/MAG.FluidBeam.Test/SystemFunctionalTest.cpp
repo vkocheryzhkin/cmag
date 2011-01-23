@@ -1,18 +1,19 @@
 #define BOOST_TEST_MODULE FirstTest
 #include <boost/test/unit_test.hpp>
 #include <vector_types.h>
+typedef unsigned int uint;
+
+
 #include "fluidbeamSystem.cuh"
 #include "fluidbeamSystem.h"
-
-typedef unsigned int uint;
-BOOST_AUTO_TEST_CASE(Check_system)
+BOOST_AUTO_TEST_CASE(FluidBeamTest)
 {	
 	cudaInit(1,(char **) &"");
-	uint numFluidParticles = 5 * 5 * 5;
-	uint3 gridSize;
-	gridSize.x = gridSize.y = gridSize.z = 64;		
+	uint3 fluidParticlesGrid = make_uint3(5, 5, 5);
+	uint3 gridSize = make_uint3(64, 64, 64);
+	//gridSize.x = gridSize.y = gridSize.z = 64;		
 
-    FluidBeamSystem *psystem = new FluidBeamSystem(numFluidParticles,0, gridSize, false); 
+    FluidBeamSystem *psystem = new FluidBeamSystem(fluidParticlesGrid, 0, gridSize, false); 
 	psystem->reset();
 
 	float *hPos = (float *)malloc(sizeof(float)*4*psystem->getNumParticles());

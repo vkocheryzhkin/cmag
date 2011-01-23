@@ -19,7 +19,7 @@
 #define THRESHOLD         0.30f
 
 #define GRID_SIZE       64
-#define NUM_PARTICLES   15625
+#define NUM_PARTICLES   5*5*5//15625
 
 const uint width = 1024, height = 768;
 

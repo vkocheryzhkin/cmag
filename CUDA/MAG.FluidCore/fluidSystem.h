@@ -36,6 +36,9 @@ public:
     void * getCudaColorVBO()            const { return (void *)m_cudaColorVBO; }
 	void * getCudaHash()				const {return (void *)m_dGridParticleHash;}
 	void * getCudaIndex()				const {return (void *)m_dGridParticleIndex;}	
+	void * getCudaSortedPosition()      const { return (void *)m_dSortedPos; }
+	void * getCudaMeasures()            const { return (void *)dMeasures; }    
+	void * getCudaAcceleration()        const {return (void *)dAcceleration;}	
 
     void changeGravity();
 

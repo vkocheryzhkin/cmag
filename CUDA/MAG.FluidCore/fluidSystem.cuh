@@ -1,3 +1,8 @@
+#ifndef FLUID_SYSTEM_H
+#define FLUID_SYSTEM_H
+
+#include "fluid_kernel.cuh"
+
 extern "C"
 {
 void cudaInit(int argc, char **argv);
@@ -62,4 +67,4 @@ void calcAndApplyAcceleration(
 			uint numParticles,
 			uint numGridCells);
 }
-
+#endif

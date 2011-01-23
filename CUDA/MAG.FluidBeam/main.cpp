@@ -15,12 +15,10 @@
 #include "fluidbeamSystem.h"
 #include "render_particles.h"
 
-#define MAX_EPSILON_ERROR 5.00f
-#define THRESHOLD         0.30f
 
 #define GRID_SIZE       64
-#define NUM_FLUID_PARTICLES  25 * 25 * 25
-#define NUM_BEAM_PARTICLES 0//1 * 5 * 20//25 * 32
+//#define NUM_FLUID_PARTICLES  25 * 25 * 25
+//#define NUM_BEAM_PARTICLES 0//1 * 5 * 20//25 * 32
 
 const uint width = 1024, height = 768;
 
@@ -33,8 +31,10 @@ float camera_rot_lag[] = {0, 0, 0};
 const float inertia = 0.1;
 
 bool bPause = true;
-uint numParticles = 0;
 uint3 gridSize;
+uint3 fluidParticlesSize;
+uint3 beamParticlesSize;
+float particleRadius;
 
 FluidBeamSystem *psystem = 0;
 
@@ -51,19 +51,7 @@ unsigned int frameCount = 0;
 
 extern "C" void cudaGLInit(int argc, char **argv);
 
-void initParticleSystem(int numFluidParticles,int numBeamParticles, uint3 gridSize, bool bUseOpenGL)
-{
-	psystem = new FluidBeamSystem(numFluidParticles, numBeamParticles, gridSize, bUseOpenGL); 
-	psystem->reset();
 
-	if (bUseOpenGL) {
-		renderer = new ParticleRenderer;
-		renderer->setParticleRadius(psystem->getParticleRadius());
-		renderer->setColorBuffer(psystem->getColorBuffer());
-	}
-
-	cutilCheckError(cutCreateTimer(&timer));
-}
 
 void cleanup()
 {
@@ -105,7 +93,7 @@ void computeFPS()
 	if (fpsCount == fpsLimit) {
 		char fps[256];
 		float ifps = 1.f / (cutGetAverageTimerValue(timer) / 1000.f);
-		sprintf(fps, "Fluid-Membrane (%d particles): %3.1f fps", numParticles, ifps);                  
+		sprintf(fps, "Fluid-Membrane (%d particles): %3.1f fps",  psystem->getNumParticles(), ifps);                  
 		glutSetWindowTitle(fps);
 		fpsCount = 0;         
 
@@ -148,29 +136,29 @@ void display()
 	glGetFloatv(GL_MODELVIEW_MATRIX, modelView);
 
 	glColor3f(0.0, 0.0, 0.0);
-	// cube	
+			
+	float halfWorldLength = (2 * particleRadius) * GRID_SIZE / 2.0f;
+	float b = fluidParticlesSize.z * 2.0f / GRID_SIZE - halfWorldLength;	
+	float &h = halfWorldLength;	
 	glutWireCube(2.0);
-	//
-	
-	glBegin(GL_LINE_STRIP);
-	float b = (powf((float) NUM_FLUID_PARTICLES, 1.0f / 3.0f) * 2)/GRID_SIZE -1.0f;
-	float y = 0.0f;
-	glVertex3f(-1, -1, -1);
-	glVertex3f(1, -1, -1);
-	glVertex3f(1, 0, -1);
-	glVertex3f(-1, 0, -1);
-	glVertex3f(-1, -1, -1);
-	glVertex3f(-1, -1, b);	
-	glVertex3f(1, -1, b);
-	glVertex3f(1, 0, b);
-	glVertex3f(-1, 0, b);
-	glVertex3f(-1, -1, b);
-	glVertex3f(-1, 0, b);
-	glVertex3f(-1, 0, -1);
-	glVertex3f(1, 0, -1);
-	glVertex3f(1, 0, b);
-	glVertex3f(1, -1, b);
-	glVertex3f(1, -1, -1);
+
+	glBegin(GL_LINE_STRIP);	
+	glVertex3f(-h, -h, -h);
+	glVertex3f(h, -h, -h);
+	glVertex3f(h, 0, -h);
+	glVertex3f(-h, 0, -h);
+	glVertex3f(-h, -h, -h);
+	glVertex3f(-h, -h, b);	
+	glVertex3f(h, -h, b);
+	glVertex3f(h, 0, b);
+	glVertex3f(-h, 0, b);
+	glVertex3f(-h, -h, b);
+	glVertex3f(-h, 0, b);
+	glVertex3f(-h, 0, -h);
+	glVertex3f(h, 0, -h);
+	glVertex3f(h, 0, b);
+	glVertex3f(h, -h, b);
+	glVertex3f(h, -h, -h);
 	glEnd();	
 
 	if (renderer)
@@ -287,17 +275,31 @@ void mainMenu(int i)
 	key((unsigned char) i, 0, 0);
 }
 
+void initParticleSystem(uint3 fluidParticlesSize,uint3 beamParticlesSize, uint3 gridSize, float particleRadius, bool bUseOpenGL)
+{
+	psystem = new FluidBeamSystem(fluidParticlesSize, beamParticlesSize, gridSize, particleRadius, bUseOpenGL); 
+	psystem->reset();
+
+	if (bUseOpenGL) {
+		renderer = new ParticleRenderer;
+		renderer->setParticleRadius(psystem->getParticleRadius());
+		renderer->setColorBuffer(psystem->getColorBuffer());
+	}
+
+	cutilCheckError(cutCreateTimer(&timer));
+}
+
 int main(int argc, char** argv) 
 {
-	numParticles = NUM_FLUID_PARTICLES + NUM_BEAM_PARTICLES;
-	uint gridDim = GRID_SIZE;
-
-	gridSize.x = gridSize.y = gridSize.z = gridDim;
+	fluidParticlesSize = make_uint3(25, 25, 25);
+	beamParticlesSize = make_uint3(0, 0, 0);			
+	gridSize = make_uint3(GRID_SIZE, GRID_SIZE, GRID_SIZE);
+	particleRadius = 1.0f / 64;
 
 	initGL(argc, argv);
 	cudaGLInit(argc, argv);
 
-	initParticleSystem(NUM_FLUID_PARTICLES, NUM_BEAM_PARTICLES, gridSize, true);
+	initParticleSystem(fluidParticlesSize, beamParticlesSize, gridSize, particleRadius, true);
 
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
