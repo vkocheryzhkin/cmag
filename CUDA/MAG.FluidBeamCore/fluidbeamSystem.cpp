@@ -65,9 +65,9 @@ FluidBeamSystem::FluidBeamSystem(
 	
 	m_params.restDensity = 1000.0f;
 		
-	m_params.gasConstant = 3.0f;
+	//m_params.gasConstant = 3.0f;
 	//m_params.viscosity = pow(10.0f,-3.0f);	
-	m_params.viscosity = 10.0f;	
+	//m_params.viscosity = 10.0f;	
 	
 
 	//let choose N = 80 is an avg number of particles in sphere
@@ -77,7 +77,7 @@ FluidBeamSystem::FluidBeamSystem(
 
 	//m_params.particleMass = m_params.restDensity * 4.0f / 3.0f * CUDART_PI_F * pow(m_params.smoothingRadius,3) / N;	
 	m_params.particleMass = 1000.f / 29332.720703f;
-	m_params.accelerationLimit = 100;
+	//m_params.accelerationLimit = 100;
     	
 	//m_params.worldOrigin = make_float3(-1.0f, -1.0f, -1.0f);
 	m_params.worldOrigin = make_float3(
@@ -98,14 +98,15 @@ FluidBeamSystem::FluidBeamSystem(
 
 	/*m_params.B = 200.0f * m_params.restDensity * m_params.gravity.y 
 		* (2 * fluidParticlesGrid.y * m_params.particleRadius) / 7.0f;*/
-	float soundspeed = 40.0f;
-	m_params.B = pow(soundspeed, 2) * pow(10.0f, 3.0f) / 7;
+	m_params.soundspeed = 10.0f;
+	m_params.B = pow(m_params.soundspeed, 2) * pow(10.0f, 3.0f) / 7;
 
 	m_params.Young = 4500000.0f;	
 	m_params.Poisson = 0.49f;	
 	
-	m_params.deltaTime = 0.005f;
+	//m_params.deltaTime = 0.005f;
 	//m_params.deltaTime = pow(10.0f, -4.0f);
+	m_params.deltaTime = pow(10.0f, -3.0f);
 
     _initialize(numParticles);
 }

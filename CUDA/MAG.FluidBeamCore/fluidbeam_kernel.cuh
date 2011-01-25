@@ -37,6 +37,7 @@ struct SimParams {
 	float viscosity;
 	float deltaTime;
 	float smoothingRadius;	
+	float soundspeed;
 	float B;
 
 	//todo: investigate and remove it

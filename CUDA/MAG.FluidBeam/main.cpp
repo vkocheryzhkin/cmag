@@ -310,7 +310,7 @@ int main(int argc, char** argv)
 {
 	fluidParticlesSize = make_uint3(25, 25, 25);
 	beamParticlesSize = make_uint3(0, 0, 0);	
-	boundaryOffset = 3;
+	boundaryOffset = 0;
 	gridSize = make_uint3(GRID_SIZE, GRID_SIZE, GRID_SIZE);
 	particleRadius = 1.0f / 64;
 	//particleRadius = 0.1f / 3;
