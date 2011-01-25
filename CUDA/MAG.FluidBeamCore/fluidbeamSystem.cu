@@ -177,6 +177,7 @@ void reorderDataAndFindCellStart(uint*  cellStart,
 void calcDensityAndPressure(			
 			float* measures,
 			float* sortedPos,			
+			float* sortedVel,
 			uint* gridParticleIndex,
 			uint* cellStart,
 			uint* cellEnd,
@@ -186,6 +187,7 @@ void calcDensityAndPressure(
 
 	#if USE_TEX
     cutilSafeCall(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(float4)));
+	cutilSafeCall(cudaBindTexture(0, oldVelTex, sortedVel, numParticles*sizeof(float4)));
     cutilSafeCall(cudaBindTexture(0, cellStartTex, cellStart, numGridCells*sizeof(uint)));
     cutilSafeCall(cudaBindTexture(0, cellEndTex, cellEnd, numGridCells*sizeof(uint)));    
 	#endif
@@ -196,6 +198,7 @@ void calcDensityAndPressure(
     calcDensityAndPressureD<<< numBlocks, numThreads >>>(										  
 										  (float4*)measures,
                                           (float4*)sortedPos,                                          
+										  (float4*)sortedVel, 
                                           gridParticleIndex,
                                           cellStart,
                                           cellEnd,
@@ -205,6 +208,7 @@ void calcDensityAndPressure(
 
 	#if USE_TEX
     cutilSafeCall(cudaUnbindTexture(oldPosTex));
+	cutilSafeCall(cudaUnbindTexture(oldVelTex));
     cutilSafeCall(cudaUnbindTexture(cellStartTex));
     cutilSafeCall(cudaUnbindTexture(cellEndTex));
 	#endif

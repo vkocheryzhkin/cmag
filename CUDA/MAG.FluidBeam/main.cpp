@@ -24,7 +24,9 @@ const uint width = 1024, height = 768;
 
 int ox, oy;
 int buttonState = 0;
+
 float camera_trans[] = {0.0, 0.0, -2.2};
+//float camera_trans[] = {0.0, 0.0003, -0.001};
 float camera_rot[]   = {0, 0, 0};
 float camera_trans_lag[] = {0, 0, -1};
 float camera_rot_lag[] = {0, 0, 0};
@@ -35,6 +37,7 @@ uint3 gridSize;
 uint3 fluidParticlesSize;
 uint3 beamParticlesSize;
 float particleRadius;
+int boundaryOffset;
 
 FluidBeamSystem *psystem = 0;
 
@@ -138,7 +141,8 @@ void display()
 	glColor3f(0.0, 0.0, 0.0);
 			
 	float halfWorldLength = (2 * particleRadius) * GRID_SIZE / 2.0f;
-	float b = fluidParticlesSize.z * 2.0f / GRID_SIZE - halfWorldLength;	
+	//float b = fluidParticlesSize.z * 2.0f / GRID_SIZE - halfWorldLength;	
+	float b = 2.0f * particleRadius * (fluidParticlesSize.z + 2 * boundaryOffset) - halfWorldLength;	
 	float &h = halfWorldLength;	
 	glutWireCube(2.0);
 
@@ -181,7 +185,7 @@ void reshape(int w, int h)
 {
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(60.0, (float) w / (float) h, 0.1, 100.0);
+	gluPerspective(60.0, (float) w / (float) h, 0.001, 100.0);
 
 	glMatrixMode(GL_MODELVIEW);
 	glViewport(0, 0, w, h);
@@ -275,9 +279,22 @@ void mainMenu(int i)
 	key((unsigned char) i, 0, 0);
 }
 
-void initParticleSystem(uint3 fluidParticlesSize,uint3 beamParticlesSize, uint3 gridSize, float particleRadius, bool bUseOpenGL)
+void initParticleSystem(
+	uint3 fluidParticlesSize,
+	uint3 beamParticlesSize,
+	int boundaryOffset, 
+	uint3 gridSize, 
+	float particleRadius, 
+	bool bUseOpenGL)
 {
-	psystem = new FluidBeamSystem(fluidParticlesSize, beamParticlesSize, gridSize, particleRadius, bUseOpenGL); 
+	psystem = new FluidBeamSystem(
+		fluidParticlesSize,
+		beamParticlesSize,
+		boundaryOffset,
+		gridSize,
+		particleRadius,
+		bUseOpenGL); 
+
 	psystem->reset();
 
 	if (bUseOpenGL) {
@@ -292,14 +309,24 @@ void initParticleSystem(uint3 fluidParticlesSize,uint3 beamParticlesSize, uint3 
 int main(int argc, char** argv) 
 {
 	fluidParticlesSize = make_uint3(25, 25, 25);
-	beamParticlesSize = make_uint3(0, 0, 0);			
+	beamParticlesSize = make_uint3(0, 0, 0);	
+	boundaryOffset = 3;
 	gridSize = make_uint3(GRID_SIZE, GRID_SIZE, GRID_SIZE);
 	particleRadius = 1.0f / 64;
+	//particleRadius = 0.1f / 3;
+	//particleRadius = 1.0f / (2 * 50 * 1000);
+	//particleRadius = 1.0f / (1000);
 
 	initGL(argc, argv);
 	cudaGLInit(argc, argv);
 
-	initParticleSystem(fluidParticlesSize, beamParticlesSize, gridSize, particleRadius, true);
+	initParticleSystem(
+		fluidParticlesSize,
+		beamParticlesSize,
+		boundaryOffset,
+		gridSize,
+		particleRadius,
+		true);
 
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);

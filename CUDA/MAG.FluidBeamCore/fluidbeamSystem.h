@@ -8,7 +8,13 @@
 class FluidBeamSystem
 {
 public:
-    FluidBeamSystem(uint3 fluidParticlesGrid,uint3 beamParticlesGrid, uint3 gridSize,float particleRadius, bool bUseOpenGL);
+    FluidBeamSystem(
+		uint3 fluidParticlesGrid,
+		uint3 beamParticlesGrid,
+		int numBoundaryParticles,
+		uint3 gridSize,
+		float particleRadius,
+		bool bUseOpenGL);
     ~FluidBeamSystem();
 
     enum ParticleArray
@@ -39,6 +45,7 @@ public:
 	void * getCudaUDisplacementGradient()        const {return (void *)duDisplacementGradient;}
 	void * getCudaVDisplacementGradient()        const {return (void *)dvDisplacementGradient;}
 	void * getCudaWDisplacementGradient()        const {return (void *)dwDisplacementGradient;}
+	void * getCudaVelocity()        const {return (void *)dVel;}	
 	void * getCudaAcceleration()        const {return (void *)dAcceleration;}	
 
     void changeGravity();
@@ -55,6 +62,7 @@ protected: // methods
     void _finalize();
 
     void initFluidGrid(float spacing, float jitter);
+	void initBoundaryParticles(float spacing);	
 	void initBeamGrid(float spacing, float jitter);
 
 protected: // data
@@ -62,6 +70,7 @@ protected: // data
     uint numParticles;
 	uint numFluidParticles;
 	uint numBeamParticles;
+	int boundaryOffset;
 	uint3 fluidParticlesGrid;
 	uint3 beamParticlesGrid;
 

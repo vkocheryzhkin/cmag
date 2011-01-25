@@ -49,7 +49,8 @@ void reorderDataAndFindCellStart(
 
 void calcDensityAndPressure(			
 			float* measures,
-			float* sortedPos,			
+			float* sortedPos,		
+			float* sortedVel,
 			uint* gridParticleIndex,
 			uint* cellStart,
 			uint* cellEnd,

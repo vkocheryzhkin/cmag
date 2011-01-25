@@ -10,10 +10,12 @@ BOOST_AUTO_TEST_CASE(FluidBeamTest)
 {	
 	cudaInit(1,(char **) &"");
 	uint3 fluidParticlesGrid = make_uint3(5, 5, 5);
+	uint3 beamParticlesGrid = make_uint3(0, 0, 0);
 	uint3 gridSize = make_uint3(64, 64, 64);
-	//gridSize.x = gridSize.y = gridSize.z = 64;		
+	float particleRadius = 1.0f / 64;
+	uint numFluidParticles =fluidParticlesGrid.x * fluidParticlesGrid.y * fluidParticlesGrid.z;
 
-    FluidBeamSystem *psystem = new FluidBeamSystem(fluidParticlesGrid, 0, gridSize, false); 
+    FluidBeamSystem *psystem = new FluidBeamSystem(fluidParticlesGrid, beamParticlesGrid, gridSize, particleRadius, false); 
 	psystem->reset();
 
 	float *hPos = (float *)malloc(sizeof(float)*4*psystem->getNumParticles());
@@ -27,6 +29,7 @@ BOOST_AUTO_TEST_CASE(FluidBeamTest)
 	{				
 		psystem->update();	
 	}
+	//getCudaMeasures
 		copyArrayFromDevice(hPos,psystem->getCudaSortedPosition(),0, sizeof(float)*4*psystem->getNumParticles());
 		//copyArrayFromDevice(hrPos,psystem->getCudaSortedReferencePosition(),0, sizeof(float)*4*psystem->getNumParticles());
 		copyArrayFromDevice(htemp,psystem->getCudaMeasures(),0, sizeof(float)*4*psystem->getNumParticles());	

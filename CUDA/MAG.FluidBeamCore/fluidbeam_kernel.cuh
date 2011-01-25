@@ -20,6 +20,7 @@ struct SimParams {
     float particleRadius;
 
     uint3 gridSize;
+	uint3 fluidParticlesSize;
     uint numCells;
     float3 worldOrigin;
     float3 cellSize;    
@@ -29,7 +30,7 @@ struct SimParams {
 	//sph
 	float Poly6Kern;
 	float SpikyKern;
-	float LapKern;
+	float LapKern;	
 	float particleMass;
 	float restDensity;
 	float gasConstant;

@@ -16,33 +16,46 @@
 #define CUDART_PI_F         3.141592654f
 #endif
 
-FluidBeamSystem::FluidBeamSystem(uint3 fluidParticlesGrid, uint3 beamParticlesGrid, uint3 gridSize, float particleRadius, bool bUseOpenGL) :
-    m_bInitialized(false),	
-    m_bUseOpenGL(bUseOpenGL),
-	numFluidParticles(fluidParticlesGrid.x * fluidParticlesGrid.y * fluidParticlesGrid.z),
-	numBeamParticles(beamParticlesGrid.x * beamParticlesGrid.y * beamParticlesGrid.z),
-    numParticles(fluidParticlesGrid.x * fluidParticlesGrid.y * fluidParticlesGrid.z 
-	+ beamParticlesGrid.x * beamParticlesGrid.y * beamParticlesGrid.z),		
-    fluidParticlesGrid(fluidParticlesGrid),
-	beamParticlesGrid(beamParticlesGrid),
-    hPos(0),
-    hVel(0),
-	hMeasures(0),	
-    m_dPos(0),
-    dVel(0),
-	dReferencePos(0),
-	dSortedReferencePos(0),
-	duDisplacementGradient(0),
-	dvDisplacementGradient(0),
-	dwDisplacementGradient(0),
-	dMeasures(0),	
-    m_gridSize(gridSize),
-    m_timer(0)
-{
-	m_params.particleRadius = particleRadius;		
+FluidBeamSystem::FluidBeamSystem(
+	uint3 fluidParticlesGrid,
+	uint3 beamParticlesGrid,
+	int boundaryOffset,
+	uint3 gridSize,
+	float particleRadius,
+	bool bUseOpenGL) :
+		m_bInitialized(false),	
+		m_bUseOpenGL(bUseOpenGL),
+		numFluidParticles(fluidParticlesGrid.x * fluidParticlesGrid.y * fluidParticlesGrid.z),
+		numBeamParticles(beamParticlesGrid.x * beamParticlesGrid.y * beamParticlesGrid.z),
+		boundaryOffset(boundaryOffset),		
+		fluidParticlesGrid(fluidParticlesGrid),
+		beamParticlesGrid(beamParticlesGrid),
+		hPos(0),
+		hVel(0),
+		hMeasures(0),	
+		m_dPos(0),
+		dVel(0),
+		dReferencePos(0),
+		dSortedReferencePos(0),
+		duDisplacementGradient(0),
+		dvDisplacementGradient(0),
+		dwDisplacementGradient(0),
+		dMeasures(0),	
+		m_gridSize(gridSize),
+		m_timer(0)
+{	
+	numParticles = fluidParticlesGrid.x * fluidParticlesGrid.y * fluidParticlesGrid.z 
+		+ beamParticlesGrid.x * beamParticlesGrid.y * beamParticlesGrid.z
+		+ gridSize.x * boundaryOffset * (2 * boundaryOffset + fluidParticlesGrid.z)//bottom	
+		+ boundaryOffset * (gridSize.y / 2 - boundaryOffset) * (2 * boundaryOffset + fluidParticlesGrid.z) * 2 // left + right
+		+ (gridSize.x - 2 * boundaryOffset) * (gridSize.y / 2 - boundaryOffset) * boundaryOffset * 2 //front + back
+		;
+
+	m_params.particleRadius = particleRadius;	
+	m_params.fluidParticlesSize = fluidParticlesGrid;
 	srand(1973);
 
-    numGridCells = m_gridSize.x*m_gridSize.y*m_gridSize.z;
+    numGridCells = m_gridSize.x * m_gridSize.y * m_gridSize.z;
     gridSortBits = 18;//see radix sort for details
 
     m_params.gridSize = m_gridSize;
@@ -50,33 +63,47 @@ FluidBeamSystem::FluidBeamSystem(uint3 fluidParticlesGrid, uint3 beamParticlesGr
     
 	//m_params.particleRadius = 1.0f / 64.0f;		
 	
-	m_params.restDensity = 600.0f;
-	m_params.particleMass = 0.06f;
+	m_params.restDensity = 1000.0f;
+		
 	m_params.gasConstant = 3.0f;
-	m_params.viscosity = 3.5f;	
 	//m_params.viscosity = pow(10.0f,-3.0f);	
+	m_params.viscosity = 10.0f;	
+	
+
+	//let choose N = 20 is an avg number of particles in sphere
+	int N = 20;
 	m_params.smoothingRadius = 3.0f * m_params.particleRadius;	
+	m_params.particleMass = m_params.restDensity * 4.0f / 3.0f * CUDART_PI_F * pow(m_params.smoothingRadius,3) / N;
 	m_params.cellcount = 1;
 	m_params.accelerationLimit = 100;
     	
-	m_params.worldOrigin = make_float3(-1.0f, -1.0f, -1.0f);
+	//m_params.worldOrigin = make_float3(-1.0f, -1.0f, -1.0f);
+	m_params.worldOrigin = make_float3(
+		-1.0f * m_params.gridSize.x * m_params.particleRadius,
+		-1.0f * m_params.gridSize.y * m_params.particleRadius,
+		-1.0f * m_params.gridSize.z * m_params.particleRadius);
+
     float cellSize = m_params.particleRadius * 2.0f;  
     m_params.cellSize = make_float3(cellSize, cellSize, cellSize);
     
     m_params.boundaryDamping = -1.0f;
 
-    m_params.gravity = make_float3(0.0f, -6.8f, 0.0f);    	  
-	//m_params.gravity = make_float3(0.0f, -9.8f, 0.0f);    	  
+    //m_params.gravity = make_float3(0.0f, -6.8f, 0.0f);    	  
+	m_params.gravity = make_float3(0.0f, -9.8f, 0.0f);    	  
 	m_params.Poly6Kern = 315.0f / (64.0f * CUDART_PI_F * pow(m_params.smoothingRadius, 9.0f));
 	m_params.SpikyKern = -45.0f /(CUDART_PI_F * pow(m_params.smoothingRadius, 6.0f));
-	m_params.LapKern = m_params.viscosity * 45.0f / (CUDART_PI_F * pow(m_params.smoothingRadius, 6.0f));	
+	m_params.LapKern = m_params.viscosity * 45.0f / (CUDART_PI_F * pow(m_params.smoothingRadius, 6.0f));		
 
-	m_params.B = 200 * m_params.restDensity * m_params.gravity.y * (2 * 25 * m_params.particleRadius) / 7;
+	/*m_params.B = 200.0f * m_params.restDensity * m_params.gravity.y 
+		* (2 * fluidParticlesGrid.y * m_params.particleRadius) / 7.0f;*/
+	float soundspeed = 40.0f;
+	m_params.B = pow(soundspeed, 2) * pow(10.0f, 3) / 7;
 
 	m_params.Young = 4500000.0f;	
 	m_params.Poisson = 0.49f;	
 	
-	m_params.deltaTime = 0.005f;
+	//m_params.deltaTime = 0.005f;
+	m_params.deltaTime = 4.0f * pow(10.0f,-4);
 
     _initialize(numParticles);
 }
@@ -179,7 +206,7 @@ void FluidBeamSystem::_initialize(int numParticles)
         glBindBufferARB(GL_ARRAY_BUFFER, m_colorVBO);
         float *data = (float *) glMapBufferARB(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
         float *ptr = data;
-        for(uint i=0; i<numParticles; i++) 
+        for(uint i=0; i < numParticles; i++) 
 		{
 			float t =0.0f;
 			if(i < numFluidParticles)
@@ -285,6 +312,7 @@ void FluidBeamSystem::update()
 	calcDensityAndPressure(		
 		dMeasures,
 		dSortedPos,			
+		dSortedVel,
 		dIndex,
 		dCellStart,
 		dCellEnd,
@@ -387,9 +415,10 @@ inline float frand()
 
 void FluidBeamSystem::reset()
 {
-	float jitter = m_params.particleRadius * 0.01f;			            	
+	float jitter = m_params.particleRadius * 0.1f;			            	
 	float spacing = m_params.particleRadius * 2.0f;	
-	initFluidGrid( spacing, jitter);
+	initFluidGrid(spacing, jitter);
+	initBoundaryParticles(spacing);
 	//initBeamGrid(spacing, jitter);
 
 	setArray(POSITION, hPos, 0, numParticles);
@@ -403,6 +432,7 @@ void FluidBeamSystem::reset()
 void FluidBeamSystem::initFluidGrid(float spacing, float jitter)
 {	
 	uint size[3];
+	float offset = boundaryOffset * 2 * m_params.particleRadius;
 	uint s = (int) (powf((float) numFluidParticles, 1.0f / 3.0f));
 	size[0] = size[1] = size[2] = s;
 	for(uint z=0; z<size[2]; z++) {
@@ -410,9 +440,12 @@ void FluidBeamSystem::initFluidGrid(float spacing, float jitter)
 			for(uint x=0; x<size[0]; x++) {
 				uint i = (z*size[1]*size[0]) + (y*size[0]) + x;
 				if (i < numFluidParticles) {
-					hPos[i*4] = (spacing * x) + m_params.particleRadius + (frand() * 2.0f - 1.0f) * jitter - 1.0f ;
-					hPos[i*4+1] = (spacing * y) + m_params.particleRadius + (frand() * 2.0f - 1.0f) * jitter - 1.0f;
-					hPos[i*4+2] = (spacing * z) + m_params.particleRadius + (frand() * 2.0f - 1.0f) * jitter - 1.0f;					
+					hPos[i*4] = offset + (spacing * x) + m_params.particleRadius +
+						(frand() * 2.0f - 1.0f) * jitter + m_params.worldOrigin.x;
+					hPos[i*4+1] = offset + (spacing * y) + m_params.particleRadius +
+						(frand() * 2.0f - 1.0f) * jitter + m_params.worldOrigin.y;
+					hPos[i*4+2] = offset + (spacing * z) + m_params.particleRadius +
+						(frand() * 2.0f - 1.0f) * jitter + m_params.worldOrigin.z;					
 					hPos[i*4+3] = -1.0f;
 
 					hVel[i*4] = 0.0f;
@@ -424,6 +457,105 @@ void FluidBeamSystem::initFluidGrid(float spacing, float jitter)
 		}
 	}
 }
+
+void FluidBeamSystem::initBoundaryParticles(float spacing)
+{	
+	uint size[3];	
+	int numAllocatedParticles = numFluidParticles;
+	//bottom
+	size[0] = m_params.gridSize.x;
+	size[1] = boundaryOffset;
+	size[2] = 2 * boundaryOffset + fluidParticlesGrid.z;	
+	for(uint z=0; z < size[2]; z++) {
+		for(uint y=0; y < size[1]; y++) {
+			for(uint x=0; x < size[0]; x++) {
+				uint i = numAllocatedParticles + (z * size[1] * size[0]) + (y * size[0]) + x;				
+				hPos[i*4] = (spacing * x) + m_params.particleRadius + m_params.worldOrigin.x;
+				hPos[i*4+1] = (spacing * y) + m_params.particleRadius + m_params.worldOrigin.y;
+				hPos[i*4+2] = (spacing * z) + m_params.particleRadius + m_params.worldOrigin.z;					
+				hPos[i*4+3] = -1.0f;				
+				hVel[i*4+3] = 0.0f;				
+			}
+		}
+	}
+	numAllocatedParticles += size[2] * size[1] * size[0];
+	//left
+	size[0] = boundaryOffset;
+	size[1] = m_params.gridSize.y / 2 - boundaryOffset;
+	size[2] = 2 * boundaryOffset + fluidParticlesGrid.z;	
+	for(uint z=0; z < size[2]; z++) {
+		for(uint y=0; y < size[1]; y++) {
+			for(uint x=0; x < size[0]; x++) {
+				uint i = numAllocatedParticles + (z * size[1] * size[0]) + (y * size[0]) + x;				
+				hPos[i*4] = (spacing * x) + m_params.particleRadius + m_params.worldOrigin.x;
+				hPos[i*4+1] = boundaryOffset * 2 * m_params.particleRadius +
+					(spacing * y) + m_params.particleRadius + m_params.worldOrigin.y;
+				hPos[i*4+2] = (spacing * z) + m_params.particleRadius + m_params.worldOrigin.z;					
+				hPos[i*4+3] = -1.0f;				
+				hVel[i*4+3] = 0.0f;				
+			}
+		}
+	}
+	numAllocatedParticles += size[2] * size[1] * size[0];
+	//right
+	size[0] = boundaryOffset;
+	size[1] = m_params.gridSize.y / 2- boundaryOffset;
+	size[2] = 2 * boundaryOffset + fluidParticlesGrid.z;	
+	for(uint z=0; z < size[2]; z++) {
+		for(uint y=0; y < size[1]; y++) {
+			for(uint x=0; x < size[0]; x++) {
+				uint i = numAllocatedParticles + (z * size[1] * size[0]) + (y * size[0]) + x;				
+				hPos[i*4] = ((m_params.gridSize.x - boundaryOffset) * 2 * m_params.particleRadius) +
+					(spacing * x) + m_params.particleRadius + m_params.worldOrigin.x;
+				hPos[i*4+1] = boundaryOffset * 2 * m_params.particleRadius +
+					(spacing * y) + m_params.particleRadius + m_params.worldOrigin.y;
+				hPos[i*4+2] = (spacing * z) + m_params.particleRadius + m_params.worldOrigin.z;					
+				hPos[i*4+3] = -1.0f;				
+				hVel[i*4+3] = 0.0f;				
+			}
+		}
+	}
+	numAllocatedParticles += size[2] * size[1] * size[0];
+	//back
+	size[0] = m_params.gridSize.x - 2 * boundaryOffset;
+	size[1] = m_params.gridSize.y / 2 - boundaryOffset;
+	size[2] = boundaryOffset;		
+	for(uint z=0; z < size[2]; z++) {
+		for(uint y=0; y < size[1]; y++) {
+			for(uint x=0; x < size[0]; x++) {
+				uint i = numAllocatedParticles + (z * size[1] * size[0]) + (y * size[0]) + x;				
+				hPos[i*4] = boundaryOffset * 2 * m_params.particleRadius +
+					(spacing * x) + m_params.particleRadius + m_params.worldOrigin.x;
+				hPos[i*4+1] = boundaryOffset * 2 * m_params.particleRadius +
+					(spacing * y) + m_params.particleRadius + m_params.worldOrigin.y;
+				hPos[i*4+2] = (spacing * z) + m_params.particleRadius + m_params.worldOrigin.z;					
+				hPos[i*4+3] = -1.0f;				
+				hVel[i*4+3] = 0.0f;				
+			}
+		}
+	}
+	numAllocatedParticles += size[2] * size[1] * size[0];
+	//front
+	size[0] = m_params.gridSize.x - 2 * boundaryOffset;
+	size[1] = m_params.gridSize.y / 2 - boundaryOffset;
+	size[2] = boundaryOffset;	
+	for(uint z=0; z < size[2]; z++) {
+		for(uint y=0; y < size[1]; y++) {
+			for(uint x=0; x < size[0]; x++) {
+				uint i = numAllocatedParticles + (z * size[1] * size[0]) + (y * size[0]) + x;				
+				hPos[i*4] = boundaryOffset * 2 * m_params.particleRadius +
+					(spacing * x) + m_params.particleRadius + m_params.worldOrigin.x;
+				hPos[i*4+1] = boundaryOffset * 2 * m_params.particleRadius +
+					(spacing * y) + m_params.particleRadius + m_params.worldOrigin.y;
+				hPos[i*4+2] = (boundaryOffset + fluidParticlesGrid.z) * 2 * m_params.particleRadius +
+					(spacing * z) + m_params.particleRadius + m_params.worldOrigin.z;					
+				hPos[i*4+3] = -1.0f;				
+				hVel[i*4+3] = 0.0f;			
+			}
+		}
+	}
+}
+
 //void FluidBeamSystem::initBeamGrid(float spacing, float jitter)
 //{
 //	srand(1973);	
@@ -449,30 +581,30 @@ void FluidBeamSystem::initFluidGrid(float spacing, float jitter)
 //	}
 //}
 
-void FluidBeamSystem::initBeamGrid(float spacing, float jitter)
-{	/*
-	int xsize = 20;
-	int ysize = 1;
-	int zsize = 5;*/
-	int xsize = 0;
-	int ysize = 0;
-	int zsize = 0;
-	for(uint z=0; z < zsize; z++) {
-		for(uint y=0; y < ysize; y++) {	
-			for(uint x=0; x < xsize; x++) {
-				uint i = numFluidParticles + (z* ysize * xsize) + (y * xsize) + x;
-				if (i < numParticles) {
-					hPos[i*4] =  0.7 + (spacing * x) + m_params.particleRadius - 1.0f ;//+ (frand() * 2.0f - 1.0f) * jitter;
-					hPos[i*4+1] = - (spacing * y) - m_params.particleRadius ;//+ (frand() * 2.0f - 1.0f) * jitter;
-					hPos[i*4+2] = (spacing * z) + m_params.particleRadius - 1.0f;// + (frand() * 2.0f - 1.0f) * jitter;					
-					hPos[i*4+3] = 1.0f;				
-
-					hVel[i*4+0] = 0;	
-					hVel[i*4+1] = 0;					
-					hVel[i*4+2] = 0;															
-					hVel[i*4+3] = (x == 0) ? 0 : 1;
-				}
-			}
-		}
-	}	
-}
+//void FluidBeamSystem::initBeamGrid(float spacing, float jitter)
+//{	/*
+//	int xsize = 20;
+//	int ysize = 1;
+//	int zsize = 5;*/
+//	int xsize = 0;
+//	int ysize = 0;
+//	int zsize = 0;
+//	for(uint z=0; z < zsize; z++) {
+//		for(uint y=0; y < ysize; y++) {	
+//			for(uint x=0; x < xsize; x++) {
+//				uint i = numFluidParticles + (z* ysize * xsize) + (y * xsize) + x;
+//				if (i < numParticles) {
+//					hPos[i*4] =  0.7 + (spacing * x) + m_params.particleRadius - 1.0f ;//+ (frand() * 2.0f - 1.0f) * jitter;
+//					hPos[i*4+1] = - (spacing * y) - m_params.particleRadius ;//+ (frand() * 2.0f - 1.0f) * jitter;
+//					hPos[i*4+2] = (spacing * z) + m_params.particleRadius - 1.0f;// + (frand() * 2.0f - 1.0f) * jitter;					
+//					hPos[i*4+3] = 1.0f;				
+//
+//					hVel[i*4+0] = 0;	
+//					hVel[i*4+1] = 0;					
+//					hVel[i*4+2] = 0;															
+//					hVel[i*4+3] = (x == 0) ? 0 : 1;
+//				}
+//			}
+//		}
+//	}	
+//}

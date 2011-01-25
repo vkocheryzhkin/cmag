@@ -108,8 +108,10 @@ void reorderDataAndFindCellStartD(uint*   cellStart,        // output
 __device__
 float sumParticlesInDomain(int3    gridPos,
                    uint    index,
-                   float3  pos,
+                   float3  pos,				   
                    float4* oldPos, 
+				   float3  vel,
+				   float4* oldVel, 
                    uint*   cellStart,
                    uint*   cellEnd)
 {
@@ -123,14 +125,17 @@ float sumParticlesInDomain(int3    gridPos,
         for(uint j=startIndex; j<endIndex; j++) {
             if (j != index) {             
 	            float3 pos2 = make_float3(FETCH(oldPos, j));
-				float wpolyExpr = 0.0f;
-
+				float3 vel2 = make_float3(FETCH(oldVel, j));
+				//float wpolyExpr = 0.0f;
 				float3 relPos = pos2 - pos; 
 				float dist = length(relPos);
 
-				if (dist < params.smoothingRadius) {
-					wpolyExpr = pow(params.smoothingRadius,2)- pow(dist,2);					
+				if (dist < params.smoothingRadius) {					
+					float wpolyExpr = pow(params.smoothingRadius,2)- pow(dist,2);					
 					sum += pow(wpolyExpr,3);
+					
+					/*float temp = params.smoothingRadius - dist;		
+					sum += dot(vel - vel2, normalize(relPos)) * temp * temp;*/									
 				}                
             }
         }
@@ -142,6 +147,7 @@ __global__
 void calcDensityAndPressureD(			
 			float4* measures, //output
 			float4* oldPos,	  //input 
+			float4* oldVel,	  //input 
 			uint* gridParticleIndex,
 			uint* cellStart,
 			uint* cellEnd,
@@ -152,6 +158,7 @@ void calcDensityAndPressureD(
     if (index >= numParticles) return;    
 
 	float3 pos = make_float3(FETCH(oldPos, index));
+	float3 vel = make_float3(FETCH(oldVel, index));
 
     int3 gridPos = calcGridPos(pos);
 
@@ -161,13 +168,21 @@ void calcDensityAndPressureD(
         for(int y=-cellcount; y<=cellcount; y++) {
             for(int x=-cellcount; x<=cellcount; x++) {
                 int3 neighbourPos = gridPos + make_int3(x, y, z);
-                sum += sumParticlesInDomain(neighbourPos, index, pos, oldPos, cellStart, cellEnd);
+                sum += sumParticlesInDomain(neighbourPos, index, pos, oldPos, vel, oldVel, cellStart, cellEnd);
             }
         }
     }	
-	float dens = sum * params.particleMass * params.Poly6Kern;
+	/*float dens =  sum * params.particleMass * params.Poly6Kern;
     measures[index].x = dens;	
-	measures[index].y = (dens - params.restDensity) * params.gasConstant; 	
+	measures[index].y = (dens - params.restDensity) * params.gasConstant; */
+
+	float dens =  sum * params.particleMass * params.Poly6Kern;
+    measures[index].x = dens;	
+	measures[index].y =  params.B * (pow(dens / params.restDensity ,7.0f) - 1.0f); 
+
+	/*float dens = params.restDensity +  params.deltaTime * params.particleMass * sum * params.SpikyKern;			
+	measures[index].x = dens;	
+	measures[index].y = params.B * (pow(dens / params.restDensity ,7.0f) - 1.0f); 	*/			
 }
 
 __device__
@@ -177,6 +192,7 @@ float3 sumNavierStokesForces(int3    gridPos,
                    float4* oldPos, 
 				   float3  vel,
 				   float4* oldVel,
+				   float density,
 				   float pressure,				   
 				   float4* oldMeasures,
                    uint*   cellStart,
@@ -197,24 +213,32 @@ float3 sumNavierStokesForces(int3    gridPos,
 				float3 vel2 = make_float3(FETCH(oldVel, j));				
 				float4 measure = FETCH(oldMeasures, j);
 				float density2 = measure.x;
-				float pressure2 = measure.y;				
-				float tempExpr = 0.0f;
-
+				float pressure2 = measure.y;								
 				float3 relPos = pos - pos2;
 				float dist = length(relPos);
+				float artViscosity = 0.0f;
 
 				if (dist < params.smoothingRadius) {
-					tempExpr =  (params.smoothingRadius - dist);					
-					pexp = pressure + pressure2;
-					texp = tempExpr / density2;					
-					tmpForce.x += texp * (-0.5 * params.SpikyKern * (relPos.x / dist) * tempExpr * pexp + params.LapKern * (vel2.x - vel.x));
-					tmpForce.y += texp * (-0.5 * params.SpikyKern * (relPos.y / dist) * tempExpr * pexp + params.LapKern * (vel2.y - vel.y));
-					tmpForce.z += texp * (-0.5 * params.SpikyKern * (relPos.z / dist) * tempExpr * pexp + params.LapKern * (vel2.z - vel.z));					
+					float temp = params.smoothingRadius - dist;						
+					/*tmpForce += -0.5f * (pressure + pressure2) * params.SpikyKern * normalize(relPos) * temp * temp / density2
+						+ params.LapKern * (vel2 - vel) * temp / density2;		*/			
+
+					float artViscosity = 0.0f;
+					if(dot(vel - vel2, relPos) < 0)
+					{
+						float nu = 2.0f * 0.08f * params.smoothingRadius * 40.0f / (density + density2);
+
+						artViscosity = -1.0f * nu * dot(vel - vel2, relPos) / 
+							(dot(relPos, relPos) + 0.01f * pow(params.smoothingRadius, 2));
+					}
+					tmpForce += (pressure / pow(density,2) + pressure2 / pow(density2,2) + artViscosity)
+						* params.SpikyKern * normalize(relPos) * temp * temp;
 				}                
             }
         }
     }
-	return tmpForce;				
+	//return tmpForce * params.particleMass / density;				
+	return -1.0f * params.particleMass * tmpForce;		
 }
 
 __global__
@@ -251,6 +275,7 @@ void calcAndApplyAccelerationD(
 					oldPos,
 					vel,
 					oldVel,
+					density,
 					pressure,					
 					oldMeasures,
 					cellStart, 
@@ -260,11 +285,11 @@ void calcAndApplyAccelerationD(
     }
 	uint originalIndex = gridParticleIndex[index];					
 
-	float3 acc = params.particleMass * nvForce / density;
-	float speed = dot(acc,acc);
-	if(speed > params.accelerationLimit * params.accelerationLimit)
-		acc *= params.accelerationLimit / sqrt(speed);
-
+	//float3 acc = params.particleMass * nvForce / density;
+	float3 acc = nvForce;
+	//float speed = dot(acc,acc);
+	//if(speed > params.accelerationLimit * params.accelerationLimit)
+	//	acc *= params.accelerationLimit / sqrt(speed);
 	acceleration[originalIndex] =  make_float4(acc, 0.0f);
 }
 
@@ -287,8 +312,8 @@ void integrate(float4* posArray,		 // input, output
     float3 vel = make_float3(velData.x, velData.y, velData.z);
 	float3 acc = make_float3(accData.x, accData.y, accData.z);
 
-	float3 nextVel = vel + (params.gravity + acc) * params.deltaTime;
-	//float3 nextVel = vel + (acc) * params.deltaTime;
+	float3 nextVel = vel + (params.gravity + acc) * params.deltaTime * velData.w;
+	//float3 nextVel = vel + params.gravity * params.deltaTime;
 
 	float3 velLeapFrog = vel + nextVel;
 	velLeapFrog *= 0.5;
@@ -296,15 +321,23 @@ void integrate(float4* posArray,		 // input, output
     vel = nextVel;   	
     pos += vel * params.deltaTime;   
 
-	float bound =(25 * 2)/64.0f -1.0f;	
+	float scale = params.gridSize.x * params.particleRadius;
+	float bound = 2.0f * params.particleRadius * params.fluidParticlesSize.z - 1.0f * scale;	
 	//float bound =(5 * 2)/64.0f -1.0f;	
 	//float bound =1.0f;	
-	if (pos.x > 1.0f - params.particleRadius) { pos.x = 1.0f - params.particleRadius; vel.x *= params.boundaryDamping; }
-    if (pos.x < -1.0f + params.particleRadius) { pos.x = -1.0f + params.particleRadius; vel.x *= params.boundaryDamping;}
-    if (pos.y > 1.0f - params.particleRadius) { pos.y = 1.0f - params.particleRadius; vel.y *= params.boundaryDamping; }    
-    if (pos.z > bound - params.particleRadius) { pos.z = bound - params.particleRadius; vel.z *= params.boundaryDamping; }
-    if (pos.z < -1.0f + params.particleRadius) { pos.z = -1.0f + params.particleRadius; vel.z *= params.boundaryDamping;}
-    if (pos.y < -1.0f + params.particleRadius) { pos.y = -1.0f + params.particleRadius; vel.y *= params.boundaryDamping;}		
+
+	/*if (pos.x > 1.0f * scale - params.particleRadius) {
+		pos.x = 1.0f * scale - params.particleRadius; vel.x *= params.boundaryDamping; }
+    if (pos.x < -1.0f * scale + params.particleRadius) {
+		pos.x = -1.0f * scale + params.particleRadius; vel.x *= params.boundaryDamping;}
+    if (pos.y > 1.0f * scale - params.particleRadius) {
+		pos.y = 1.0f * scale - params.particleRadius; vel.y *= params.boundaryDamping; }    
+    if (pos.z > bound - params.particleRadius) {
+		pos.z = bound - params.particleRadius; vel.z *= params.boundaryDamping; }
+    if (pos.z < -1.0f * scale + params.particleRadius) {
+		pos.z = -1.0f * scale + params.particleRadius; vel.z *= params.boundaryDamping;}
+    if (pos.y < -1.0f * scale + params.particleRadius) {
+		pos.y = -1.0f * scale + params.particleRadius; vel.y *= params.boundaryDamping;}*/		
     
     posArray[index] = make_float4(pos, posData.w);
     velArray[index] = make_float4(vel, velData.w);
