@@ -38,6 +38,7 @@ public:
     unsigned int getCurrentReadBuffer() const { return m_posVbo; }
     unsigned int getColorBuffer()       const { return m_colorVBO; }
 
+	void * getCudaPositions()      const { return (void *)m_dPos; }
     void * getCudaSortedPosition()      const { return (void *)dSortedPos; }
 	void * getCudaMeasures()            const { return (void *)dMeasures; }    
 	void * getCudaHash()				const {return (void *)dHash;}
