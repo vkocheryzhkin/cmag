@@ -106,7 +106,7 @@ void reorderDataAndFindCellStartD(uint*   cellStart,        // output
 __device__
 float sumParticlesInDomain(int3    gridPos,
                    uint    index,
-                   float3  pos,				   
+                   float4  pos,				   
                    float4* oldPos, 
 				   float4  vel,
 				   float4* oldVel, 
@@ -122,12 +122,12 @@ float sumParticlesInDomain(int3    gridPos,
         uint endIndex = FETCH(cellEnd, gridHash);
         for(uint j=startIndex; j<endIndex; j++) {
             if (j != index) {             
-	            float3 pos2 = make_float3(FETCH(oldPos, j));
+	            float4 pos2 = FETCH(oldPos, j);
 				float4 vel2 = FETCH(oldVel, j);				
-				float3 relPos = pos2 - pos; 
+				float3 relPos = make_float3(pos2 - pos); 
 				float dist = length(relPos);
 
-				 if(vel2.w == 0.0f)//todo: remove w usage
+				 if(pos2.w == 0.0f)//todo: remove w usage
 					 continue;
 
 				if (dist < params.smoothingRadius) {					
@@ -154,10 +154,10 @@ void calcDensityAndPressureD(
 	uint index = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
     if (index >= numParticles) return;    
 
-	float3 pos = make_float3(FETCH(oldPos, index));
+	float4 pos = FETCH(oldPos, index);
 	float4 vel = FETCH(oldVel, index);
 
-    int3 gridPos = calcGridPos(pos);
+    int3 gridPos = calcGridPos(make_float3(pos));
 
     float sum = 0.0f;
 	
@@ -207,7 +207,7 @@ float3 sumNavierStokesForces(int3    gridPos,
 				float dist = length(relPos);
 				float artViscosity = 0.0f;
 				
-				 if(vel2.w == 0.0f)//todo: remove w usage
+				 if(pos2.w == 0.0f)//todo: remove w usage
 				 {					 		
 					float q = dist / params.particleRadius;
 					float k = pow(params.soundspeed, 2);
@@ -266,27 +266,34 @@ void calcAndApplyAccelerationD(
 
     int3 gridPos = calcGridPos(make_float3(pos));
 
-    float3 nvForce = make_float3(0.0f);	
+    float3 force = make_float3(0.0f);	
     for(int z=-params.cellcount; z<=params.cellcount; z++) {
         for(int y=-params.cellcount; y<=params.cellcount; y++) {
             for(int x=-params.cellcount; x<=params.cellcount; x++) {
                 int3 neighbourPos = gridPos + make_int3(x, y, z);
-                nvForce += sumNavierStokesForces(neighbourPos, 
-					index, 
-					pos, 
-					oldPos,
-					vel,
-					oldVel,
-					density,
-					pressure,					
-					oldMeasures,
-					cellStart, 
-					cellEnd);
+				if(pos.w == 1.0f)
+				{
+					force += sumNavierStokesForces(
+						neighbourPos, 
+						index, 
+						pos, 
+						oldPos,
+						vel,
+						oldVel,
+						density,
+						pressure,					
+						oldMeasures,
+						cellStart, 
+						cellEnd);
+				}else
+				{
+					force += make_float3(-0.1f,0.0f,0.0f);
+				}
             }
         }
     }
 	uint originalIndex = gridParticleIndex[index];						
-	float3 acc = nvForce;	
+	float3 acc = force;	
 	acceleration[originalIndex] =  make_float4(acc, 0.0f);
 }
 
@@ -309,6 +316,7 @@ void integrate(float4* posArray,		 // input, output
     float3 vel = make_float3(velData.x, velData.y, velData.z);
 	float3 acc = make_float3(accData.x, accData.y, accData.z);
 
+	//float3 nextVel = vel + (params.gravity + acc) * params.deltaTime;
 	float3 nextVel = vel + (params.gravity + acc) * params.deltaTime * velData.w; //todo: remove w usage
 	//float3 nextVel = vel + acc * params.deltaTime * velData.w;
 
@@ -321,6 +329,7 @@ void integrate(float4* posArray,		 // input, output
 	float scale = params.gridSize.x * params.particleRadius;
 	float bound = 2.0f * params.particleRadius * params.fluidParticlesSize.z - 1.0f * scale;	
 	//float bound = 2.0f * params.particleRadius * (params.fluidParticlesSize.z + 6) - 1.0f * scale;		
+
 	if (pos.x > 1.0f * scale - params.particleRadius) {
 		pos.x = 1.0f * scale - params.particleRadius; vel.x *= params.boundaryDamping; }
     if (pos.x < -1.0f * scale + params.particleRadius) {

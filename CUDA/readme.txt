@@ -1,7 +1,7 @@
-SPH implementation of the following dynamic problems:
-
 - clone it inside C:\ProgramData\NVIDIA Corporation\NVIDIA GPU Computing SDK 3.2
    so you don't need to copy libraries
+   
+SPH implementation of the following dynamic problems:
 
 - Fluid (incompressible Navier–Stokes)
 	+ normalized density

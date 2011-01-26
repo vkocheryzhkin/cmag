@@ -567,13 +567,15 @@ void FluidBeamSystem::initBeamGrid(float spacing, float jitter)
 					hPos[i*4] = (spacing * x) + m_params.particleRadius + 0.7f;
 					hPos[i*4+1] = (spacing * y) + m_params.particleRadius - 1.0f;
 					hPos[i*4+2] = (spacing * z) + m_params.particleRadius - 1.0f;					
-					hPos[i*4+3] = 1.0f;
+					hPos[i*4+3] = 0.0f; //distinguish beam from fluid
 
 					hVel[i*4] = 0.0f;
 					hVel[i*4+1] = 0.0f;
 					hVel[i*4+2] = 0.0f;
-					hVel[i*4+3] = 0.0f;
-					hVelLeapFrog[i*4+3] = 0.0f;
+					hVel[i*4+3] = ((y == ysize - 1) || (y == 0) ||
+						(z == zsize -1 ) || (z == 0))? 0.0f : 1.0f;
+					hVelLeapFrog[i*4+3] = ((y == ysize - 1) || (y == 0) ||
+						(z == zsize -1 ) || (z == 0))? 0.0f : 1.0f; // 0: don't integrate, 1: integrate
 			}
 		}
 	}
