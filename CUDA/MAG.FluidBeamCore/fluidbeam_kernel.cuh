@@ -30,11 +30,11 @@ struct SimParams {
 	//sph
 	float Poly6Kern;
 	float SpikyKern;
-	float LapKern;	
+	//float LapKern;	
 	float particleMass;
 	float restDensity;
 	float gasConstant;
-	float viscosity;
+	//float viscosity;
 	float deltaTime;
 	float smoothingRadius;	
 	float soundspeed;

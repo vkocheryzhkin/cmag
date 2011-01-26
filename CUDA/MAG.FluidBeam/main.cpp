@@ -309,7 +309,7 @@ void initParticleSystem(
 int main(int argc, char** argv) 
 {
 	fluidParticlesSize = make_uint3(25, 25, 25);
-	beamParticlesSize = make_uint3(0, 0, 0);	
+	beamParticlesSize = make_uint3(25, 32, 1);	
 	boundaryOffset = 0;
 	gridSize = make_uint3(GRID_SIZE, GRID_SIZE, GRID_SIZE);
 	particleRadius = 1.0f / 64;

@@ -101,8 +101,6 @@ void reorderDataAndFindCellStartD(uint*   cellStart,        // output
         sortedPos[index] = pos;
         sortedVel[index] = vel;
 	}
-
-
 }
 
 __device__
@@ -110,7 +108,7 @@ float sumParticlesInDomain(int3    gridPos,
                    uint    index,
                    float3  pos,				   
                    float4* oldPos, 
-				   float3  vel,
+				   float4  vel,
 				   float4* oldVel, 
                    uint*   cellStart,
                    uint*   cellEnd)
@@ -120,22 +118,21 @@ float sumParticlesInDomain(int3    gridPos,
     uint startIndex = FETCH(cellStart, gridHash);
 
     float sum = 0.0f;
-    if (startIndex != 0xffffffff) {        // cell is not empty
+    if (startIndex != 0xffffffff) {       
         uint endIndex = FETCH(cellEnd, gridHash);
         for(uint j=startIndex; j<endIndex; j++) {
             if (j != index) {             
 	            float3 pos2 = make_float3(FETCH(oldPos, j));
-				float3 vel2 = make_float3(FETCH(oldVel, j));
-				//float wpolyExpr = 0.0f;
+				float4 vel2 = FETCH(oldVel, j);				
 				float3 relPos = pos2 - pos; 
 				float dist = length(relPos);
 
+				 if(vel2.w == 0.0f)//todo: remove w usage
+					 continue;
+
 				if (dist < params.smoothingRadius) {					
-					float wpolyExpr = pow(params.smoothingRadius,2)- pow(dist,2);					
-					sum += pow(wpolyExpr,3);
-					
-					/*float temp = params.smoothingRadius - dist;		
-					sum += dot(vel - vel2, normalize(relPos)) * temp * temp;*/									
+					float wpolyExpr = pow(params.smoothingRadius,2)- pow(dist,2);
+					sum += pow(wpolyExpr,3);																	
 				}                
             }
         }
@@ -158,7 +155,7 @@ void calcDensityAndPressureD(
     if (index >= numParticles) return;    
 
 	float3 pos = make_float3(FETCH(oldPos, index));
-	float3 vel = make_float3(FETCH(oldVel, index));
+	float4 vel = FETCH(oldVel, index);
 
     int3 gridPos = calcGridPos(pos);
 
@@ -171,18 +168,10 @@ void calcDensityAndPressureD(
                 sum += sumParticlesInDomain(neighbourPos, index, pos, oldPos, vel, oldVel, cellStart, cellEnd);
             }
         }
-    }	
-	/*float dens =  sum * params.particleMass * params.Poly6Kern;
-    measures[index].x = dens;
-	measures[index].y = (dens - params.restDensity) * params.gasConstant; */
-
+    }		
 	float dens =  sum * params.particleMass * params.Poly6Kern;
     measures[index].x = dens;	
-	measures[index].y =  params.B * (pow(dens / params.restDensity ,7.0f) - 1.0f); 
-
-	/*float dens = params.restDensity +  params.deltaTime * params.particleMass * sum * params.SpikyKern;			
-	measures[index].x = dens;	
-	measures[index].y = params.B * (pow(dens / params.restDensity ,7.0f) - 1.0f); 	*/			
+	measures[index].y =  params.B * (pow(dens / params.restDensity ,7.0f) - 1.0f); 		
 }
 
 __device__
@@ -190,7 +179,7 @@ float3 sumNavierStokesForces(int3    gridPos,
                    uint    index,
                    float4  pos,
                    float4* oldPos, 
-				   float3  vel,
+				   float4  vel,
 				   float4* oldVel,
 				   float density,
 				   float pressure,				   
@@ -210,50 +199,48 @@ float3 sumNavierStokesForces(int3    gridPos,
         for(uint j=startIndex; j<endIndex; j++) {
             if (j != index) {             
 	            float4 pos2 = FETCH(oldPos, j);
-				float3 vel2 = make_float3(FETCH(oldVel, j));				
+				float4 vel2 = FETCH(oldVel, j);				
 				float4 measure = FETCH(oldMeasures, j);
 				float density2 = measure.x;
 				float pressure2 = measure.y;								
 				float3 relPos = make_float3(pos - pos2);
 				float dist = length(relPos);
 				float artViscosity = 0.0f;
-				//float q = dist / (2 * params.particleRadius);
+				
+				 if(vel2.w == 0.0f)//todo: remove w usage
+				 {					 		
+					float q = dist / params.particleRadius;
+					float k = pow(params.soundspeed, 2);
+					float3 coeff = k * (params.particleMass + params.particleMass) / params.particleMass 
+						/ dist * normalize(relPos);					
+					if((q >= 1.0f) && (q < 2.0f))
+						tmpForce += coeff * 0.5f * pow(2.0f - q, 2);
+					if((q >= 2.0f / 3.0f) && (q < 1.0f))
+						tmpForce += coeff * (2.0f * q - 3.0f / 2 * q * q);
+					if(q < 2.0f / 3.0f)
+						tmpForce += coeff * 2.0f / 3.0f;	
+					 continue;
+				 }
 
 				if (dist < params.smoothingRadius) {
-					float temp = params.smoothingRadius - dist;						
-				/*tmpForce += params.particleMass / density * (
-						-0.5f * (pressure + pressure2) 
-						* params.SpikyKern * normalize(relPos) * temp * temp / density2
-						+ params.LapKern * (vel2 - vel) * temp / density2);*/	
-
+					float temp = (params.smoothingRadius - dist);				
 					float artViscosity = 0.0f;
-					if(dot(vel - vel2, relPos) < 0)
+					float vij_pij = dot(make_float3(vel - vel2),relPos);
+					if(vij_pij < 0)
 					{
 						float nu = 2.0f * 0.18f * params.smoothingRadius *
 							params.soundspeed / (density + density2);
 
-						artViscosity = -1.0f * nu * dot(vel - vel2, relPos) / 
+						artViscosity = -1.0f * nu * vij_pij / 
 							(dot(relPos, relPos) + 0.01f * pow(params.smoothingRadius, 2));
 					}
 					tmpForce +=  -1.0f * params.particleMass *
 						(pressure / pow(density,2) + pressure2 / pow(density2,2) +
-						artViscosity) * params.SpikyKern * normalize(relPos) * temp * temp;
-
-					//float indication = pos2.w - pos.w; 
-					////0 - same items; 1 - water under boundary impact; -1 : boundary under water impact
-					//float3 coeff = 0.02f * pow(params.soundspeed, 2) / dist * 0.5f * normalize(relPos) * indication;					
-					//if((q > 1.0f) && (q < 2.0f))
-					//	tmpForce += coeff * 0.5f * pow(2.0f - q, 2);
-					//if((q > 2.0f / 3.0f) && (q < 1.0f))
-					//	tmpForce += coeff * (2.0f * q - 3.0f / 2 * q * q);
-					//if(q < 2.0f / 3.0f)
-					//	tmpForce += coeff * 2.0f / 3.0f;				
+						artViscosity) * params.SpikyKern * normalize(relPos) * temp * temp;							
 				}                
             }
         }
-    }
-	//return tmpForce * params.particleMass / density;				
-	//return -1.0f * params.particleMass * tmpForce;		
+    }		
 	return tmpForce;
 }
 
@@ -272,7 +259,7 @@ void calcAndApplyAccelerationD(
     if (index >= numParticles) return;    
 
 	float4 pos = FETCH(oldPos, index);
-	float3 vel = make_float3(FETCH(oldVel, index));
+	float4 vel = FETCH(oldVel, index);
 	float4 measure = FETCH(oldMeasures,index);
 	float density = measure.x;
 	float pressure = measure.y;
@@ -298,13 +285,8 @@ void calcAndApplyAccelerationD(
             }
         }
     }
-	uint originalIndex = gridParticleIndex[index];					
-
-	//float3 acc = params.particleMass * nvForce / density;
-	float3 acc = nvForce;
-	//float speed = dot(acc,acc);
-	//if(speed > params.accelerationLimit * params.accelerationLimit)
-	//	acc *= params.accelerationLimit / sqrt(speed);
+	uint originalIndex = gridParticleIndex[index];						
+	float3 acc = nvForce;	
 	acceleration[originalIndex] =  make_float4(acc, 0.0f);
 }
 
@@ -327,7 +309,7 @@ void integrate(float4* posArray,		 // input, output
     float3 vel = make_float3(velData.x, velData.y, velData.z);
 	float3 acc = make_float3(accData.x, accData.y, accData.z);
 
-	float3 nextVel = vel + (params.gravity + acc) * params.deltaTime * velData.w;
+	float3 nextVel = vel + (params.gravity + acc) * params.deltaTime * velData.w; //todo: remove w usage
 	//float3 nextVel = vel + acc * params.deltaTime * velData.w;
 
 	float3 velLeapFrog = vel + nextVel;
@@ -338,10 +320,7 @@ void integrate(float4* posArray,		 // input, output
 
 	float scale = params.gridSize.x * params.particleRadius;
 	float bound = 2.0f * params.particleRadius * params.fluidParticlesSize.z - 1.0f * scale;	
-	//float bound = 2.0f * params.particleRadius * (params.fluidParticlesSize.z + 6) - 1.0f * scale;	
-	//float bound =(5 * 2)/64.0f -1.0f;	
-	//float bound =1.0f;	
-
+	//float bound = 2.0f * params.particleRadius * (params.fluidParticlesSize.z + 6) - 1.0f * scale;		
 	if (pos.x > 1.0f * scale - params.particleRadius) {
 		pos.x = 1.0f * scale - params.particleRadius; vel.x *= params.boundaryDamping; }
     if (pos.x < -1.0f * scale + params.particleRadius) {
