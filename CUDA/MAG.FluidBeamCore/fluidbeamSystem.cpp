@@ -32,14 +32,16 @@ FluidBeamSystem::FluidBeamSystem(
 		beamParticlesGrid(beamParticlesGrid),
 		hPos(0),
 		hVel(0),
+		hDisplacement(0),
 		hMeasures(0),	
 		m_dPos(0),
 		dVel(0),
-		dReferencePos(0),
-		dSortedReferencePos(0),
-		duDisplacementGradient(0),
-		dvDisplacementGradient(0),
-		dwDisplacementGradient(0),
+		dDisplacement(0),
+		//dReferencePos(0),
+		//dSortedReferencePos(0),
+		//duDisplacementGradient(0),
+		//dvDisplacementGradient(0),
+		//dwDisplacementGradient(0),
 		dMeasures(0),	
 		m_gridSize(gridSize),
 		m_timer(0)
@@ -151,6 +153,7 @@ void FluidBeamSystem::_initialize(int numParticles)
 
     hPos = new float[numParticles*4];
     hVel = new float[numParticles*4];
+	hDisplacement = new float[numParticles*4];
 	hVelLeapFrog = new float[numParticles*4];		
 	hMeasures = new float[numParticles*4];
 	hAcceleration = new float[numParticles*4];
@@ -159,6 +162,7 @@ void FluidBeamSystem::_initialize(int numParticles)
 	memset(hVelLeapFrog, 0, numParticles*4*sizeof(float));
 	memset(hAcceleration, 0, numParticles*4*sizeof(float));	
 	memset(hMeasures, 0, numParticles*4*sizeof(float));
+	memset(hDisplacement, 0, numParticles*4*sizeof(float));
 
     m_hCellStart = new uint[numGridCells];
     memset(m_hCellStart, 0, numGridCells*sizeof(uint));
@@ -176,16 +180,17 @@ void FluidBeamSystem::_initialize(int numParticles)
         cutilSafeCall( cudaMalloc( (void **)&m_cudaPosVBO, memSize )) ;
 
     allocateArray((void**)&dVel, memSize);
+	allocateArray((void**)&dDisplacement, memSize);
 	allocateArray((void**)&dVelLeapFrog, memSize);
 	allocateArray((void**)&dAcceleration, memSize);
 	allocateArray((void**)&dMeasures, memSize);
-	allocateArray((void**)&dReferencePos, memSize);
-	allocateArray((void**)&dSortedReferencePos, memSize);			
+	//allocateArray((void**)&dReferencePos, memSize);
+	//allocateArray((void**)&dSortedReferencePos, memSize);			
     allocateArray((void**)&dSortedPos, memSize);
     allocateArray((void**)&dSortedVel, memSize);
-	allocateArray((void**)&duDisplacementGradient, memSize); 
-	allocateArray((void**)&dvDisplacementGradient, memSize); 
-	allocateArray((void**)&dwDisplacementGradient, memSize); 	
+	//allocateArray((void**)&duDisplacementGradient, memSize); 
+	//allocateArray((void**)&dvDisplacementGradient, memSize); 
+	//allocateArray((void**)&dwDisplacementGradient, memSize); 	
     allocateArray((void**)&dHash, numParticles*sizeof(uint));
     allocateArray((void**)&dIndex, numParticles*sizeof(uint));
     allocateArray((void**)&dCellStart, numGridCells*sizeof(uint));
@@ -237,6 +242,7 @@ void FluidBeamSystem::_finalize()
 
     delete [] hPos;
     delete [] hVel;
+	delete [] hDisplacement;
 	delete [] hVelLeapFrog;	
 	delete [] hMeasures;
 	delete [] hAcceleration;
@@ -244,6 +250,7 @@ void FluidBeamSystem::_finalize()
     delete [] m_hCellEnd;
 
     freeArray(dVel);
+	freeArray(dDisplacement);	
 	freeArray(dVelLeapFrog);	
 	freeArray(dMeasures);
 	freeArray(dAcceleration);
@@ -327,6 +334,7 @@ void FluidBeamSystem::update()
 	integrateSystem(
 		dPos,
 		dVel,	
+		dDisplacement,
 		dVelLeapFrog,
 		dAcceleration,
 		numParticles);
@@ -384,8 +392,8 @@ void FluidBeamSystem::setArray(ParticleArray array, const float* data, int start
 			}
         }
         break;
-	case REFERENCE_POSITION:
-		copyArrayToDevice(dReferencePos, data, start * 4 * sizeof(float), count * 4 * sizeof(float));
+	case DISPLACEMENT:
+		copyArrayToDevice(dDisplacement, data, start * 4 * sizeof(float), count * 4 * sizeof(float));
 		break;	
     case VELOCITY:
         copyArrayToDevice(dVel, data, start*4*sizeof(float), count*4*sizeof(float));
@@ -416,7 +424,7 @@ void FluidBeamSystem::reset()
 	initBeamGrid(spacing, jitter);
 
 	setArray(POSITION, hPos, 0, numParticles);
-	//setArray(REFERENCE_POSITION, hPos, 0, numParticles);   		
+	setArray(DISPLACEMENT, hDisplacement, 0, numParticles);   		
 	setArray(VELOCITY, hVel, 0, numParticles);	
 	setArray(MEASURES, hMeasures, 0, numParticles);
 	setArray(ACCELERATION, hAcceleration, 0, numParticles);

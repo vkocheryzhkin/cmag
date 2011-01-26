@@ -188,9 +188,7 @@ float3 sumNavierStokesForces(int3    gridPos,
                    uint*   cellEnd)
 {
     uint gridHash = calcGridHash(gridPos);
-
-    uint startIndex = FETCH(cellStart, gridHash);
-    
+    uint startIndex = FETCH(cellStart, gridHash);    
 	float3 tmpForce = make_float3(0.0f);
 	float texp = 0.0f;
 	float pexp = 0.0f;
@@ -287,8 +285,8 @@ void calcAndApplyAccelerationD(
 						cellEnd);
 				}else
 				{
-					force += make_float3(-0.1f,0.0f,0.0f);
-				}
+					force += make_float3(-0.1f, 0.0f, 0.0f);
+				}				
             }
         }
     }
@@ -300,6 +298,7 @@ void calcAndApplyAccelerationD(
 __global__
 void integrate(float4* posArray,		 // input, output
                float4* velArray,		 // input, output  
+			   float4* displacementArray, //input, output
 			   float4* velLeapFrogArray, // output
 			   float4* acceleration,	 // input
                uint numParticles)
@@ -309,28 +308,31 @@ void integrate(float4* posArray,		 // input, output
 
 	volatile float4 posData = posArray[index]; 
     volatile float4 velData = velArray[index];
+	volatile float4 dispData = displacementArray[index];
 	volatile float4 accData = acceleration[index];
 	volatile float4 velLeapFrogData = velLeapFrogArray[index];
 
     float3 pos = make_float3(posData.x, posData.y, posData.z);
     float3 vel = make_float3(velData.x, velData.y, velData.z);
+	float3 disp = make_float3(dispData.x, dispData.y, dispData.z);
 	float3 acc = make_float3(accData.x, accData.y, accData.z);
 
 	//float3 nextVel = vel + (params.gravity + acc) * params.deltaTime;
-	float3 nextVel = vel + (params.gravity + acc) * params.deltaTime * velData.w; //todo: remove w usage
-	//float3 nextVel = vel + acc * params.deltaTime * velData.w;
+	//float3 nextVel = vel + (params.gravity + acc) * params.deltaTime * velData.w; //todo: remove w usage
+	float3 nextVel = vel + acc * params.deltaTime * velData.w;
 
 	float3 velLeapFrog = vel + nextVel;
 	velLeapFrog *= 0.5;
 
-    vel = nextVel;   	
+    vel = nextVel;   
+	disp = acc; // * params.deltaTime;
     pos += vel * params.deltaTime;   
 
 	float scale = params.gridSize.x * params.particleRadius;
 	float bound = 2.0f * params.particleRadius * params.fluidParticlesSize.z - 1.0f * scale;	
 	//float bound = 2.0f * params.particleRadius * (params.fluidParticlesSize.z + 6) - 1.0f * scale;		
 
-	if (pos.x > 1.0f * scale - params.particleRadius) {
+	/*if (pos.x > 1.0f * scale - params.particleRadius) {
 		pos.x = 1.0f * scale - params.particleRadius; vel.x *= params.boundaryDamping; }
     if (pos.x < -1.0f * scale + params.particleRadius) {
 		pos.x = -1.0f * scale + params.particleRadius; vel.x *= params.boundaryDamping;}
@@ -341,9 +343,10 @@ void integrate(float4* posArray,		 // input, output
     if (pos.z < -1.0f * scale + params.particleRadius) {
 		pos.z = -1.0f * scale + params.particleRadius; vel.z *= params.boundaryDamping;}
     if (pos.y < -1.0f * scale + params.particleRadius) {
-		pos.y = -1.0f * scale + params.particleRadius; vel.y *= params.boundaryDamping;}		
+		pos.y = -1.0f * scale + params.particleRadius; vel.y *= params.boundaryDamping;}	*/	
     
     posArray[index] = make_float4(pos, posData.w);
+	displacementArray[index] = make_float4(disp, dispData.w);
     velArray[index] = make_float4(vel, velData.w);
 	velLeapFrogArray[index] = make_float4(velLeapFrog, velLeapFrogData.w);
 }

@@ -100,10 +100,11 @@ void computeGridSize(uint n, uint blockSize, uint &numBlocks, uint &numThreads)
     numBlocks = iDivUp(n, numThreads);
 }
 
-void integrateSystem(float *pos,
-                     float *vel,  
+void integrateSystem(float* pos,
+                     float* vel,  
+					 float* displacement,
 					 float* velLeapFrog,
-					 float *acc,
+					 float* acc,
                      uint numParticles)
 {
     uint numThreads, numBlocks;
@@ -111,6 +112,7 @@ void integrateSystem(float *pos,
 
     integrate<<< numBlocks, numThreads >>>((float4*)pos,
                                            (float4*)vel,
+										   (float4*)displacement,
 										   (float4*)velLeapFrog,
 										   (float4*)acc,
                                            numParticles);

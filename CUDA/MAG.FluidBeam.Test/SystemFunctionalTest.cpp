@@ -8,12 +8,12 @@ typedef unsigned int uint;
 #include "fluidbeamSystem.h"
 BOOST_AUTO_TEST_CASE(FluidBeamTest)
 {	
-	cudaInit(1,(char **) &"");
-	uint3 fluidParticlesGrid = make_uint3(3, 3, 3);
-	uint3 beamParticlesGrid = make_uint3(0, 0, 0);
+	cudaInit(1,(char **) &"");	
+	uint3 fluidParticlesGrid = make_uint3(25, 25, 25);
+	uint3 beamParticlesGrid = make_uint3(25, 32, 1);
 	uint3 gridSize = make_uint3(64, 64, 64);
 	float particleRadius = 1.0f / 64;
-	int boundaryOffset = 3;
+	int boundaryOffset = 0;
 	uint numFluidParticles = fluidParticlesGrid.x * fluidParticlesGrid.y * fluidParticlesGrid.z;
 
     FluidBeamSystem *psystem = new FluidBeamSystem(
@@ -39,23 +39,24 @@ BOOST_AUTO_TEST_CASE(FluidBeamTest)
 	//getCudaMeasures getCudaSortedPosition getCudaPositions
 		copyArrayFromDevice(hPos,psystem->getCudaSortedPosition(),0, sizeof(float)*4*psystem->getNumParticles());
 		//copyArrayFromDevice(hrPos,psystem->getCudaSortedReferencePosition(),0, sizeof(float)*4*psystem->getNumParticles());
-		copyArrayFromDevice(htemp,psystem->getCudaMeasures(),0, sizeof(float)*4*psystem->getNumParticles());	
+		copyArrayFromDevice(htemp,psystem->getCudaDisplacement(),0, sizeof(float)*4*psystem->getNumParticles());	
 		//copyArrayFromDevice(hacc,psystem->getCudaAcceleration(),0, sizeof(float)*4*psystem->getNumParticles());			
 		copyArrayFromDevice(hHash,psystem->getCudaHash(),0, sizeof(uint)*psystem->getNumParticles());
 		copyArrayFromDevice(hIndex,psystem->getCudaIndex(),0, sizeof(uint)*psystem->getNumParticles());			
 				
+		int cx = 0;
 		for(uint i=0; i < psystem->getNumParticles(); i++) 
 		{			
-			if(hPos[4*i+3] == 2.0f){
+			if(hPos[4*i+3] == 0.0f){
 				printf("%d id=%d (%d %2d) %f %1.10f %f w=%f\n", 
-						0,
+						cx++,
 						i,
 						hHash[i],
 						hIndex[i],	
 					
-						htemp[4*i+0],
-						htemp[4*i+1],
-						htemp[4*i+2],
+						htemp[4*hIndex[i]+0],
+						htemp[4*hIndex[i]+1],
+						htemp[4*hIndex[i]+2],
 						hPos[4*i+3]
 					);	
 			}

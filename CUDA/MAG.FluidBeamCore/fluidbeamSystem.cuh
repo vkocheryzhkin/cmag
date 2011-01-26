@@ -25,6 +25,7 @@ void setParameters(SimParams *hostParams);
 void integrateSystem(
 			 float* pos,
              float* vel,  
+			 float* displacement,
 			 float* velLeapFrog,
 			 float* acc,
              uint numParticles);

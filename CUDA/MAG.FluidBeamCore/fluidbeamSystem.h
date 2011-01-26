@@ -20,7 +20,7 @@ public:
     enum ParticleArray
     {
         POSITION,
-		REFERENCE_POSITION,
+		DISPLACEMENT,
         VELOCITY,		
 		MEASURES,
 		ACCELERATION,
@@ -39,15 +39,16 @@ public:
     unsigned int getColorBuffer()       const { return m_colorVBO; }
 
 	void * getCudaPositions()      const { return (void *)m_dPos; }
+	void * getCudaDisplacement()        const {return (void *)dDisplacement;}	
     void * getCudaSortedPosition()      const { return (void *)dSortedPos; }
 	void * getCudaMeasures()            const { return (void *)dMeasures; }    
 	void * getCudaHash()				const {return (void *)dHash;}
 	void * getCudaIndex()				const {return (void *)dIndex;}	
-	void * getCudaUDisplacementGradient()        const {return (void *)duDisplacementGradient;}
-	void * getCudaVDisplacementGradient()        const {return (void *)dvDisplacementGradient;}
-	void * getCudaWDisplacementGradient()        const {return (void *)dwDisplacementGradient;}
+	//void * getCudaUDisplacementGradient()        const {return (void *)duDisplacementGradient;}
+	//void * getCudaVDisplacementGradient()        const {return (void *)dvDisplacementGradient;}
+	//void * getCudaWDisplacementGradient()        const {return (void *)dwDisplacementGradient;}
 	void * getCudaVelocity()        const {return (void *)dVel;}	
-	void * getCudaAcceleration()        const {return (void *)dAcceleration;}	
+	void * getCudaAcceleration()        const {return (void *)dAcceleration;}		
 
     void changeGravity();
 
@@ -78,6 +79,7 @@ protected: // data
     // CPU data
     float* hPos;              // particle positions
     float* hVel;              // particle velocities
+	float* hDisplacement;
 	float* hVelLeapFrog;
 	
 	float* hMeasures;
@@ -90,6 +92,7 @@ protected: // data
     // GPU data
     float* m_dPos;
     float* dVel;
+	float* dDisplacement;
 	float* dVelLeapFrog;
 	
 	float* dMeasures;
@@ -98,11 +101,11 @@ protected: // data
     float* dSortedPos;
     float* dSortedVel;
 
-	float* dReferencePos;
+	/*float* dReferencePos;
 	float* dSortedReferencePos;	 
 	float* duDisplacementGradient;
 	float* dvDisplacementGradient;
-	float* dwDisplacementGradient;
+	float* dwDisplacementGradient;*/
 
     // grid data for sorting method
     uint*  dHash; // grid hash value for each particle
