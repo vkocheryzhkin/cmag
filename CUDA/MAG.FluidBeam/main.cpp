@@ -308,15 +308,15 @@ void initParticleSystem(
 
 int main(int argc, char** argv) 
 {
-	fluidParticlesSize = make_uint3(25, 25, 25);
+	int num = 25;
+	boundaryOffset = 3;
+	fluidParticlesSize = make_uint3(num, num, num);
 	//fluidParticlesSize = make_uint3(0, 0, 0);
-	beamParticlesSize = make_uint3(25, 32, 1);	
-	boundaryOffset = 0;
+	beamParticlesSize = make_uint3(1, num + 2 * boundaryOffset, num + 2 * boundaryOffset);	
+	
+	
 	gridSize = make_uint3(GRID_SIZE, GRID_SIZE, GRID_SIZE);
-	particleRadius = 1.0f / 64;
-	//particleRadius = 0.1f / 3;
-	//particleRadius = 1.0f / (2 * 50 * 1000);
-	//particleRadius = 1.0f / (1000);
+	particleRadius = 1.0f / 64;	
 
 	initGL(argc, argv);
 	cudaGLInit(argc, argv);
@@ -346,4 +346,5 @@ int main(int argc, char** argv)
 
 	cudaThreadExit();
 }
+
 

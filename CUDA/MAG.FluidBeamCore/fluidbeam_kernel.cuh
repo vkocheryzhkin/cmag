@@ -26,6 +26,7 @@ struct SimParams {
     float3 cellSize;    
     
     float boundaryDamping;
+	int boundaryOffset;
 
 	//sph
 	float Poly6Kern;
@@ -39,6 +40,7 @@ struct SimParams {
 	float smoothingRadius;	
 	float soundspeed;
 	float B;
+	float c;
 
 	//todo: investigate and remove it
 	float accelerationLimit;

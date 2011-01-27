@@ -36,19 +36,21 @@ public:
     int    getNumParticles() const { return numParticles; }
 
     unsigned int getCurrentReadBuffer() const { return m_posVbo; }
-    unsigned int getColorBuffer()       const { return m_colorVBO; }
-
-	void * getCudaPositions()      const { return (void *)m_dPos; }
-	void * getCudaDisplacement()        const {return (void *)dDisplacement;}	
-    void * getCudaSortedPosition()      const { return (void *)dSortedPos; }
-	void * getCudaMeasures()            const { return (void *)dMeasures; }    
-	void * getCudaHash()				const {return (void *)dHash;}
-	void * getCudaIndex()				const {return (void *)dIndex;}	
-	//void * getCudaUDisplacementGradient()        const {return (void *)duDisplacementGradient;}
-	//void * getCudaVDisplacementGradient()        const {return (void *)dvDisplacementGradient;}
-	//void * getCudaWDisplacementGradient()        const {return (void *)dwDisplacementGradient;}
-	void * getCudaVelocity()        const {return (void *)dVel;}	
-	void * getCudaAcceleration()        const {return (void *)dAcceleration;}		
+    unsigned int getColorBuffer() const { return m_colorVBO; }
+	void * getCudaPositions() const { return (void *)m_dPos; }
+	void * getCudaDisplacement() const {return (void *)dDisplacement;}	
+	void * getCudaSortedDisplacement() const {return (void *)dSortedDisplacement;}	
+    void * getCudaSortedPosition() const { return (void *)dSortedPos; }
+	void * getCudaMeasures() const { return (void *)dMeasures; }    
+	void * getCudaHash() const {return (void *)dHash;}
+	void * getCudaIndex()const {return (void *)dIndex;}	
+	void * getUDisplacementGradient() const {return (void *)duDisplacementGradient;}
+	void * getVDisplacementGradient() const {return (void *)dvDisplacementGradient;}
+	void * getWDisplacementGradient() const {return (void *)dwDisplacementGradient;}
+	void * getCudaVelocity() const {return (void *)dVel;}	
+	void * getCudaAcceleration() const {return (void *)dAcceleration;}	
+	void * getCellStart() const {return (void *)dCellStart;}	
+	void * getCellEnd() const {return (void *)dCellEnd;}	
 
     void changeGravity();
 
@@ -100,12 +102,13 @@ protected: // data
 
     float* dSortedPos;
     float* dSortedVel;
+	float* dSortedDisplacement;
 
 	/*float* dReferencePos;
-	float* dSortedReferencePos;	 
+	float* dSortedReferencePos;	 */
 	float* duDisplacementGradient;
 	float* dvDisplacementGradient;
-	float* dwDisplacementGradient;*/
+	float* dwDisplacementGradient;
 
     // grid data for sorting method
     uint*  dHash; // grid hash value for each particle

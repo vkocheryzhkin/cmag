@@ -410,7 +410,8 @@ __global__ void calcDisplacementGradientD(
                 buf += sumDisplacementGradientPart(neighbourPos, index, pos, oldPos, referencePos, oldReferencePos, oldMeasures, cellStart, cellEnd);				
             }
         }
-    }    				
+    }    		
+	
 	udisplacementGradient[index].x = buf.a11;
 	udisplacementGradient[index].y = buf.a12;
 	udisplacementGradient[index].z = buf.a13;

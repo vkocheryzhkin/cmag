@@ -41,10 +41,12 @@ void reorderDataAndFindCellStart(
 		     uint*  cellEnd,
 		     float* sortedPos,
 		     float* sortedVel,
+			 float* sortedDisplacement,
              uint*  gridParticleHash,
              uint*  gridParticleIndex,
 		     float* oldPos,
 		     float* oldVel,
+			 float* oldDisplacement,
 		     uint   numParticles,
 		     uint   numCells);
 
@@ -58,16 +60,32 @@ void calcDensityAndPressure(
 			uint numParticles,
 			uint numGridCells);
 
+void calcDisplacementGradient(
+	float* duDisplacementGradient,
+	float* dvDisplacementGradient,
+	float* dwDisplacementGradient,
+	float* dSortedPos,
+	float* dSortedDisplacement,
+	uint*dIndex,
+	uint*dCellStart,
+	uint*dCellEnd,
+	uint numParticles,
+	uint numGridCells);   
+
 void calcAndApplyAcceleration(	
-			float* acceleration,			
-			float* measures,
-			float* sortedPos,			
-			float* sortedVel,
-			uint* gridParticleIndex,
-			uint* cellStart,
-			uint* cellEnd,
-			uint numParticles,
-			uint numGridCells);
+	float* acceleration,	
+	float* duDisplacementGradient,
+	float* dvDisplacementGradient,
+	float* dwDisplacementGradient,
+	float* measures,
+	float* sortedPos,			
+	float* sortedVel,
+	float* sortedDisplacement,
+	uint* gridParticleIndex,
+	uint* cellStart,
+	uint* cellEnd,
+	uint numParticles,
+	uint numGridCells);
 }
 
 #endif

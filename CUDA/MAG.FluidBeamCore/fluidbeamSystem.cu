@@ -140,10 +140,12 @@ void reorderDataAndFindCellStart(uint*  cellStart,
 							     uint*  cellEnd,
 							     float* sortedPos,
 							     float* sortedVel,
+								 float* sortedDisplacement,
                                  uint*  gridParticleHash,
                                  uint*  gridParticleIndex,
 							     float* oldPos,
 							     float* oldVel,
+								 float* oldDisplacement,
 							     uint   numParticles,
 							     uint   numCells)
 {
@@ -151,10 +153,12 @@ void reorderDataAndFindCellStart(uint*  cellStart,
     computeGridSize(numParticles, 256, numBlocks, numThreads);
 
 	cutilSafeCall(cudaMemset(cellStart, 0xffffffff, numCells*sizeof(uint)));
+	//cutilSafeCall(cudaMemset(cellEnd, 0xffffffff, numCells*sizeof(uint)));
 
 	#if USE_TEX
 		cutilSafeCall(cudaBindTexture(0, oldPosTex, oldPos, numParticles*sizeof(float4)));
 		cutilSafeCall(cudaBindTexture(0, oldVelTex, oldVel, numParticles*sizeof(float4)));
+		cutilSafeCall(cudaBindTexture(0, oldDisplacementTex, oldDisplacement, numParticles*sizeof(float4)));
 	#endif
 
 		uint smemSize = sizeof(uint)*(numThreads+1);
@@ -163,16 +167,19 @@ void reorderDataAndFindCellStart(uint*  cellStart,
 			cellEnd,
 			(float4 *) sortedPos,
 			(float4 *) sortedVel,
+			(float4 *) sortedDisplacement,
 			gridParticleHash,
 			gridParticleIndex,
 			(float4 *) oldPos,
 			(float4 *) oldVel,
+			(float4 *) oldDisplacement,
 			numParticles);
 		cutilCheckMsg("Kernel execution failed: reorderDataAndFindCellStartD");
 
 	#if USE_TEX
 		cutilSafeCall(cudaUnbindTexture(oldPosTex));
 		cutilSafeCall(cudaUnbindTexture(oldVelTex));
+		cutilSafeCall(cudaUnbindTexture(oldDisplacementTex));
 	#endif
 }
 
@@ -216,20 +223,68 @@ void calcDensityAndPressure(
 	#endif
 }
 
+void calcDisplacementGradient(
+	float* duDisplacementGradient,
+	float* dvDisplacementGradient,
+	float* dwDisplacementGradient,
+	float* sortedPos,
+	float* sortedDisplacement,
+	uint* gridParticleIndex,
+	uint* cellStart,
+	uint* cellEnd,
+	uint numParticles,
+	uint numGridCells)
+{
+	#if USE_TEX
+    cutilSafeCall(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(float4)));
+	cutilSafeCall(cudaBindTexture(0, oldDisplacementTex, sortedDisplacement, numParticles*sizeof(float4)));
+	cutilSafeCall(cudaBindTexture(0, cellStartTex, cellStart, numGridCells*sizeof(uint)));
+    cutilSafeCall(cudaBindTexture(0, cellEndTex, cellEnd, numGridCells*sizeof(uint)));    
+	#endif
+	uint numThreads, numBlocks;
+    computeGridSize(numParticles, 64, numBlocks, numThreads);
+
+    calcDisplacementGradientD<<< numBlocks, numThreads >>>(										  
+										  (float4*)duDisplacementGradient,
+										  (float4*)dvDisplacementGradient,
+										  (float4*)dwDisplacementGradient,
+                                          (float4*)sortedPos,                                          
+										  (float4*)sortedDisplacement, 
+                                          gridParticleIndex,
+                                          cellStart,
+                                          cellEnd,
+                                          numParticles);
+	#if USE_TEX
+    cutilSafeCall(cudaUnbindTexture(oldPosTex));    
+	cutilSafeCall(cudaUnbindTexture(oldDisplacementTex)); 
+	cutilSafeCall(cudaUnbindTexture(cellStartTex));
+    cutilSafeCall(cudaUnbindTexture(cellEndTex));
+	#endif
+}
+
+
 void calcAndApplyAcceleration(
-			float* acceleration,
-			float* sortedMeasures,			
-			float* sortedPos,			
-			float* sortedVel,
-			uint* gridParticleIndex,
-			uint* cellStart,
-			uint* cellEnd,
-			uint numParticles,
-			uint numGridCells)
+	float* acceleration,
+	float* duDisplacementGradient,
+	float* dvDisplacementGradient,
+	float* dwDisplacementGradient,
+	float* sortedMeasures,			
+	float* sortedPos,			
+	float* sortedVel,
+	float* sortedDisplacement,
+	uint* gridParticleIndex,
+	uint* cellStart,
+	uint* cellEnd,
+	uint numParticles,
+	uint numGridCells)
 {
 	#if USE_TEX
     cutilSafeCall(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(float4)));
     cutilSafeCall(cudaBindTexture(0, oldVelTex, sortedVel, numParticles*sizeof(float4)));
+	cutilSafeCall(cudaBindTexture(0, oldDisplacementTex, sortedDisplacement, numParticles*sizeof(float4)));
+	cutilSafeCall(cudaBindTexture(0, olduDisplacementGradientTex, duDisplacementGradient, numParticles * sizeof(float4)));
+	cutilSafeCall(cudaBindTexture(0, oldvDisplacementGradientTex, dvDisplacementGradient, numParticles * sizeof(float4)));
+	cutilSafeCall(cudaBindTexture(0, oldwDisplacementGradientTex, dwDisplacementGradient, numParticles * sizeof(float4)));
 	cutilSafeCall(cudaBindTexture(0, oldMeasuresTex, sortedMeasures, numParticles*sizeof(float4)));
     cutilSafeCall(cudaBindTexture(0, cellStartTex, cellStart, numGridCells*sizeof(uint)));
     cutilSafeCall(cudaBindTexture(0, cellEndTex, cellEnd, numGridCells*sizeof(uint)));    
@@ -239,10 +294,14 @@ void calcAndApplyAcceleration(
     computeGridSize(numParticles, 64, numBlocks, numThreads);
 
     calcAndApplyAccelerationD<<< numBlocks, numThreads >>>(
-										  (float4*)acceleration,
-										  (float4*)sortedMeasures,										  
-                                          (float4*)sortedPos,                                          
-										  (float4*)sortedVel, 
+										  (float4*) acceleration,
+										  (float4*) duDisplacementGradient,
+										  (float4*) dvDisplacementGradient,
+					  					  (float4*) dwDisplacementGradient,
+										  (float4*) sortedMeasures,										  
+                                          (float4*) sortedPos,                                          
+										  (float4*) sortedVel, 
+										  (float4*) sortedDisplacement,
                                           gridParticleIndex,
                                           cellStart,
                                           cellEnd,
@@ -253,6 +312,10 @@ void calcAndApplyAcceleration(
 	#if USE_TEX
     cutilSafeCall(cudaUnbindTexture(oldPosTex));
     cutilSafeCall(cudaUnbindTexture(oldVelTex));
+	cutilSafeCall(cudaUnbindTexture(oldDisplacementTex));	
+	cutilSafeCall(cudaUnbindTexture(olduDisplacementGradientTex));	
+	cutilSafeCall(cudaUnbindTexture(oldvDisplacementGradientTex));	
+	cutilSafeCall(cudaUnbindTexture(oldwDisplacementGradientTex));	
 	cutilSafeCall(cudaUnbindTexture(oldMeasuresTex));
     cutilSafeCall(cudaUnbindTexture(cellStartTex));
     cutilSafeCall(cudaUnbindTexture(cellEndTex));

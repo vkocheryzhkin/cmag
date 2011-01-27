@@ -9,8 +9,9 @@ typedef unsigned int uint;
 BOOST_AUTO_TEST_CASE(FluidBeamTest)
 {	
 	cudaInit(1,(char **) &"");	
-	uint3 fluidParticlesGrid = make_uint3(25, 25, 25);
-	uint3 beamParticlesGrid = make_uint3(25, 32, 1);
+	uint3 fluidParticlesGrid = make_uint3(0, 0, 0);
+	//uint3 fluidParticlesGrid = make_uint3(0, 0, 0);
+	uint3 beamParticlesGrid = make_uint3(1, 3, 3);
 	uint3 gridSize = make_uint3(64, 64, 64);
 	float particleRadius = 1.0f / 64;
 	int boundaryOffset = 0;
@@ -32,34 +33,35 @@ BOOST_AUTO_TEST_CASE(FluidBeamTest)
 	uint* hHash = new uint[psystem->getNumParticles()];
 	uint* hIndex = new uint[psystem->getNumParticles()];	
 
-	for(uint j = 0; j < 1; j++)
+	for(uint j = 0; j < 2; j++)
 	{				
 		psystem->update();	
-	}
-	//getCudaMeasures getCudaSortedPosition getCudaPositions
-		copyArrayFromDevice(hPos,psystem->getCudaSortedPosition(),0, sizeof(float)*4*psystem->getNumParticles());
-		//copyArrayFromDevice(hrPos,psystem->getCudaSortedReferencePosition(),0, sizeof(float)*4*psystem->getNumParticles());
-		copyArrayFromDevice(htemp,psystem->getCudaDisplacement(),0, sizeof(float)*4*psystem->getNumParticles());	
-		//copyArrayFromDevice(hacc,psystem->getCudaAcceleration(),0, sizeof(float)*4*psystem->getNumParticles());			
+	}	
+		copyArrayFromDevice(hPos,psystem->getCudaSortedPosition(),0, sizeof(float)*4*psystem->getNumParticles());		
+		copyArrayFromDevice(htemp,psystem->getCudaMeasures(),0, sizeof(float)*4*psystem->getNumParticles());			
 		copyArrayFromDevice(hHash,psystem->getCudaHash(),0, sizeof(uint)*psystem->getNumParticles());
 		copyArrayFromDevice(hIndex,psystem->getCudaIndex(),0, sizeof(uint)*psystem->getNumParticles());			
 				
 		int cx = 0;
 		for(uint i=0; i < psystem->getNumParticles(); i++) 
 		{			
-			if(hPos[4*i+3] == 0.0f){
-				printf("%d id=%d (%d %2d) %f %1.10f %f w=%f\n", 
+			//if(hPos[4*i+3] != 1.0f){
+				//printf("%d id=%d (%d %2d) %f %1.10f %f w=%f\n", 
+				printf("%d id=%d (%d %2d) %f %f %1.20f w=%f\n", 
 						cx++,
 						i,
 						hHash[i],
 						hIndex[i],	
-					
-						htemp[4*hIndex[i]+0],
+					    //use hIndex[i] for not sorted items
+						/*htemp[4*hIndex[i]+0],
 						htemp[4*hIndex[i]+1],
-						htemp[4*hIndex[i]+2],
+						htemp[4*hIndex[i]+2],*/
+						htemp[4*i+0],
+						htemp[4*i+1],
+						htemp[4*i+2],
 						hPos[4*i+3]
 					);	
-			}
+			//}
 		}
 		printf("---------------------\n");			
 	
