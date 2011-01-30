@@ -60,7 +60,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="libboost_unit_test_framework-vc90-mt-gd-1_44.lib cudart.lib  cutil32D.lib glew32.lib cudpp32.lib"
 				OutputFile="../../../C/bin/win32/$(ConfigurationName)/$(ProjectName).exe"
-				AdditionalLibraryDirectories="&quot;$(BOOST_ROOT)&quot;\lib;$(CUDA_PATH)/lib/$(PlatformName);&quot;$(NVSDKCOMPUTE_ROOT)/C/common/lib&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/shared/lib&quot;"
+				AdditionalLibraryDirectories="&quot;$(BOOST_ROOT)/lib&quot;;&quot;$(CUDA_PATH)/lib/$(PlatformName)&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/C/common/lib&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/shared/lib&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				TargetMachine="1"

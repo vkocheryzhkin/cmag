@@ -15,33 +15,24 @@
 typedef unsigned int uint;
 
 struct SimParams {     
-    float3 gravity;
-    float globalDamping;
-    float particleRadius;
-
-    uint3 gridSize;
-    uint numCells;
-    float3 worldOrigin;
+	uint3 gridSize;
+	float3 worldOrigin;
     float3 cellSize;
+	uint3 fluidParticlesSize;
+	int cellcount; //how many neigbours cell to look
 
-    uint numBodies;
-    uint maxParticlesPerCell;
-    
-    float boundaryDamping;
-
-	//sph
-	float Poly6Kern;
-	float SpikyKern;
-	float LapKern;
+    float3 gravity;    
+    float particleRadius;        		        
+	float smoothingRadius;
 	float particleMass;
 	float restDensity;
-	float gasConstant;
-	float viscosity;
-	float deltaTime;
-	float smoothingRadius;
-
-	//todo: investigate and remove it
-	float accelerationLimit;
+	float soundspeed;
+	float B;//Equation of state    
+	
+	float Poly6Kern;
+	float SpikyKern;		
+	float deltaTime;		
+	float boundaryDamping;	
 };
 
 #endif

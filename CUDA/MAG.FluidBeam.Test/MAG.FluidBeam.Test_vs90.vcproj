@@ -43,7 +43,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(BOOST_ROOT)&quot;;&quot;$(CUDA_PATH)/include&quot;;&quot;$(NVSDKCOMPUTE_ROOT)\C\common\inc&quot;;..\MAG.FluidBeamCore"
+				AdditionalIncludeDirectories="&quot;$(CUDA_PATH)/include&quot;;&quot;$(CULA_INC_PATH)&quot;;&quot;$(BOOST_ROOT)&quot;;&quot;$(NVSDKCOMPUTE_ROOT)\C\common\inc&quot;;..\MAG.FluidBeamCore"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -61,9 +61,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libboost_unit_test_framework-vc90-mt-gd-1_44.lib cudart.lib  cutil32D.lib glew32.lib cudpp32.lib"
+				AdditionalDependencies="cudart.lib cutil32D.lib glew32.lib cudpp32.lib cula.lib libboost_unit_test_framework-vc90-mt-gd-1_44.lib"
 				OutputFile="../../../C/bin/win32/$(ConfigurationName)/$(ProjectName).exe"
-				AdditionalLibraryDirectories="&quot;$(BOOST_ROOT)&quot;\lib;$(CUDA_PATH)/lib/$(PlatformName);&quot;$(NVSDKCOMPUTE_ROOT)/C/common/lib&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/shared/lib&quot;"
+				AdditionalLibraryDirectories="&quot;$(BOOST_ROOT)/lib&quot;;&quot;$(CUDA_PATH)/lib/$(PlatformName)&quot;;&quot;$(CULA_LIB_PATH_32)&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/C/common/lib&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/shared/lib&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				TargetMachine="1"

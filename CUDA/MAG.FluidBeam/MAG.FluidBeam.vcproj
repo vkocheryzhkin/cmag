@@ -40,7 +40,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(CUDA_PATH)/include&quot;;&quot;$(NVSDKCOMPUTE_ROOT)\C\common\inc&quot;;../MAG.FluidBeamCore;../MAG.Infrastructure"
+				AdditionalIncludeDirectories="&quot;$(CUDA_PATH)/include&quot;;&quot;$(CULA_INC_PATH)&quot;;&quot;$(NVSDKCOMPUTE_ROOT)\C\common\inc&quot;;../MAG.FluidBeamCore;../MAG.Infrastructure"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -58,10 +58,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="cudart.lib  cutil32D.lib glew32.lib cudpp32.lib"
+				AdditionalDependencies="cudart.lib  cutil32D.lib glew32.lib cudpp32.lib cula.lib"
 				OutputFile="../../../C/bin/win32/$(ConfigurationName)/$(ProjectName).exe"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="$(CUDA_PATH)/lib/$(PlatformName);&quot;$(NVSDKCOMPUTE_ROOT)/C/common/lib&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/shared/lib&quot;"
+				AdditionalLibraryDirectories="&quot;$(CUDA_PATH)/lib/$(PlatformName)&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/C/common/lib&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/shared/lib&quot;;&quot;$(CULA_LIB_PATH_32)&quot;"
 				GenerateDebugInformation="true"
 				TargetMachine="1"
 			/>

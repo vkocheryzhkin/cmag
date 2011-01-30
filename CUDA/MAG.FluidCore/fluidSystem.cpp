@@ -16,57 +16,64 @@
 #define CUDART_PI_F         3.141592654f
 #endif
 
-FluidSystem::FluidSystem(uint numParticles, uint3 gridSize, bool bUseOpenGL) :
+FluidSystem::FluidSystem(
+	uint3 fluidParticlesSize,
+	uint3 gridSize,
+	float particleRadius,
+	bool bUseOpenGL) :
     m_bInitialized(false),
-    m_bUseOpenGL(bUseOpenGL),
-    m_numParticles(numParticles),
+    m_bUseOpenGL(bUseOpenGL),    
+	fluidParticlesSize(fluidParticlesSize),
     m_hPos(0),
     m_hVel(0),
 	hMeasures(0),	
     m_dPos(0),
     m_dVel(0),
 	dMeasures(0),	
-    m_gridSize(gridSize),
-    m_timer(0)
-{
-    m_numGridCells = m_gridSize.x*m_gridSize.y*m_gridSize.z;
+    m_gridSize(gridSize),	
+	elapsedTime(0.0f),
+    m_timer(0){
+		m_numParticles = fluidParticlesSize.x * fluidParticlesSize.y * fluidParticlesSize.z;
+		m_numGridCells = m_gridSize.x  *m_gridSize.y * m_gridSize.z;
+		m_gridSortBits = 18;	//see radix sort for details
+		m_params.fluidParticlesSize = fluidParticlesSize;
+		m_params.gridSize = m_gridSize;		
+	    
+		//m_params.particleRadius = particleRadius;		
+		m_params.particleRadius = 1.0f / 64;		
+		m_params.smoothingRadius = 5 * m_params.particleRadius;	
 
-    m_gridSortBits = 18;//see radix sort for details
+		m_params.restDensity = 1000.0f;
 
-    m_params.gridSize = m_gridSize;
-    m_params.numCells = m_numGridCells;
-    m_params.numBodies = m_numParticles;
-    
-	m_params.particleRadius = 1.0f / 64.0f;		
-	m_params.restDensity = 600.0f;
-	m_params.particleMass = 0.02f;
-	m_params.gasConstant = 3.0f;
-	m_params.viscosity = 3.5f;
-	m_params.deltaTime = 0.005f;
-	m_params.smoothingRadius = 3.0f * m_params.particleRadius;	
-	m_params.accelerationLimit = 100;
-    	
-	m_params.worldOrigin = make_float3(-1.0f, -1.0f, -1.0f);
-    float cellSize = m_params.particleRadius * 2.0f;  
-    m_params.cellSize = make_float3(cellSize, cellSize, cellSize);
-    
-    m_params.boundaryDamping = -1.0f;
+		//let choose N = 60 is an avg number of particles in sphere
+		int N = 60;				
+		m_params.particleMass = m_params.restDensity * 4.0f / 3.0f * CUDART_PI_F * pow(m_params.smoothingRadius,3) / N;	
+		
+		m_params.cellcount = (5 - 1) / 2;		
+	    	
+		m_params.worldOrigin = make_float3(-1.0f, -1.0f, -1.0f);
+		float cellSize = m_params.particleRadius * 2.0f;  
+		m_params.cellSize = make_float3(cellSize, cellSize, cellSize);
+	    
+		m_params.boundaryDamping = -1.0f;
 
-    m_params.gravity = make_float3(0.0f, -6.8f, 0.0f);    	  
-	m_params.Poly6Kern = 315.0f / (64.0f * CUDART_PI_F * pow(m_params.smoothingRadius, 9.0f));
-	m_params.SpikyKern = (-0.5f) * -45.0f /(CUDART_PI_F * pow(m_params.smoothingRadius, 6.0f));
-	m_params.LapKern = m_params.viscosity * 45.0f / (CUDART_PI_F * pow(m_params.smoothingRadius, 6.0f));	
-    _initialize(numParticles);
+		m_params.gravity = make_float3(0.0f, -9.8f, 0.0f);    	  
+		m_params.Poly6Kern = 315.0f / (64.0f * CUDART_PI_F * pow(m_params.smoothingRadius, 9.0f));
+		m_params.SpikyKern = -45.0f /(CUDART_PI_F * pow(m_params.smoothingRadius, 6.0f));		
+
+		m_params.soundspeed = 10.0f;
+		m_params.B = pow(m_params.soundspeed, 2) * pow(10.0f, 3.0f) / 7;
+
+		m_params.deltaTime = pow(10.0f, -4.0f);
+		_initialize(m_numParticles);
 }
 
-FluidSystem::~FluidSystem()
-{
+FluidSystem::~FluidSystem(){
     _finalize();
     m_numParticles = 0;
 }
 
-uint FluidSystem::createVBO(uint size)
-{
+uint FluidSystem::createVBO(uint size){
     GLuint vbo;
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -75,13 +82,11 @@ uint FluidSystem::createVBO(uint size)
     return vbo;
 }
 
-inline float lerp(float a, float b, float t)
-{
+inline float lerp(float a, float b, float t){
     return a + t*(b-a);
 }
 
-void colorRamp(float t, float *r)
-{
+void colorRamp(float t, float *r){
     const int ncolors = 7;
     float c[ncolors][3] = {
         { 1.0, 0.0, 0.0, },
@@ -100,9 +105,7 @@ void colorRamp(float t, float *r)
     r[2] = lerp(c[i][2], c[i+1][2], u);
 }
 
-void
-FluidSystem::_initialize(int numParticles)
-{
+void FluidSystem::_initialize(int numParticles){
     assert(!m_bInitialized);
 
     m_numParticles = numParticles;
@@ -155,15 +158,9 @@ FluidSystem::_initialize(int numParticles)
         float *data = (float *) glMapBufferARB(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
         float *ptr = data;
         for(uint i=0; i<m_numParticles; i++) {
-            float t = 0.7f;//i / (float) m_numParticles;
-    #if 0
-            *ptr++ = rand() / (float) RAND_MAX;
-            *ptr++ = rand() / (float) RAND_MAX;
-            *ptr++ = rand() / (float) RAND_MAX;
-    #else
+            float t = 0.7f;    
             colorRamp(t, ptr);
             ptr+=3;
-    #endif
             *ptr++ = 1.0f;
         }
         glUnmapBufferARB(GL_ARRAY_BUFFER);
@@ -171,7 +168,6 @@ FluidSystem::_initialize(int numParticles)
         cutilSafeCall( cudaMalloc( (void **)&m_cudaColorVBO, sizeof(float)*numParticles*4) );
     }
 
-    // Create the CUDPP radix sort
     CUDPPConfiguration sortConfig;
     sortConfig.algorithm = CUDPP_SORT_RADIX;
     sortConfig.datatype = CUDPP_UINT;
@@ -186,9 +182,7 @@ FluidSystem::_initialize(int numParticles)
     m_bInitialized = true;
 }
 
-void
-FluidSystem::_finalize()
-{
+void FluidSystem::_finalize(){
     assert(m_bInitialized);
 
     delete [] m_hPos;
@@ -222,24 +216,22 @@ FluidSystem::_finalize()
 
     cudppDestroyPlan(m_sortHandle);
 }
-void FluidSystem::changeGravity() 
-{ 
+void FluidSystem::changeGravity(){ 
 	m_params.gravity.y *= -1.0f; 
 	setParameters(&m_params);  
 }
 
 // step the simulation
-void FluidSystem::update()
-{
+void FluidSystem::update(){
     assert(m_bInitialized);
 
     float *dPos;
 
-    if (m_bUseOpenGL) {
+    if (m_bUseOpenGL) 
         dPos = (float *) mapGLBufferObject(&m_cuda_posvbo_resource);
-    } else {
+    else 
         dPos = (float *) m_cudaPosVBO;
-    }
+    
 
     setParameters(&m_params); 
 	
@@ -289,11 +281,10 @@ void FluidSystem::update()
     if (m_bUseOpenGL) {
         unmapGLBufferObject(m_cuda_posvbo_resource);
     }
+	elapsedTime+= m_params.deltaTime;
 }
 
-float* 
-FluidSystem::getArray(ParticleArray array)
-{
+float* FluidSystem::getArray(ParticleArray array){
     assert(m_bInitialized);
  
     float* hdata = 0;
@@ -319,9 +310,7 @@ FluidSystem::getArray(ParticleArray array)
     return hdata;
 }
 
-void
-FluidSystem::setArray(ParticleArray array, const float* data, int start, int count)
-{
+void FluidSystem::setArray(ParticleArray array, const float* data, int start, int count){
     assert(m_bInitialized);
  
     switch (array)
@@ -356,20 +345,17 @@ FluidSystem::setArray(ParticleArray array, const float* data, int start, int cou
     }       
 }
 
-inline float frand()
-{
+inline float frand(){
     return rand() / (float) RAND_MAX;
 }
 
-void
-FluidSystem::reset()
-{
+void FluidSystem::reset(){
 	float jitter = m_params.particleRadius*0.01f;			            
 	uint s = (int) (powf((float) m_numParticles, 1.0f / 3.0f));
 	float spacing = m_params.particleRadius * 2.0f;
 	uint gridSize[3];
 	gridSize[0] = gridSize[1] = gridSize[2] = s;
-	initGrid(gridSize, spacing, jitter, m_numParticles);
+	initFluid(gridSize, spacing, jitter, m_numParticles);
 
     setArray(POSITION, m_hPos, 0, m_numParticles);
     setArray(VELOCITY, m_hVel, 0, m_numParticles);	
@@ -378,23 +364,20 @@ FluidSystem::reset()
 	setArray(VELOCITYLEAPFROG, hVelLeapFrog, 0, m_numParticles);
 }
 
-void FluidSystem::initGrid(uint *size, float spacing, float jitter, uint numParticles)
-{
-	srand(1973);
-	for(uint z=0; z<size[2]; z++) {
-		for(uint y=0; y<size[1]; y++) {
-			for(uint x=0; x<size[0]; x++) {
-				uint i = (z*size[1]*size[0]) + (y*size[0]) + x;
+void FluidSystem::initFluid(uint *size, float spacing, float jitter, uint numParticles){
+	srand(1973);			
+	int xsize = fluidParticlesSize.x;
+	int ysize = fluidParticlesSize.y;
+	int zsize = fluidParticlesSize.z;
+	
+	for(uint z = 0; z < zsize; z++) {
+		for(uint y = 0; y < ysize; y++) {
+			for(uint x = 0; x < xsize; x++) {				
+				uint i = (z * ysize * xsize) + y * xsize + x;
 				if (i < numParticles) {
-					m_hPos[i*4] = (spacing * x) + m_params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;
-					m_hPos[i*4+1] = (spacing * y) + m_params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;
-					m_hPos[i*4+2] = (spacing * z) + m_params.particleRadius - 1.0f + (frand() * 2.0f - 1.0f) * jitter;					
-					m_hPos[i*4+3] = 1.0f;
-
-					m_hVel[i*4] = 0.0f;
-					m_hVel[i*4+1] = 0.0f;
-					m_hVel[i*4+2] = 0.0f;
-					m_hVel[i*4+3] = 0.0f;
+					m_hPos[i*4] = (spacing * x) + m_params.particleRadius - 1.0f;					
+					m_hPos[i*4+1] = (spacing * y) + m_params.particleRadius - 1.0f;
+					m_hPos[i*4+2] = (spacing * z) + m_params.particleRadius - 1.0f;					
 				}
 			}
 		}

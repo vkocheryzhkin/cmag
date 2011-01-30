@@ -33,6 +33,7 @@
 			/>
 			<Tool
 				Name="Cudart Build Rule"
+				Arch1="10"
 				Arch2="0"
 			/>
 			<Tool
@@ -202,7 +203,7 @@
 				>
 				<Tool
 					Name="Cudart Build Rule"
-					Include="$(CUDA_PATH)/include;$(NVSDKCOMPUTE_ROOT)\C\common\inc"
+					Include="$(CUDA_PATH)/include;$(NVSDKCOMPUTE_ROOT)\C\common\inc;$(CULA_INC_PATH)"
 					AddedDependencies="fluidbeamSystem.cuh; fluidbeam_kernel.cu;"
 				/>
 			</FileConfiguration>

@@ -309,10 +309,12 @@ void initParticleSystem(
 int main(int argc, char** argv) 
 {
 	int num = 25;
-	boundaryOffset = 3;
-	fluidParticlesSize = make_uint3(num, num, num);
-	//fluidParticlesSize = make_uint3(0, 0, 0);
-	beamParticlesSize = make_uint3(1, num + 2 * boundaryOffset, num + 2 * boundaryOffset);	
+	boundaryOffset = 4;
+	/*fluidParticlesSize = make_uint3(num, num, num);
+	beamParticlesSize = make_uint3(1, 2 * (num + 2 * boundaryOffset), 2 * (num + 2 * boundaryOffset));	*/
+	fluidParticlesSize = make_uint3(0, 0, 0);	
+	beamParticlesSize = make_uint3(1, (2 + 2 * boundaryOffset), (2 + 2 * boundaryOffset));
+	
 	
 	
 	gridSize = make_uint3(GRID_SIZE, GRID_SIZE, GRID_SIZE);

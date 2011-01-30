@@ -8,7 +8,7 @@
 class FluidSystem
 {
 public:
-    FluidSystem(uint numParticles, uint3 gridSize, bool bUseOpenGL);
+    FluidSystem(uint3 fluidParticlesSize, uint3 gridSize, float particleRadius, bool bUseOpenGL);
     ~FluidSystem();
 
     enum ParticleArray
@@ -27,6 +27,7 @@ public:
     void   setArray(ParticleArray array, const float* data, int start, int count);
 
     int    getNumParticles() const { return m_numParticles; }
+	float    getElapsedTime() const { return elapsedTime; }
 
     unsigned int getCurrentReadBuffer() const { return m_posVbo; }
     unsigned int getColorBuffer()       const { return m_colorVBO; }
@@ -53,11 +54,13 @@ protected: // methods
     void _initialize(int numParticles);
     void _finalize();
 
-    void initGrid(uint *size, float spacing, float jitter, uint numParticles);
+    void initFluid(uint *size, float spacing, float jitter, uint numParticles);
 
 protected: // data
     bool m_bInitialized, m_bUseOpenGL;
     uint m_numParticles;
+	uint3 fluidParticlesSize;	
+	float elapsedTime;
 
     // CPU data
     float* m_hPos;              // particle positions

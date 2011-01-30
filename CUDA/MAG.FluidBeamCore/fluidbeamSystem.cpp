@@ -98,8 +98,11 @@ FluidBeamSystem::FluidBeamSystem(
 	m_params.soundspeed = 10.0f;
 	m_params.B = pow(m_params.soundspeed, 2) * pow(10.0f, 3.0f) / 7;
 
-	m_params.Young = 4500000.0f;	
-	m_params.Poisson = 0.49f;	
+	/*m_params.Young = 4500000.0f;	
+	m_params.Poisson = 0.49f;	*/
+
+	m_params.Young = 70 * pow(10.0f, 4);	
+	m_params.Poisson = 0.40f;		
 	
 	//m_params.deltaTime = 0.005f;
 	//m_params.deltaTime = pow(10.0f, -4.0f);
@@ -325,15 +328,15 @@ void FluidBeamSystem::update()
 		numParticles,
 		numGridCells);
 
-	calcDensityAndPressure(		
-		dMeasures, //output like sorted
-		dSortedPos,			
-		dSortedVel,
-		dIndex,
-		dCellStart,
-		dCellEnd,
-		numParticles,
-		numGridCells);
+	//calcDensityAndPressure(		
+	//	dMeasures, //output like sorted
+	//	dSortedPos,			
+	//	dSortedVel,
+	//	dIndex,
+	//	dCellStart,
+	//	dCellEnd,
+	//	numParticles,
+	//	numGridCells);
 
 	//todo: can be implemented in DensityPressure kernel
 	calcDisplacementGradient(
@@ -348,28 +351,28 @@ void FluidBeamSystem::update()
 		numParticles,
 		numGridCells);    
 
-	calcAndApplyAcceleration(
-		dAcceleration,
-		duDisplacementGradient, //sorted input
-		dvDisplacementGradient, //sorted input
-		dwDisplacementGradient, //sorted input
-		dMeasures,	//sorted input	
-		dSortedPos,			
-		dSortedVel,	
-		dSortedDisplacement,
-		dIndex,
-		dCellStart,
-		dCellEnd,
-		numParticles,
-		numGridCells);    
+	//calcAndApplyAcceleration(
+	//	dAcceleration,
+	//	duDisplacementGradient, //sorted input
+	//	dvDisplacementGradient, //sorted input
+	//	dwDisplacementGradient, //sorted input
+	//	dMeasures,	//sorted input	
+	//	dSortedPos,			
+	//	dSortedVel,	
+	//	dSortedDisplacement,
+	//	dIndex,
+	//	dCellStart,
+	//	dCellEnd,
+	//	numParticles,
+	//	numGridCells);    
 
-	integrateSystem(
-		dPos,
-		dVel,		
-		dDisplacement,
-		dVelLeapFrog,
-		dAcceleration,
-		numParticles);
+	//integrateSystem(
+	//	dPos,
+	//	dVel,		
+	//	dDisplacement,
+	//	dVelLeapFrog,
+	//	dAcceleration,
+	//	numParticles);
 	
     if (m_bUseOpenGL) {
         unmapGLBufferObject(m_cuda_posvbo_resource);
@@ -453,7 +456,7 @@ void FluidBeamSystem::reset()
 	float spacing = m_params.particleRadius * 2.0f;	
 	initFluidGrid(spacing, jitter);
 	//initBoundaryParticles(spacing);
-	initBeamGrid(spacing, jitter);
+	initBeamGrid(spacing / 2, jitter);
 
 	setArray(POSITION, hPos, 0, numParticles);
 	setArray(DISPLACEMENT, hDisplacement, 0, numParticles);   		
@@ -615,12 +618,19 @@ void FluidBeamSystem::initBeamGrid(float spacing, float jitter)
 
 					hVel[i*4] = 0.0f;
 					hVel[i*4+1] = 0.0f;
-					hVel[i*4+2] = 0.0f;
-					//hVel[i*4+3] = (x != 2)? 0.0f : 1.0f;
-					hVel[i*4+3] = ((y > ysize - boundaryOffset - 1) || (y < 3) ||
-						(z > zsize - boundaryOffset - 1 ) || (z < 3))? 0.0f : 1.0f;
-					hVelLeapFrog[i*4+3] = ((y > ysize - boundaryOffset - 1) || (y < 3) ||
-						(z > zsize - boundaryOffset - 1 ) || (z < 3))? 0.0f : 1.0f; // 0: don't integrate, 1: integrate
+					hVel[i*4+2] = 0.0f;	
+					hVel[i*4+3] = 1.0f;
+					hVelLeapFrog[i*4+3] = 1.0f;
+					/*hVel[i*4+3] = (y == 1)? 0.0f: 0.0f;
+					hVelLeapFrog[i*4+3] = (y == 1)? 0.0f: 0.0f;*/
+					//hVel[i*4+3] = ((y > ysize - boundaryOffset - 1) || (y < 3) ||
+					//	(z > zsize - boundaryOffset - 1 ) || (z < 3))? 0.0f : 1.0f;
+					//hVelLeapFrog[i*4+3] = ((y > ysize - boundaryOffset - 1) || (y < 3) ||
+					//	(z > zsize - boundaryOffset - 1 ) || (z < 3))? 0.0f : 1.0f; // 0: don't integrate, 1: integrate
+					hPos[i*4+3] = ((y > ysize - boundaryOffset - 1) || (y < boundaryOffset) ||
+						(z > zsize - boundaryOffset - 1 ) || (z < boundaryOffset))? 0.0f : 1.0f;
+					hPos[i*4+3] = ((y > ysize - boundaryOffset - 1) || (y < boundaryOffset) ||
+						(z > zsize - boundaryOffset - 1 ) || (z < boundaryOffset))? 0.0f : 1.0f; // 0: don't integrate, 1: integrate
 				}
 			}
 		}

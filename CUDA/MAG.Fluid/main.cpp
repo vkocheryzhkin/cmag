@@ -4,35 +4,30 @@
 #endif
 
 #include <GL/glut.h>
-
 #include <cutil_inline.h>
 #include <cutil_gl_inline.h>
-#include <cstdlib>
-#include <cstdio>
-#include <algorithm>
 #include <cuda_gl_interop.h>
-
 #include "fluidSystem.h"
 #include "render_particles.h"
 
-#define MAX_EPSILON_ERROR 5.00f
-#define THRESHOLD         0.30f
-
 #define GRID_SIZE       64
-#define NUM_PARTICLES   5*5*5//15625
+#define MAX(a,b) ((a > b) ? a : b)
 
-const uint width = 1024, height = 768;
+const uint width = 1280, height = 1024;
+
+uint3 fluidParticlesSize;
+float particleRadius;
 
 int ox, oy;
 int buttonState = 0;
-float camera_trans[] = {0.0, 0.0, -2.2};
+float camera_trans[] = {0.0, 0.5, -1.2};
 float camera_rot[]   = {0, 0, 0};
 float camera_trans_lag[] = {0, 0, -1};
 float camera_rot_lag[] = {0, 0, 0};
 const float inertia = 0.1;
 
-bool bPause = false;
-uint numParticles = 0;
+bool bPause = true;
+bool IsFirstTime = true; //make one iteration
 uint3 gridSize;
 
 FluidSystem *psystem = 0;
@@ -46,28 +41,9 @@ ParticleRenderer *renderer = 0;
 float modelView[16];
 unsigned int frameCount = 0;
 
-#define MAX(a,b) ((a > b) ? a : b)
-
-extern "C" void cudaInit(int argc, char **argv);
 extern "C" void cudaGLInit(int argc, char **argv);
-extern "C" void copyArrayFromDevice(void* host, const void* device, unsigned int vbo, int size);
 
-void initParticleSystem(int numParticles, uint3 gridSize, bool bUseOpenGL)
-{
-    psystem = new FluidSystem(numParticles, gridSize, bUseOpenGL); 
-    psystem->reset();
-
-    if (bUseOpenGL) {
-        renderer = new ParticleRenderer;
-        renderer->setParticleRadius(psystem->getParticleRadius());
-        renderer->setColorBuffer(psystem->getColorBuffer());
-    }
-
-    cutilCheckError(cutCreateTimer(&timer));
-}
-
-void cleanup()
-{
+void cleanup(){
 	cutilCheckError( cutDeleteTimer( timer));    
 }
 
@@ -92,7 +68,7 @@ void initGL(int argc, char **argv)
 #endif
 
     glEnable(GL_DEPTH_TEST);
-    glClearColor(0.25, 0.25, 0.25, 1.0);
+    glClearColor(1.0, 1.0, 1.0, 1.0);
 
     glutReportErrors();
 }
@@ -105,7 +81,8 @@ void computeFPS()
     if (fpsCount == fpsLimit) {
         char fps[256];
         float ifps = 1.f / (cutGetAverageTimerValue(timer) / 1000.f);
-        sprintf(fps, "CUDA Particles (%d particles): %3.1f fps", numParticles, ifps);                  
+		sprintf(fps, "Dam Break (%d particles): %3.1f fps; elapsed Time: %f",
+			psystem->getNumParticles(), ifps, psystem->getElapsedTime()); 
         glutSetWindowTitle(fps);
         fpsCount = 0;         
 
@@ -115,7 +92,14 @@ void computeFPS()
 
 void display()
 {
-    cutilCheckError(cutStartTimer(timer));  
+	cutilCheckError(cutStartTimer(timer));  
+	if(IsFirstTime)
+	{
+		IsFirstTime = false;
+		psystem->update(); 
+		if (renderer) 
+			renderer->setVertexBuffer(psystem->getCurrentReadBuffer(), psystem->getNumParticles());
+	}
 
     if (!bPause)
     {
@@ -139,30 +123,31 @@ void display()
 
     glGetFloatv(GL_MODELVIEW_MATRIX, modelView);
 
-    // cube
-    //glColor3f(1.0, 1.0, 1.0);
-    //glutWireCube(2.0);	
-	//
-	glBegin(GL_LINE_STRIP);
-	float b = (powf((float) NUM_PARTICLES, 1.0f / 3.0f) * 2)/GRID_SIZE -1.0f;
-	float y = 0.0f;
-	glVertex3f(-1, -1, -1);
-	glVertex3f(1, -1, -1);
-	glVertex3f(1, 0, -1);
-	glVertex3f(-1, 0, -1);
-	glVertex3f(-1, -1, -1);
-	glVertex3f(-1, -1, b);	
-	glVertex3f(1, -1, b);
-	glVertex3f(1, 0, b);
-	glVertex3f(-1, 0, b);
-	glVertex3f(-1, -1, b);
-	glVertex3f(-1, 0, b);
-	glVertex3f(-1, 0, -1);
-	glVertex3f(1, 0, -1);
-	glVertex3f(1, 0, b);
-	glVertex3f(1, -1, b);
-	glVertex3f(1, -1, -1);
-	glEnd();	
+	glColor3f(0.0, 0.0, 0.0);
+
+	float halfWorldLength = (2 * particleRadius) * GRID_SIZE / 2.0f;	
+	float b = 2.0f * particleRadius * (fluidParticlesSize.z) - halfWorldLength;	
+	float &h = halfWorldLength;	
+	//glutWireCube(2.0);
+
+	glBegin(GL_LINE_STRIP);	
+	glVertex3f(-h, -h, -h);
+	glVertex3f(h, -h, -h);
+	glVertex3f(h, 0, -h);
+	glVertex3f(-h, 0, -h);
+	glVertex3f(-h, -h, -h);
+	glVertex3f(-h, -h, b);	
+	glVertex3f(h, -h, b);
+	glVertex3f(h, 0, b);
+	glVertex3f(-h, 0, b);
+	glVertex3f(-h, -h, b);
+	glVertex3f(-h, 0, b);
+	glVertex3f(-h, 0, -h);
+	glVertex3f(h, 0, -h);
+	glVertex3f(h, 0, b);
+	glVertex3f(h, -h, b);
+	glVertex3f(h, -h, -h);
+	glEnd();
 
     if (renderer)
         renderer->display();
@@ -278,17 +263,35 @@ void mainMenu(int i)
     key((unsigned char) i, 0, 0);
 }
 
+void initParticleSystem(
+	uint3 fluidParticlesSize,
+	uint3 gridSize,
+	float particleRadius,
+	bool bUseOpenGL){
+		psystem = new FluidSystem(fluidParticlesSize, gridSize, particleRadius, bUseOpenGL); 
+		psystem->reset();
+
+		if (bUseOpenGL) {
+			renderer = new ParticleRenderer;
+			renderer->setParticleRadius(psystem->getParticleRadius());
+			renderer->setColorBuffer(psystem->getColorBuffer());
+		}
+
+		cutilCheckError(cutCreateTimer(&timer));
+}
+
 int main(int argc, char** argv) 
 {
-    numParticles = NUM_PARTICLES;
-    uint gridDim = GRID_SIZE;
-
-    gridSize.x = gridSize.y = gridSize.z = gridDim;
+	int num = 25;
+	particleRadius = 1.0f / GRID_SIZE;	
+	fluidParticlesSize = make_uint3(num, num, num);	    
+	gridSize = make_uint3(GRID_SIZE, GRID_SIZE, GRID_SIZE);    
+	
     
     initGL(argc, argv);
     cudaGLInit(argc, argv);
 
-    initParticleSystem(numParticles, gridSize, true);
+    initParticleSystem(fluidParticlesSize, gridSize, particleRadius, true);
      
     glutDisplayFunc(display);
     glutReshapeFunc(reshape);
