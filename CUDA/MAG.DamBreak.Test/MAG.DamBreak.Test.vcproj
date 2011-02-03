@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9,00"
-	Name="MAG.Fluid"
-	ProjectGUID="{B51AF99A-2229-484C-99A4-CF01E6E6F0F8}"
-	RootNamespace="MAGCUDAFluid"
+	Name="MAG.DamBreak.Test"
+	ProjectGUID="{754DE6D4-4B5F-48E2-9825-BF15BB6A560F}"
+	RootNamespace="MAGFluidTest"
 	TargetFrameworkVersion="196613"
 	>
 	<Platforms>
@@ -40,10 +40,10 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(CUDA_PATH)/include&quot;;&quot;$(NVSDKCOMPUTE_ROOT)\C\common\inc&quot;;../MAG.FluidCore;../MAG.Infrastructure"
+				AdditionalIncludeDirectories="&quot;$(BOOST_ROOT)&quot;;&quot;$(CUDA_PATH)/include&quot;;&quot;$(NVSDKCOMPUTE_ROOT)\C\common\inc&quot;;..\MAG.DamBreakCore"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
+				RuntimeLibrary="3"
 				WarningLevel="3"
 				DebugInformationFormat="3"
 			/>
@@ -58,11 +58,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="cudart.lib  cutil32D.lib glew32.lib cudpp32.lib"
+				AdditionalDependencies="libboost_unit_test_framework-vc90-mt-gd-1_44.lib cudart.lib  cutil32D.lib glew32.lib cudpp32.lib"
 				OutputFile="../../../C/bin/win32/$(ConfigurationName)/$(ProjectName).exe"
-				LinkIncremental="1"
-				AdditionalLibraryDirectories="$(CUDA_PATH)/lib/$(PlatformName);&quot;$(NVSDKCOMPUTE_ROOT)/C/common/lib&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/shared/lib&quot;"
+				AdditionalLibraryDirectories="&quot;$(BOOST_ROOT)/lib&quot;;&quot;$(CUDA_PATH)/lib/$(PlatformName)&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/C/common/lib&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/shared/lib&quot;"
 				GenerateDebugInformation="true"
+				SubSystem="1"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -89,8 +89,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
-			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
+			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -114,8 +114,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="&quot;$(CUDA_PATH)/include&quot;;&quot;$(NVSDKCOMPUTE_ROOT)\C\common\inc&quot;;../MAG.FluidCore;../MAG.Infrastructure"
-				RuntimeLibrary="0"
+				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				WarningLevel="3"
 				DebugInformationFormat="3"
@@ -131,10 +130,6 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="cudart.lib  cutil32.lib glew32.lib cudpp32.lib"
-				OutputFile="../../../C/bin/win32/$(ConfigurationName)/$(ProjectName).exe"
-				LinkIncremental="1"
-				AdditionalLibraryDirectories="$(CUDA_PATH)/lib/$(PlatformName);&quot;$(NVSDKCOMPUTE_ROOT)/C/common/lib&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/shared/lib&quot;"
 				GenerateDebugInformation="true"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
@@ -167,7 +162,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath=".\main.cpp"
+			RelativePath=".\SystemTest.cpp"
 			>
 		</File>
 	</Files>

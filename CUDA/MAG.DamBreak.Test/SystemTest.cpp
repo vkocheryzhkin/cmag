@@ -12,7 +12,7 @@ BOOST_AUTO_TEST_CASE(FluidTest)
 	uint3 fluidParticlesSize = make_uint3(num, num, num);	    
 	uint3 gridSize = make_uint3(64, 64, 64);   	
 
-	FluidSystem *psystem = new FluidSystem(fluidParticlesSize, gridSize, false); 
+	DamBreakSystem *psystem = new DamBreakSystem(fluidParticlesSize, gridSize, 1.0f/64, false); 
 	psystem->reset();
 
 	float *hPos = (float*)malloc(sizeof(float)*4*psystem->getNumParticles());

@@ -30,7 +30,7 @@ bool bPause = true;
 bool IsFirstTime = true; //make one iteration
 uint3 gridSize;
 
-FluidSystem *psystem = 0;
+DamBreakSystem *psystem = 0;
 
 static int fpsCount = 0;
 static int fpsLimit = 1;
@@ -129,7 +129,7 @@ void display()
 	float b = 2.0f * particleRadius * (fluidParticlesSize.z) - halfWorldLength;	
 	float &h = halfWorldLength;	
 	//glutWireCube(2.0);
-
+	glLineWidth (3.0f);	
 	glBegin(GL_LINE_STRIP);	
 	glVertex3f(-h, -h, -h);
 	glVertex3f(h, -h, -h);
@@ -268,7 +268,7 @@ void initParticleSystem(
 	uint3 gridSize,
 	float particleRadius,
 	bool bUseOpenGL){
-		psystem = new FluidSystem(fluidParticlesSize, gridSize, particleRadius, bUseOpenGL); 
+		psystem = new DamBreakSystem(fluidParticlesSize, gridSize, particleRadius, bUseOpenGL); 
 		psystem->reset();
 
 		if (bUseOpenGL) {
