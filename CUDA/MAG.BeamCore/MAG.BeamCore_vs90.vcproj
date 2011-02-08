@@ -36,7 +36,7 @@
 			/>
 			<Tool
 				Name="Cudart Build Rule"
-				Include="$(NVSDKCOMPUTE_ROOT)\C\common\inc"
+				Include="$(NVSDKCOMPUTE_ROOT)\C\common\inc;..\MAG.Util"
 				Arch2="0"
 			/>
 			<Tool
@@ -51,7 +51,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="$(CUDA_PATH)/include;$(NVSDKCOMPUTE_ROOT)\C\common\inc"
+				AdditionalIncludeDirectories="&quot;$(CUDA_PATH)/include&quot;;&quot;$(NVSDKCOMPUTE_ROOT)\C\common\inc&quot;;..\MAG.Util"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -355,7 +355,7 @@
 				>
 				<Tool
 					Name="Cudart Build Rule"
-					Include="$(CUDA_PATH)/include;$(NVSDKCOMPUTE_ROOT)\C\common\inc"
+					Include="$(CUDA_PATH)/include;$(NVSDKCOMPUTE_ROOT)\C\common\inc;..\MAG.Util"
 					AddedDependencies="beamSystem.cuh; beam_kernel.cu;"
 				/>
 			</FileConfiguration>

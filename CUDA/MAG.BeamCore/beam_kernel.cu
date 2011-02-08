@@ -1,9 +1,5 @@
-#ifndef _PARTICLES_KERNEL_H_
-#define _PARTICLES_KERNEL_H_
-
 #include "cutil_math.h"
 #include "beam_kernel.cuh"
-
 texture<float4, 1, cudaReadModeElementType> oldPosTex;
 texture<float4, 1, cudaReadModeElementType> oldReferencePosTex;
 texture<float4, 1, cudaReadModeElementType> olduDisplacementGradientTex;
@@ -13,7 +9,7 @@ texture<float4, 1, cudaReadModeElementType> oldMeasuresTex;
 texture<uint, 1, cudaReadModeElementType> cellStartTex;
 texture<uint, 1, cudaReadModeElementType> cellEndTex;
 
-__constant__ SimParams params;
+__constant__ BeamParams params;
 
 //todo: take this math away
 struct Matrix
@@ -139,103 +135,103 @@ __device__ Matrix Transpose (const Matrix & b)
 
 __device__ int3 calcGridPos(float3 p)
 {
-    int3 gridPos;
-    gridPos.x = floor((p.x - params.worldOrigin.x) / params.cellSize.x);
-    gridPos.y = floor((p.y - params.worldOrigin.y) / params.cellSize.y);
-    gridPos.z = floor((p.z - params.worldOrigin.z) / params.cellSize.z);
-    return gridPos;
+	int3 gridPos;
+	gridPos.x = floor((p.x - params.worldOrigin.x) / params.cellSize.x);
+	gridPos.y = floor((p.y - params.worldOrigin.y) / params.cellSize.y);
+	gridPos.z = floor((p.z - params.worldOrigin.z) / params.cellSize.z);
+	return gridPos;
 }
 
 __device__ uint calcGridHash(int3 gridPos)
 {
-    gridPos.x = gridPos.x & (params.gridSize.x-1);  
-    gridPos.y = gridPos.y & (params.gridSize.y-1);
-    gridPos.z = gridPos.z & (params.gridSize.z-1);        
-    return __umul24(__umul24(gridPos.z, params.gridSize.y), params.gridSize.x) + __umul24(gridPos.y, params.gridSize.x) + gridPos.x;
+	gridPos.x = gridPos.x & (params.gridSize.x-1);  
+	gridPos.y = gridPos.y & (params.gridSize.y-1);
+	gridPos.z = gridPos.z & (params.gridSize.z-1);        
+	return __umul24(__umul24(gridPos.z, params.gridSize.y), params.gridSize.x) + __umul24(gridPos.y, params.gridSize.x) + gridPos.x;
 }
 
-__global__ void calcHashD(uint* Hash,   // output
-               uint* Index,				// output
-               float4* pos,				// input
-               uint    numParticles)
+__global__ void calculateBeamHashD(uint* Hash,   // output
+			   uint* Index,				// output
+			   float4* pos,				// input
+			   uint    numParticles)
 {
-    uint index = __umul24(blockIdx.x, blockDim.x) + threadIdx.x;
-    if (index >= numParticles) return;
+	uint index = __umul24(blockIdx.x, blockDim.x) + threadIdx.x;
+	if (index >= numParticles) return;
     
-    volatile float4 p = pos[index];
+	volatile float4 p = pos[index];
 
-    int3 gridPos = calcGridPos(make_float3(p.x, p.y, p.z));
-    uint hash = calcGridHash(gridPos);
+	int3 gridPos = calcGridPos(make_float3(p.x, p.y, p.z));
+	uint hash = calcGridHash(gridPos);
 
-    Hash[index] = hash;
-    Index[index] = index;
+	Hash[index] = hash;
+	Index[index] = index;
 }
 
-__global__ void reorderDataAndFindCellStartD(
+__global__ void reorderBeamDataD(
 								  uint*   cellStart,		   // output: 
-							      uint*   cellEnd,             // output: 
+								  uint*   cellEnd,             // output: 
 								  float4* sortedPos,		   // output;
-  							      float4* sortedReferencePos,  // output:						  
-                                  uint *  Hash,				   // input: 
-                                  uint *  Index,			   // input: 
+								  float4* sortedReferencePos,  // output:						  
+								  uint *  Hash,				   // input: 
+								  uint *  Index,			   // input: 
 								  float4* oldPos,			   // input;
 								  float4* oldReferencePos,
-							      uint    numParticles)
+								  uint    numParticles)
 {
 	extern __shared__ uint sharedHash[];    
-    uint index = __umul24(blockIdx.x,blockDim.x) + threadIdx.x;
+	uint index = __umul24(blockIdx.x,blockDim.x) + threadIdx.x;
 	
-    volatile uint hash;   
-    if (index < numParticles) {
-         hash = Hash[index];
+	volatile uint hash;   
+	if (index < numParticles) {
+		 hash = Hash[index];
         
-	    sharedHash[threadIdx.x+1] = hash;
+		sharedHash[threadIdx.x+1] = hash;
 
-	    if (index > 0 && threadIdx.x == 0)
-	    {		    
-		    sharedHash[0] = Hash[index-1];
-	    }
+		if (index > 0 && threadIdx.x == 0)
+		{		    
+			sharedHash[0] = Hash[index-1];
+		}
 	}
 
 	__syncthreads();
 	
 	if (index < numParticles) {		
-	    if (index == 0 || hash != sharedHash[threadIdx.x])
-	    {
-		    cellStart[hash] = index;
-            if (index > 0)
-                cellEnd[sharedHash[threadIdx.x]] = index;
-	    }
+		if (index == 0 || hash != sharedHash[threadIdx.x])
+		{
+			cellStart[hash] = index;
+			if (index > 0)
+				cellEnd[sharedHash[threadIdx.x]] = index;
+		}
 
-        if (index == numParticles - 1)
-        {
-            cellEnd[hash] = index + 1;
-        }
+		if (index == numParticles - 1)
+		{
+			cellEnd[hash] = index + 1;
+		}
 
-	    uint sortedIndex = Index[index];		 				
+		uint sortedIndex = Index[index];		 				
 		sortedPos[index] = FETCH(oldPos, sortedIndex);
-        sortedReferencePos[index] = FETCH(oldReferencePos, sortedIndex);
+		sortedReferencePos[index] = FETCH(oldReferencePos, sortedIndex);
 	}
 }
 
 
 __device__ float sumDensityPart(
 				   int3    gridPos,
-                   uint    index,
-                   float3  referencePos,
-                   float4* oldReferencePos, 
-                   uint*   cellStart,
-                   uint*   cellEnd)
+				   uint    index,
+				   float3  referencePos,
+				   float4* oldReferencePos, 
+				   uint*   cellStart,
+				   uint*   cellEnd)
 {
-    uint gridHash = calcGridHash(gridPos);
+	uint gridHash = calcGridHash(gridPos);
 
-    uint startIndex = FETCH(cellStart, gridHash);
+	uint startIndex = FETCH(cellStart, gridHash);
 
-    float sum = 0.0f;
-    if (startIndex != 0xffffffff) {                
-        uint endIndex = FETCH(cellEnd, gridHash);
-        for(uint j=startIndex; j<endIndex; j++) {                  
-            float3 referencePos_j = make_float3(FETCH(oldReferencePos, j));
+	float sum = 0.0f;
+	if (startIndex != 0xffffffff) {                
+		uint endIndex = FETCH(cellEnd, gridHash);
+		for(uint j=startIndex; j<endIndex; j++) {                  
+			float3 referencePos_j = make_float3(FETCH(oldReferencePos, j));
 			float wpolyExpr = 0.0f;
 
 			float3 relPos = referencePos_j - referencePos; 
@@ -243,15 +239,15 @@ __device__ float sumDensityPart(
 
 			if (dist < params.smoothingRadius) {					
 				 wpolyExpr = pow(params.smoothingRadius, 2) - pow(dist, 2);
-                 sum += pow(wpolyExpr, 3);
+				 sum += pow(wpolyExpr, 3);
 			}                
-        }
-    }
-    return sum;
+		}
+	}
+	return sum;
 }
 
 __global__ 
-void calcDensityD(			
+void calculateBeamDensityD(			
 			float4* measures,			 //output
 			float4* oldReferencePos,	 //input
 			uint* cellStart,
@@ -260,56 +256,56 @@ void calcDensityD(
 			
 {
 	uint index = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
-    if (index >= numParticles) return;    
+	if (index >= numParticles) return;    
 
 	float3 referencePos = make_float3(FETCH(oldReferencePos, index));
-    int3 gridPos = calcGridPos(referencePos);
+	int3 gridPos = calcGridPos(referencePos);
 
-    float sum = 0.0f;
+	float sum = 0.0f;
 	int cellcount = 1;
-    for(int z=-cellcount; z<=cellcount; z++) {
-        for(int y=-cellcount; y<=cellcount; y++) {
-            for(int x=-cellcount; x<=cellcount; x++) {
-                int3 neighbourPos = gridPos + make_int3(x, y, z);
-                sum += sumDensityPart(neighbourPos, index, referencePos, oldReferencePos, cellStart, cellEnd);
-            }
-        }
-    }	
+	for(int z=-cellcount; z<=cellcount; z++) {
+		for(int y=-cellcount; y<=cellcount; y++) {
+			for(int x=-cellcount; x<=cellcount; x++) {
+				int3 neighbourPos = gridPos + make_int3(x, y, z);
+				sum += sumDensityPart(neighbourPos, index, referencePos, oldReferencePos, cellStart, cellEnd);
+			}
+		}
+	}	
 	float dens = sum * params.particleMass * params.Poly6Kern;
-    measures[index].x = dens;	//density		
-	measures[index].y = 0.0f; //clear it will be filled in calcDensityDenominatorD
+	measures[index].x = dens;	//density		
+	measures[index].y = 0.0f; //clear it will be filled in calculateBeamDensityDenominatorD
 }
 
 __device__ void sumDensityDenominator(
 				   int3    gridPos,
-                   uint    index,
-                   float3  referencePos,
-                   float4* oldReferencePos, 
+				   uint    index,
+				   float3  referencePos,
+				   float4* oldReferencePos, 
 				   float4* measures,
-                   uint*   cellStart,
-                   uint*   cellEnd)
+				   uint*   cellStart,
+				   uint*   cellEnd)
 {
-    uint gridHash = calcGridHash(gridPos);
-    uint startIndex = FETCH(cellStart, gridHash);
+	uint gridHash = calcGridHash(gridPos);
+	uint startIndex = FETCH(cellStart, gridHash);
     
-    if (startIndex != 0xffffffff) {                
-        uint endIndex = FETCH(cellEnd, gridHash);
-        for(uint j=startIndex; j<endIndex; j++) {                  
-            float3 referencePos_j = make_float3(FETCH(oldReferencePos, j));			
+	if (startIndex != 0xffffffff) {                
+		uint endIndex = FETCH(cellEnd, gridHash);
+		for(uint j=startIndex; j<endIndex; j++) {                  
+			float3 referencePos_j = make_float3(FETCH(oldReferencePos, j));			
 			float3 relPos = referencePos_j - referencePos; 
 			float dist = length(relPos);
 
 			if (dist < params.smoothingRadius) {									 
 				 float wpolyExpr = pow(params.smoothingRadius, 2) - pow(dist, 2);
 				 volatile float4 measure = measures[j];
-                 measures[index].y += (params.particleMass / measure.x) * params.Poly6Kern * pow(wpolyExpr, 3);
+				 measures[index].y += (params.particleMass / measure.x) * params.Poly6Kern * pow(wpolyExpr, 3);
 			}                
-        }
-    }    
+		}
+	}    
 }
 
 __global__ 
-void calcDensityDenominatorD(			
+void calculateBeamDensityDenominatorD(			
 			float4* measures,			//input, output
 			float4* oldReferencePos,	//input
 			uint* cellStart,
@@ -318,45 +314,45 @@ void calcDensityDenominatorD(
 			
 {
 	uint index = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
-    if (index >= numParticles) return;    
+	if (index >= numParticles) return;    
 
 	float3 referencePos = make_float3(FETCH(oldReferencePos, index));
-    int3 gridPos = calcGridPos(referencePos);
+	int3 gridPos = calcGridPos(referencePos);
     
 	int cellcount = 1;
-    for(int z=-cellcount; z<=cellcount; z++) {
-        for(int y=-cellcount; y<=cellcount; y++) {
-            for(int x=-cellcount; x<=cellcount; x++) {
-                int3 neighbourPos = gridPos + make_int3(x, y, z);
-                sumDensityDenominator(neighbourPos, index, referencePos, oldReferencePos, measures, cellStart, cellEnd);
-            }
-        }
-    }		
+	for(int z=-cellcount; z<=cellcount; z++) {
+		for(int y=-cellcount; y<=cellcount; y++) {
+			for(int x=-cellcount; x<=cellcount; x++) {
+				int3 neighbourPos = gridPos + make_int3(x, y, z);
+				sumDensityDenominator(neighbourPos, index, referencePos, oldReferencePos, measures, cellStart, cellEnd);
+			}
+		}
+	}		
 	volatile float4 measure = measures[index];	
 	measures[index].w = params.particleMass / (measure.x / measure.y); //volume
 }
 
 __device__ Matrix sumDisplacementGradientPart(
 				   int3    gridPos,
-                   uint    index,
-                   float3  pos_i,
-                   float4* oldPos, 
+				   uint    index,
+				   float3  pos_i,
+				   float4* oldPos, 
 				   float3  referencePos_i,
-                   float4* oldReferencePos, 
+				   float4* oldReferencePos, 
 				   float4* oldMeasures,
-                   uint*   cellStart,
-                   uint*   cellEnd)
+				   uint*   cellStart,
+				   uint*   cellEnd)
 {
 	uint gridHash = calcGridHash(gridPos);
 
-    uint startIndex = FETCH(cellStart, gridHash);    	
+	uint startIndex = FETCH(cellStart, gridHash);    	
 	Matrix gradient = make_Matrix();	
 	
-    if (startIndex != 0xffffffff) {               
-        uint endIndex = FETCH(cellEnd, gridHash);
-        for(uint j=startIndex; j<endIndex; j++) {
-            if (j != index) {             
-	            float3 pos_j = make_float3(FETCH(oldPos, j));				
+	if (startIndex != 0xffffffff) {               
+		uint endIndex = FETCH(cellEnd, gridHash);
+		for(uint j=startIndex; j<endIndex; j++) {
+			if (j != index) {             
+				float3 pos_j = make_float3(FETCH(oldPos, j));				
 				float3 referencePos_j = make_float3(FETCH(oldReferencePos,j));
 				float volume_j = FETCH(oldMeasures, j).w;
 
@@ -377,13 +373,13 @@ __device__ Matrix sumDisplacementGradientPart(
 					gradient.a32 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.c * tempExpr * (relPos.y / dist);
 					gradient.a33 += volume_j * (pos_j.z - pos_i.z - (referencePos_j.z - referencePos_i.z)) * params.c * tempExpr * (relPos.z / dist);																				
 				}                
-            }
-        }
-    }
+			}
+		}
+	}
 	return gradient;		
 }
 
-__global__ void calcDisplacementGradientD(
+__global__ void calculateBeamDisplacementGradientD(
 						  float4* udisplacementGradient,
 						  float4* vdisplacementGradient,
 						  float4* wdisplacementGradient,
@@ -396,21 +392,21 @@ __global__ void calcDisplacementGradientD(
 						  uint numParticles)			
 {
 	uint index = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
-    if (index >= numParticles) return;    
+	if (index >= numParticles) return;    
 
 	float3 pos = make_float3(FETCH(oldPos, index));
 	float3 referencePos = make_float3(FETCH(oldReferencePos, index));
-    int3 gridPos = calcGridPos(referencePos);	
+	int3 gridPos = calcGridPos(referencePos);	
 	Matrix buf = make_Matrix();	
 	int cellcount = 1;
-    for(int z=-cellcount; z<=cellcount; z++) {
-        for(int y=-cellcount; y<=cellcount; y++) {
-            for(int x=-cellcount; x<=cellcount; x++) {
-                int3 neighbourPos = gridPos + make_int3(x, y, z);
-                buf += sumDisplacementGradientPart(neighbourPos, index, pos, oldPos, referencePos, oldReferencePos, oldMeasures, cellStart, cellEnd);				
-            }
-        }
-    }    		
+	for(int z=-cellcount; z<=cellcount; z++) {
+		for(int y=-cellcount; y<=cellcount; y++) {
+			for(int x=-cellcount; x<=cellcount; x++) {
+				int3 neighbourPos = gridPos + make_int3(x, y, z);
+				buf += sumDisplacementGradientPart(neighbourPos, index, pos, oldPos, referencePos, oldReferencePos, oldMeasures, cellStart, cellEnd);				
+			}
+		}
+	}    		
 	
 	udisplacementGradient[index].x = buf.a11;
 	udisplacementGradient[index].y = buf.a12;
@@ -427,26 +423,26 @@ __global__ void calcDisplacementGradientD(
 
 __device__ float3 sumForcePart(
 				   int3    gridPos,
-                   uint    index,
-                   float3  referencePos_j,
-                   float4* oldReferencePos, 
+				   uint    index,
+				   float3  referencePos_j,
+				   float4* oldReferencePos, 
 				   float4*  olduDisplacementGradient,
 				   float4*  oldvDisplacementGradient,
 				   float4*  oldwDisplacementGradient,
-                   float   volume_j, 
+				   float   volume_j, 
 				   float4* oldMeasures,
-                   uint*   cellStart,
-                   uint*   cellEnd)
+				   uint*   cellStart,
+				   uint*   cellEnd)
 {
 	uint gridHash = calcGridHash(gridPos);
-    uint startIndex = FETCH(cellStart, gridHash);    
+	uint startIndex = FETCH(cellStart, gridHash);    
 	float3 tmpForce = make_float3(0.0f);	
 			
-    if (startIndex != 0xffffffff) {               
-        uint endIndex = FETCH(cellEnd, gridHash);
-        for(uint j=startIndex; j<endIndex; j++) {
-            if (j != index) {             
-	            float3 referencePos_i = make_float3(FETCH(oldReferencePos, j));
+	if (startIndex != 0xffffffff) {               
+		uint endIndex = FETCH(cellEnd, gridHash);
+		for(uint j=startIndex; j<endIndex; j++) {
+			if (j != index) {             
+				float3 referencePos_i = make_float3(FETCH(oldReferencePos, j));
 				float4 measure = FETCH(oldMeasures, j);				
 				float volume_i = measure.w;
 				float3 relPos = referencePos_i - referencePos_j;
@@ -502,13 +498,13 @@ __device__ float3 sumForcePart(
 
 					tmpForce += -volume_i * (((I + Transpose(dU)) * Stress) * d);					
 				}                
-            }
-        }
-    }
+			}
+		}
+	}
 	return tmpForce;
 }
 
-__global__ void calcAccelerationD(
+__global__ void calculateAccelerationD(
 						  float4* acceleration,
 						  float4* oldPos,	
 						  float4* oldReferencePos,	
@@ -522,20 +518,20 @@ __global__ void calcAccelerationD(
 						  uint numParticles)			
 {
 	uint index = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
-    if (index >= numParticles) return;    
+	if (index >= numParticles) return;    
 
 	float3 pos = make_float3(FETCH(oldPos, index));
 	float3 referencePos_j = make_float3(FETCH(oldReferencePos, index));	
 	float volume_j = FETCH(oldMeasures, index).w;
 
-    int3 gridPos = calcGridPos(referencePos_j);
+	int3 gridPos = calcGridPos(referencePos_j);
 	float3 force = make_float3(0.0f);
 	int cellcount = 1;
-    for(int z=-cellcount; z<=cellcount; z++) {
-        for(int y=-cellcount; y<=cellcount; y++) {
-            for(int x=-cellcount; x<=cellcount; x++) {
-                int3 neighbourPos = gridPos + make_int3(x, y, z);				
-                force += sumForcePart(neighbourPos,
+	for(int z=-cellcount; z<=cellcount; z++) {
+		for(int y=-cellcount; y<=cellcount; y++) {
+			for(int x=-cellcount; x<=cellcount; x++) {
+				int3 neighbourPos = gridPos + make_int3(x, y, z);				
+				force += sumForcePart(neighbourPos,
 					index, 
 					referencePos_j,
 					oldReferencePos,
@@ -546,9 +542,9 @@ __global__ void calcAccelerationD(
 					oldMeasures,
 					cellStart,
 					cellEnd);
-            }
-        }
-    }    	
+			}
+		}
+	}    	
 	uint originalIndex = Index[index];
 	float3 acc = force / params.particleMass;
 	/*float speed = dot(acc,acc);
@@ -558,26 +554,25 @@ __global__ void calcAccelerationD(
 	acceleration[originalIndex] =  make_float4(acc, 0.0f);
 }
 
-__global__ void integrate(float4* posArray, //input / output 
+__global__ void integrateBeamSystemD(float4* posArray, //input / output 
 						  float4* velArray, //input / output
 						  float4* accArray, //input
 						  uint numParticles)
 {
-    uint index = __umul24(blockIdx.x,blockDim.x) + threadIdx.x;
-    if (index >= numParticles) return;
+	uint index = __umul24(blockIdx.x,blockDim.x) + threadIdx.x;
+	if (index >= numParticles) return;
 
 	volatile float4 posData = posArray[index];
 	volatile float4 velData = velArray[index];	
 	volatile float4 accData = accArray[index];	
 	
 	float3 pos = make_float3(posData.x, posData.y, posData.z);
-    float3 vel = make_float3(velData.x, velData.y, velData.z);
+	float3 vel = make_float3(velData.x, velData.y, velData.z);
 	float3 acc = make_float3(accData.x, accData.y, accData.z);
 
 	vel += (params.gravity + acc) * params.deltaTime * velData.w;
-    pos += vel * params.deltaTime;  
+	pos += vel * params.deltaTime;  
 
 	posArray[index] = make_float4(pos, posData.w);
 	velArray[index] = make_float4(vel, velData.w);	
 }
-#endif

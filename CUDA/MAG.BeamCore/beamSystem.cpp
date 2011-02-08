@@ -1,7 +1,7 @@
 #include "beamSystem.h"
+#include "magUtil.cuh"
 #include "beamSystem.cuh"
 #include "beam_kernel.cuh"
-
 #include <cutil_inline.h>
 #include "vector_functions.h"
 #include <memory.h>
@@ -10,13 +10,12 @@
 #include <assert.h>
 #include <GL/glew.h>
 
-
 BeamSystem::BeamSystem(uint numParticles, uint3 gridSize, bool IsGLEnabled) :
-    IsInitialized(false),   
+	IsInitialized(false),   
 	IsGLEnabled(IsGLEnabled),
-    numParticles(numParticles),
+	numParticles(numParticles),
 	gridSize(gridSize),
-    hPos(0),  
+	hPos(0),  
 	hVel(0),	    
 	dSortedPos(0),
 	dVelocity(0),
@@ -30,86 +29,79 @@ BeamSystem::BeamSystem(uint numParticles, uint3 gridSize, bool IsGLEnabled) :
 	dHash(0),
 	dIndex(0),
 	dCellStart(0),
-	dCellEnd(0)
-{    	
-	srand(1973);
-	numGridCells = gridSize.x*gridSize.y*gridSize.z;
-	gridSortBits = 18;
+	dCellEnd(0){    	
+		srand(1973);
+		numGridCells = gridSize.x*gridSize.y*gridSize.z;
+		gridSortBits = 18;
 
-	params.worldOrigin = make_float3(-1.0f, -1.0f, -1.0f);
-	params.gridSize = gridSize;
-	params.particleRadius = 1.0f / 64.0f;
-	params.cellSize = make_float3(params.particleRadius * 2.0f, params.particleRadius * 2.0f, params.particleRadius * 2.0f);
+		params.worldOrigin = make_float3(-1.0f, -1.0f, -1.0f);
+		params.gridSize = gridSize;
+		params.particleRadius = 1.0f / 64.0f;
+		params.cellSize = make_float3(params.particleRadius * 2.0f, params.particleRadius * 2.0f, params.particleRadius * 2.0f);
 
-	params.particleMass = 0.01f;
-	params.smoothingRadius = 2.1f * params.particleRadius;	 	 
-	params.gravity = make_float3(0.0f, -9.8f, 0.0f);    	 	
+		params.particleMass = 0.01f;
+		params.smoothingRadius = 2.1f * params.particleRadius;	 	 
+		params.gravity = make_float3(0.0f, -9.8f, 0.0f);    	 	
 
-	float h = params.smoothingRadius;
-	params.Poly6Kern = 315.0f / (64.0f * CUDART_PI_F * pow(h, 9.0f));	
-	params.c = CUDART_PI_F / ( 8 * pow(h, 4.0f) * (CUDART_PI_F / 3 - 8 / CUDART_PI_F + 16 / (pow(CUDART_PI_F,2))));
-	
-	params.Young = 4500000.0f;	
-	params.Poisson = 0.49f;		
-	//params.accelerationLimit = 100;
-	
-	params.deltaTime = 0.00005f;
-    _initialize(numParticles);
+		float h = params.smoothingRadius;
+		params.Poly6Kern = 315.0f / (64.0f * CUDART_PI_F * pow(h, 9.0f));	
+		params.c = CUDART_PI_F / ( 8 * pow(h, 4.0f) * (CUDART_PI_F / 3 - 8 / CUDART_PI_F + 16 / (pow(CUDART_PI_F,2))));
+		
+		params.Young = 4500000.0f;	
+		params.Poisson = 0.49f;		
+		//params.accelerationLimit = 100;
+		
+		params.deltaTime = 0.00005f;
+		_initialize(numParticles);
 }
 
-BeamSystem::~BeamSystem()
-{
-    _finalize();
-    numParticles = 0;
+BeamSystem::~BeamSystem(){
+	_finalize();
+	numParticles = 0;
 }
 
-uint BeamSystem::createVBO(uint size)
-{
-    GLuint vbo;
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, size, 0, GL_DYNAMIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    return vbo;
+uint BeamSystem::createVBO(uint size){
+	GLuint vbo;
+	glGenBuffers(1, &vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBufferData(GL_ARRAY_BUFFER, size, 0, GL_DYNAMIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	return vbo;
 }
 
-inline float lerp(float a, float b, float t)
-{
-    return a + t*(b-a);
+inline float lerp(float a, float b, float t){
+	return a + t*(b-a);
 }
 
-void colorRamp(float t, float *r)
-{
-    const int ncolors = 7;
-    float c[ncolors][3] = {
-        { 1.0, 0.0, 0.0, },
-        { 1.0, 0.5, 0.0, },
-	    { 1.0, 1.0, 0.0, },
-	    { 0.0, 1.0, 0.0, },
-	    { 0.0, 1.0, 1.0, },
-	    { 0.0, 0.0, 1.0, },
-	    { 1.0, 0.0, 1.0, },
-    };
-    t = t * (ncolors-1);
-    int i = (int) t;
-    float u = t - floor(t);
-    r[0] = lerp(c[i][0], c[i+1][0], u);
-    r[1] = lerp(c[i][1], c[i+1][1], u);
-    r[2] = lerp(c[i][2], c[i+1][2], u);
+void colorRamp(float t, float *r){
+	const int ncolors = 7;
+	float c[ncolors][3] = {
+		{ 1.0, 0.0, 0.0, },
+		{ 1.0, 0.5, 0.0, },
+		{ 1.0, 1.0, 0.0, },
+		{ 0.0, 1.0, 0.0, },
+		{ 0.0, 1.0, 1.0, },
+		{ 0.0, 0.0, 1.0, },
+		{ 1.0, 0.0, 1.0, },
+	};
+	t = t * (ncolors-1);
+	int i = (int) t;
+	float u = t - floor(t);
+	r[0] = lerp(c[i][0], c[i+1][0], u);
+	r[1] = lerp(c[i][1], c[i+1][1], u);
+	r[2] = lerp(c[i][2], c[i+1][2], u);
 }
 
-void BeamSystem::_initialize(int _numParticles)
-{
-    assert(!IsInitialized);
-    numParticles = _numParticles;
-    hPos = new float[numParticles*4];  
+void BeamSystem::_initialize(int _numParticles){
+	assert(!IsInitialized);
+	numParticles = _numParticles;
+	hPos = new float[numParticles*4];  
 	hVel = new float[numParticles*4];  
-    memset(hPos, 0, numParticles*4*sizeof(float));
+	memset(hPos, 0, numParticles*4*sizeof(float));
 	memset(hVel, 0, numParticles*4*sizeof(float));	
     
-    unsigned int memSize = sizeof(float) * 4 * numParticles;   
-	if(IsGLEnabled)
-	{
+	unsigned int memSize = sizeof(float) * 4 * numParticles;   
+	if(IsGLEnabled){
 		posVbo = createVBO(memSize);    
 		registerGLBufferObject(posVbo, &cuda_posvbo_resource);
 
@@ -128,8 +120,7 @@ void BeamSystem::_initialize(int _numParticles)
 		}
 		glUnmapBufferARB(GL_ARRAY_BUFFER);    
 	}
-	else 
-	{ 
+	else{ 
 		cutilSafeCall( cudaMalloc( (void **)&cudaPosVBO, memSize )) ; 
 		cutilSafeCall( cudaMalloc( (void **)&cudaColorVBO, memSize ));
 	}
@@ -144,12 +135,10 @@ void BeamSystem::_initialize(int _numParticles)
 	allocateArray((void**)&dIndex, numParticles*sizeof(uint));
 	allocateArray((void**)&dCellStart, numGridCells*sizeof(uint));
 	allocateArray((void**)&dCellEnd, numGridCells*sizeof(uint));
-
 	allocateArray((void**)&duDisplacementGradient, memSize); 
 	allocateArray((void**)&dvDisplacementGradient, memSize); 
 	allocateArray((void**)&dwDisplacementGradient, memSize); 
-	
-  		
+	  		
 	CUDPPConfiguration sortConfig;
 	sortConfig.algorithm = CUDPP_SORT_RADIX;
 	sortConfig.datatype = CUDPP_UINT;
@@ -157,15 +146,13 @@ void BeamSystem::_initialize(int _numParticles)
 	sortConfig.options = CUDPP_OPTION_KEY_VALUE_PAIRS;
 	cudppPlan(&sortHandle, sortConfig, numParticles, 1, 0);
 
-	setParameters(&params);
-    IsInitialized = true;
+	setBeamParameters(&params);
+	IsInitialized = true;
 }
 
-void BeamSystem::_finalize()
-{
-    assert(IsInitialized);
-
-    delete [] hPos; 
+void BeamSystem::_finalize(){
+	assert(IsInitialized);
+	delete [] hPos; 
 	delete [] hVel; 	
 	freeArray(dSortedPos);
 	freeArray(dAcceleration);
@@ -182,76 +169,66 @@ void BeamSystem::_finalize()
 	freeArray(dvDisplacementGradient);
 	freeArray(dwDisplacementGradient);
   
-	if(IsGLEnabled)
-	{
+	if(IsGLEnabled){
 		unregisterGLBufferObject(cuda_posvbo_resource);
 		unregisterGLBufferObject(cuda_colorvbo_resource);
 		glDeleteBuffers(1, (const GLuint*)&posVbo);
 		glDeleteBuffers(1, (const GLuint*)&colorVBO);    
 	}
-	else 
-	{
-        cutilSafeCall( cudaFree(cudaPosVBO) );
-        cutilSafeCall( cudaFree(cudaColorVBO) );
-    }
-
+	else{
+		cutilSafeCall( cudaFree(cudaPosVBO) );
+		cutilSafeCall( cudaFree(cudaColorVBO) );
+	}
 	cudppDestroyPlan(sortHandle);
 }
-void BeamSystem::setArray(ParticleArray array, const float* data, int start, int count)
-{
-    assert(IsInitialized);
+void BeamSystem::setArray(ParticleArray array, const float* data, int start, int count){
+	assert(IsInitialized);
  
-    switch (array)
-    {
-    default:
-    case POSITION:
-        {         
-			if(IsGLEnabled)
-			{
+	switch (array)
+	{
+	default:
+	case POSITION:
+		{         
+			if(IsGLEnabled){
 				unregisterGLBufferObject(cuda_posvbo_resource);
 				glBindBuffer(GL_ARRAY_BUFFER, posVbo);
 				glBufferSubData(GL_ARRAY_BUFFER, start*4*sizeof(float), count*4*sizeof(float), data);
 				glBindBuffer(GL_ARRAY_BUFFER, 0);
 				registerGLBufferObject(posVbo, &cuda_posvbo_resource);    
 			}
-			else
-			{
+			else{
 				copyArrayToDevice(cudaPosVBO, data, start*4*sizeof(float), count*4*sizeof(float));
 			}
-        }
-        break; 
+		}
+		break; 
 	case VELOCITY:
 		copyArrayToDevice(dVelocity, data, start*4*sizeof(float), count*4*sizeof(float));
 		break;	
 	case REFERENCE_POSITION:
 		copyArrayToDevice(dReferencePos, data, start*4*sizeof(float), count*4*sizeof(float));
 		break;			
-    }  	 
+	}  	 
 }
 
-void BeamSystem::reset()
-{
-    float jitter = params.particleRadius*0.01f;			            		
+void BeamSystem::reset(){
+	float jitter = params.particleRadius*0.01f;			            		
 	float spacing = params.particleRadius * 2.0f;
-    uint gridSize[3];    
+	uint gridSize[3];    
 	gridSize[0] = 20;
 	gridSize[1] = 5;		
 	gridSize[2] = 5;
-    initGrid(gridSize, spacing, jitter, numParticles);
+	initGrid(gridSize, spacing, jitter, numParticles);
         
-    setArray(POSITION, hPos, 0, numParticles);   
+	setArray(POSITION, hPos, 0, numParticles);   
 	setArray(REFERENCE_POSITION, hPos, 0, numParticles);   		
 	setArray(VELOCITY, hVel, 0, numParticles);   
 }
 
-inline float frand()
-{
-    return rand() / (float) RAND_MAX;
+inline float frand(){
+	return rand() / (float) RAND_MAX;
 }
 
-void BeamSystem::initGrid(uint *size, float spacing, float jitter, uint numParticles)
-{
-	
+void BeamSystem::initGrid(uint *size, float spacing, float jitter, uint numParticles){	
 	for(uint z=0; z<size[2]; z++) {
 		for(uint y=0; y<size[1]; y++) {	
 			for(uint x=0; x<size[0]; x++) {
@@ -273,23 +250,22 @@ void BeamSystem::initGrid(uint *size, float spacing, float jitter, uint numParti
 }
 
 
-void BeamSystem::update()
-{
-    assert(IsInitialized);
+void BeamSystem::update(){
+	assert(IsInitialized);
 
-    float *dPos;    
+	float *dPos;    
 	if(IsGLEnabled)
 		dPos = (float *) mapGLBufferObject(&cuda_posvbo_resource);
 	else
 		dPos = (float *) cudaPosVBO;
 
-	calcHash(dHash, dIndex, dReferencePos, numParticles);
+	calculateBeamHash(dHash, dIndex, dReferencePos, numParticles);
 
 	cudppSort(sortHandle, dHash, dIndex, gridSortBits, numParticles);
 
-	reorderDataAndFindCellStart(dCellStart, dCellEnd, dSortedPos, dSortedReferencePos, dHash, dIndex, dPos, dReferencePos, numParticles, numGridCells);
+	reorderBeamData(dCellStart, dCellEnd, dSortedPos, dSortedReferencePos, dHash, dIndex, dPos, dReferencePos, numParticles, numGridCells);
 
-	calcDensity(
+	calculateBeamDensity(
 		dMeasures,
 		dSortedReferencePos,
 		dCellStart,
@@ -298,7 +274,7 @@ void BeamSystem::update()
 		numGridCells);	
 
 	//used to normalize density
-	calcDensityDenominator(
+	calculateBeamDensityDenominator(
 		dMeasures,
 		dSortedReferencePos,
 		dCellStart,
@@ -306,7 +282,7 @@ void BeamSystem::update()
 		numParticles,
 		numGridCells);	
 
-	calcDisplacementGradient(
+	calculateBeamDisplacementGradient(
 		duDisplacementGradient,
 		dvDisplacementGradient,
 		dwDisplacementGradient,
@@ -319,7 +295,7 @@ void BeamSystem::update()
 		numParticles,
 		numGridCells);    
 	
-	calcAcceleration(
+	calculateAcceleration(
 		dAcceleration,
 		dSortedPos,
 		dSortedReferencePos,
@@ -333,12 +309,12 @@ void BeamSystem::update()
 		numParticles,
 		numGridCells);    
       
-	integrateSystem(
+	integrateBeamSystem(
 		dPos,
 		dVelocity,		
 		dAcceleration,
 		numParticles);	    
 
 	if(IsGLEnabled)
-    unmapGLBufferObject(cuda_posvbo_resource);    
+	unmapGLBufferObject(cuda_posvbo_resource);    
 }

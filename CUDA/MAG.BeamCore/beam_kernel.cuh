@@ -1,6 +1,7 @@
- #ifndef PARTICLES_KERNEL_H
-#define PARTICLES_KERNEL_H
-
+#ifndef __BEAM_KERNEL_CUH__
+#define __BEAM_KERNEL_CUH__
+#include "vector_types.h"
+#include "vector_functions.h"
 #ifndef __DEVICE_EMULATION__
 #define USE_TEX 1
 #endif
@@ -11,14 +12,12 @@
 #define FETCH(t, i) t[i]
 #endif
 
-#include "vector_types.h"
-#include "vector_functions.h"
 typedef unsigned int uint;
 #define CUDART_PI_F           3.141592654f
 
-struct SimParams 
+struct BeamParams 
 {        
-    float particleRadius;
+	float particleRadius;
 	float smoothingRadius; 
 	float deltaTime;
 	float particleMass;
@@ -36,6 +35,4 @@ struct SimParams
 	float Poisson;
 	float accelerationLimit;
 };
-
-
-#endif
+#endif//__BEAM_KERNEL_CUH__

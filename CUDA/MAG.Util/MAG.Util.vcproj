@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9,00"
-	Name="MAG.DamBreakCore"
-	ProjectGUID="{F6A3E97B-56F7-4A9D-9887-D70B5403D80D}"
-	RootNamespace="MAGCUDAFluidCore"
+	Name="MAG.Util"
+	ProjectGUID="{645E4439-91F2-4F56-8445-9F8071620200}"
+	RootNamespace="MAGUtil"
 	TargetFrameworkVersion="196613"
 	>
 	<Platforms>
@@ -33,7 +33,7 @@
 			/>
 			<Tool
 				Name="Cudart Build Rule"
-				Include="$(NVSDKCOMPUTE_ROOT)\C\common\inc;..\MAG.Util"
+				Include="$(NVSDKCOMPUTE_ROOT)\C\common\inc"
 				Arch2="0"
 			/>
 			<Tool
@@ -48,12 +48,11 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(CUDA_PATH)/include&quot;;&quot;$(NVSDKCOMPUTE_ROOT)\C\common\inc&quot;;..\MAG.Util"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
+				RuntimeLibrary="3"
 				WarningLevel="3"
-				DebugInformationFormat="3"
+				DebugInformationFormat="4"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -85,9 +84,9 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
-			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
-			ConfigurationType="4"
+			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
+			IntermediateDirectory="$(ConfigurationName)"
+			ConfigurationType="1"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
 			>
@@ -113,8 +112,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="$(CUDA_PATH)/include;$(NVSDKCOMPUTE_ROOT)\C\common\inc"
-				RuntimeLibrary="0"
+				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				WarningLevel="3"
 				DebugInformationFormat="3"
@@ -129,10 +127,17 @@
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
-				Name="VCLibrarianTool"
+				Name="VCLinkerTool"
+				GenerateDebugInformation="true"
+				OptimizeReferences="2"
+				EnableCOMDATFolding="2"
+				TargetMachine="1"
 			/>
 			<Tool
 				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -144,6 +149,9 @@
 				Name="VCFxCopTool"
 			/>
 			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
 				Name="VCPostBuildEventTool"
 			/>
 		</Configuration>
@@ -152,51 +160,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath=".\fluid_kernel.cu"
-			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				ExcludedFromBuild="true"
-				>
-				<Tool
-					Name="VCCustomBuildTool"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				ExcludedFromBuild="true"
-				>
-				<Tool
-					Name="VCCustomBuildTool"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath=".\fluid_kernel.cuh"
-			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				ExcludedFromBuild="true"
-				>
-				<Tool
-					Name="VCCustomBuildTool"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				ExcludedFromBuild="true"
-				>
-				<Tool
-					Name="VCCustomBuildTool"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath=".\fluidSystem.cpp"
-			>
-		</File>
-		<File
-			RelativePath=".\fluidSystem.cu"
+			RelativePath=".\magUtil.cu"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -204,22 +168,12 @@
 				<Tool
 					Name="Cudart Build Rule"
 					Include="$(CUDA_PATH)/include;$(NVSDKCOMPUTE_ROOT)\C\common\inc"
-					AddedDependencies="fluidSystem.cuh; fluid_kernel.cu;"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="Cudart Build Rule"
-					Include="$(CUDA_PATH)/include;$(NVSDKCOMPUTE_ROOT)\C\common\inc"
-					AddedDependencies="fluidSystem.cuh; fluid_kernel.cu;"
-					Arch2="0"
+					AddedDependencies="mag_util.cuh"
 				/>
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath=".\fluidSystem.cuh"
+			RelativePath=".\magUtil.cuh"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -229,18 +183,6 @@
 					Name="VCCustomBuildTool"
 				/>
 			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				ExcludedFromBuild="true"
-				>
-				<Tool
-					Name="VCCustomBuildTool"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath=".\fluidSystem.h"
-			>
 		</File>
 	</Files>
 	<Globals>

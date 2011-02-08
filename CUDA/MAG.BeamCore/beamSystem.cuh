@@ -1,27 +1,13 @@
-#ifndef BEAM_SYSTEM_H
-#define BEAM_SYSTEM_H
-
+#ifndef __BEAMSYSTEM_CUH__
+#define __BEAMSYSTEM_CUH__
 #include "beam_kernel.cuh"
-
 extern "C"
 {	
-	void cudaInit(int argc, char **argv);
-	void cudaGLInit(int argc, char **argv);
-	void registerGLBufferObject(uint vbo, struct cudaGraphicsResource **cuda_vbo_resource);
-	void unregisterGLBufferObject(struct cudaGraphicsResource *cuda_vbo_resource);
-	void *mapGLBufferObject(struct cudaGraphicsResource **cuda_vbo_resource);
-	void unmapGLBufferObject(struct cudaGraphicsResource *cuda_vbo_resource);
-	void allocateArray(void **devPtr, int size);
-	void freeArray(void *devPtr);
+	void setBeamParameters(BeamParams *hostParams);
 
-	void threadSync();
+	void calculateBeamHash(uint* Hash, uint* Index, float* pos, int numParticles);
 
-	void copyArrayFromDevice(void* host, const void* device, unsigned int vbo, int size);
-	void copyArrayToDevice(void* device, const void* host, int offset, int size);
-	
-	void setParameters(SimParams *hostParams);
-	void calcHash(uint* Hash, uint* Index, float* pos, int numParticles);
-	void reorderDataAndFindCellStart(
+	void reorderBeamData(
 		uint* cellStart, 
 		uint* cellEnd, 
 		float* sortedPos, 
@@ -33,7 +19,7 @@ extern "C"
 		uint numParticles, 
 		uint numCells);
 
-	void calcDensity(
+	void calculateBeamDensity(
 		float* dMeasures, 
 		float* sortedReferencePos, 
 		uint* dCellStart, 
@@ -41,7 +27,7 @@ extern "C"
 		uint numParticles, 
 		uint numGridCells);
 
-	void calcDensityDenominator(
+	void calculateBeamDensityDenominator(
 		float* dMeasures, 
 		float* sortedReferencePos, 
 		uint* dCellStart, 
@@ -49,7 +35,7 @@ extern "C"
 		uint numParticles, 
 		uint numGridCells);	
 
-	void calcDisplacementGradient(
+	void calculateBeamDisplacementGradient(
 		float* duDisplacementGradient,
 		float* dvDisplacementGradient,
 		float* dwDisplacementGradient, 
@@ -62,7 +48,7 @@ extern "C"
 		uint numParticles,
 		uint numGridCells);
 
-	void calcAcceleration(		
+	void calculateAcceleration(		
 		float* acceleration,
 		float* sortedPos,
 		float* sortedReferencePos,
@@ -76,11 +62,10 @@ extern "C"
 		uint numParticles,
 		uint numGridCells);
 
-	void integrateSystem(
+	void integrateBeamSystem(
 		float* position,
 		float* velocity,
 		float* acceleration,
 		uint numParticles);	
 };
-
-#endif
+#endif //__BEAMSYSTEM_CUH__

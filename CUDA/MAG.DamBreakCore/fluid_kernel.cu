@@ -1,6 +1,3 @@
-#ifndef _FLUID_KERNEL_CU_
-#define _FLUID_KERNEL_CU_
-
 #include <stdio.h>
 #include <math.h>
 #include "cutil_math.h"
@@ -19,18 +16,18 @@ texture<uint, 1, cudaReadModeElementType> cellEndTex;
 __constant__ SimParams params;
 
 __device__ int3 calcGridPos(float3 p){
-    int3 gridPos;
-    gridPos.x = floor((p.x - params.worldOrigin.x) / params.cellSize.x);
-    gridPos.y = floor((p.y - params.worldOrigin.y) / params.cellSize.y);
-    gridPos.z = floor((p.z - params.worldOrigin.z) / params.cellSize.z);
-    return gridPos;
+	int3 gridPos;
+	gridPos.x = floor((p.x - params.worldOrigin.x) / params.cellSize.x);
+	gridPos.y = floor((p.y - params.worldOrigin.y) / params.cellSize.y);
+	gridPos.z = floor((p.z - params.worldOrigin.z) / params.cellSize.z);
+	return gridPos;
 }
 
 __device__ uint calcGridHash(int3 gridPos){
-    gridPos.x = gridPos.x & (params.gridSize.x-1);  
-    gridPos.y = gridPos.y & (params.gridSize.y-1);
-    gridPos.z = gridPos.z & (params.gridSize.z-1);        
-    return __umul24(__umul24(gridPos.z, params.gridSize.y), params.gridSize.x) + __umul24(gridPos.y, params.gridSize.x) + gridPos.x;
+	gridPos.x = gridPos.x & (params.gridSize.x-1);  
+	gridPos.y = gridPos.y & (params.gridSize.y-1);
+	gridPos.z = gridPos.z & (params.gridSize.z-1);        
+	return __umul24(__umul24(gridPos.z, params.gridSize.y), params.gridSize.x) + __umul24(gridPos.y, params.gridSize.x) + gridPos.x;
 }
 
 __global__ void calcHashD(
@@ -303,4 +300,3 @@ __global__ void integrate(
 		velArray[index] = make_float4(vel, velData.w);
 		velLeapFrogArray[index] = make_float4(velLeapFrog, velLeapFrogData.w);
 }
-#endif
