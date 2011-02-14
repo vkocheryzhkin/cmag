@@ -7,24 +7,27 @@
 #include <cutil_inline.h>
 #include <cutil_gl_inline.h>
 #include <cuda_gl_interop.h>
-#include "fluidSystem.h"
+//#include "fluidSystem.h"
 #include "beamSystem.h"
+#include "poiseuilleFlowSystem.h"
 #include "render_particles.h"
 #include "magUtil.cuh"
 
-#define GRID_SIZE       64
+//#define GRID_SIZE       64
 #define MAX(a,b) ((a > b) ? a : b)
 
 const int width = 1280, height = 1024;
 
 uint3 fluidParticlesSize;
 float particleRadius;
+int boundaryOffset;
 
 int ox, oy;
 int buttonState = 0;
-float camera_trans[] = {0.0, 0.5, -1.2};
+//float camera_trans[] = {0.0, 0.5, -1.2};
+float camera_trans[] = {0.0, 0.0, -0.002};
 float camera_rot[]   = {0, 0, 0};
-float camera_trans_lag[] = {0, 0, -1};
+float camera_trans_lag[] = {0, 0, 0};
 float camera_rot_lag[] = {0, 0, 0};
 const float inertia = 0.1;
 
@@ -35,7 +38,7 @@ uint3 gridSize;
 #if (Beam) 
 	BeamSystem *psystem = 0; 
 #else
-	DamBreakSystem *psystem = 0;
+	PoiseuilleFlowSystem *psystem = 0;
 #endif
 
 
@@ -129,29 +132,31 @@ void display()
 	glGetFloatv(GL_MODELVIEW_MATRIX, modelView);
 
 	glColor3f(0.0, 0.0, 0.0);
+	glutWireCube(2.0);
 
-	float halfWorldLength = (2 * particleRadius) * GRID_SIZE / 2.0f;	
-	float b = 2.0f * particleRadius * (fluidParticlesSize.z) - halfWorldLength;	
-	float &h = halfWorldLength;	
-	//glutWireCube(2.0);
-	glLineWidth (3.0f);	
+	float hx= particleRadius * gridSize.x;	
+	float hy= particleRadius * gridSize.y;
+	float hz= particleRadius * gridSize.z;	
+	float zb = 2.0f * particleRadius * (fluidParticlesSize.z) - hz;	
+	float yb = 2.0f * particleRadius * (fluidParticlesSize.y + 2 * boundaryOffset) - hy;		
+	glLineWidth (2.0f);	
 	glBegin(GL_LINE_STRIP);	
-	glVertex3f(-h, -h, -h);
-	glVertex3f(h, -h, -h);
-	glVertex3f(h, 0, -h);
-	glVertex3f(-h, 0, -h);
-	glVertex3f(-h, -h, -h);
-	glVertex3f(-h, -h, b);	
-	glVertex3f(h, -h, b);
-	glVertex3f(h, 0, b);
-	glVertex3f(-h, 0, b);
-	glVertex3f(-h, -h, b);
-	glVertex3f(-h, 0, b);
-	glVertex3f(-h, 0, -h);
-	glVertex3f(h, 0, -h);
-	glVertex3f(h, 0, b);
-	glVertex3f(h, -h, b);
-	glVertex3f(h, -h, -h);
+	glVertex3f(-hx, -hy, -hz);
+	glVertex3f(hx, -hy, -hz);
+	glVertex3f(hx, yb, -hz);
+	glVertex3f(-hx, yb, -hz);
+	glVertex3f(-hx, -hy, -hz);
+	glVertex3f(-hx, -hy, zb);	
+	glVertex3f(hx, -hy, zb);
+	glVertex3f(hx, yb, zb);
+	glVertex3f(-hx, yb, zb);
+	glVertex3f(-hx, -hy, zb);
+	glVertex3f(-hx, yb, zb);
+	glVertex3f(-hx, yb, -hz);
+	glVertex3f(hx, yb, -hz);
+	glVertex3f(hx, yb, zb);
+	glVertex3f(hx, -hy, zb);
+	glVertex3f(hx, -hy, -hz);
 	glEnd();
 
 	if (renderer)
@@ -174,7 +179,8 @@ void reshape(int w, int h)
 {
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(60.0, (float) w / (float) h, 0.1, 100.0);
+	//gluPerspective(60.0, (float) w / (float) h, 0.1, 100.0);
+	gluPerspective(60.0, (float) w / (float) h, 0.001, 100.0);
 
 	glMatrixMode(GL_MODELVIEW);
 	glViewport(0, 0, w, h);
@@ -270,13 +276,14 @@ void mainMenu(int i)
 
 void initParticleSystem(
 	uint3 fluidParticlesSize,
+	int boundaryOffset,
 	uint3 gridSize,
 	float particleRadius,
 	bool bUseOpenGL){
 		#if (Beam) 
 			psystem = new BeamSystem(20 * 5 * 5, gridSize, true); 		
 		#else 
-			psystem = new DamBreakSystem(fluidParticlesSize, gridSize, particleRadius, bUseOpenGL); 
+			psystem = new PoiseuilleFlowSystem(fluidParticlesSize, boundaryOffset, gridSize, particleRadius, bUseOpenGL); 
 		#endif						
 			
 		psystem->reset();
@@ -292,16 +299,16 @@ void initParticleSystem(
 
 int main(int argc, char** argv) 
 {
-	int num = 25;
-	particleRadius = 1.0f / GRID_SIZE;	
-	fluidParticlesSize = make_uint3(num, num, num);	    
-	gridSize = make_uint3(GRID_SIZE, GRID_SIZE, GRID_SIZE);    
-
+	boundaryOffset = 3;	
+	//gridSize = make_uint3(16, 64, 4);    
+	gridSize = make_uint3(16, 64, 4);    
+	particleRadius = 1.0f / (2 * gridSize.y * 1000);	
+	fluidParticlesSize = make_uint3(gridSize.x, gridSize.y -  2 * boundaryOffset, 1);	    	
 
 	initGL(argc, argv);
 	cudaGLInit(argc, argv);
 
-	initParticleSystem(fluidParticlesSize, gridSize, particleRadius, true);
+	initParticleSystem(fluidParticlesSize, boundaryOffset, gridSize, particleRadius, true);
 
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
