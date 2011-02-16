@@ -13,7 +13,7 @@ texture<uint, 1, cudaReadModeElementType> gridParticleHashTex;
 texture<uint, 1, cudaReadModeElementType> cellStartTex;
 texture<uint, 1, cudaReadModeElementType> cellEndTex;
 #endif
-__constant__ SimParams params;
+__constant__ PoiseuilleParams params;
 
 __device__ int3 calcGridPos(float3 p){
 	int3 gridPos;
@@ -30,7 +30,7 @@ __device__ uint calcGridHash(int3 gridPos){
 	return __umul24(__umul24(gridPos.z, params.gridSize.y), params.gridSize.x) + __umul24(gridPos.y, params.gridSize.x) + gridPos.x;
 }
 
-__global__ void calcHashD(
+__global__ void calculatePoiseuilleHashD(
 	uint*   gridParticleHash,  // output
 	uint*   gridParticleIndex, // output
 	float4* pos,               // input
@@ -47,7 +47,7 @@ __global__ void calcHashD(
 		gridParticleIndex[index] = index;
 }
 
-__global__ void reorderDataAndFindCellStartD(
+__global__ void reorderPoiseuilleDataD(
 	uint*   cellStart,        // output
 	uint*   cellEnd,          // output
 	float4* sortedPos,        // output
@@ -112,8 +112,7 @@ __device__ float sumParticlesInDomain(
 		float sum = 0.0f;
 		if (startIndex != 0xffffffff) {        // cell is not empty
 			uint endIndex = FETCH(cellEnd, gridHash);
-			for(uint j=startIndex; j<endIndex; j++) {
-				//if (j != index) {             
+			for(uint j=startIndex; j<endIndex; j++) {				  
 					float4 pos2 = FETCH(oldPos, j);
 					float4 vel2 = FETCH(oldVel, j);
 					float density2 = measures[j].x;
@@ -128,24 +127,27 @@ __device__ float sumParticlesInDomain(
 							relPos = make_float3(pos.x - (pos2.x + worldXSize),pos.y - pos2.y,pos.z - pos2.z);
 						
 					float dist = length(relPos);
-					float q = dist / params.smoothingRadius;
-					if (dist < params.smoothingRadius) {						
-						temp = (1.0f - 6.0f * pow(q,2) + 8.0f * pow(q,3) - 3.0f * pow(q,4));					
-						sum += 5.0f / CUDART_PI_F / pow(params.smoothingRadius, 2) * temp;
-
-						/*float temp = 1.0f / params.smoothingRadius *
-							(-12.0f * q + 24.0f * powf(q,2) - 12.0f * powf(q,3));
-						sum += params.particleMass / density2 *	
-							5.0f / CUDART_PI_F / powf(params.smoothingRadius, 2) *
-							dot(make_float3(vel - vel2), normalize(relPos)) * temp;*/
-					}                
-				//}
+					float q = dist / params.smoothingRadius;					
+					
+					float coeff = 7.0f / 478.0f / CUDART_PI_F / powf(params.smoothingRadius, 2);
+					if(q < 1){
+						sum += coeff * powf(3 - q, 5) - 6 * powf(2 - q, 5) + 15 * powf(1 - q, 5);						
+						continue;
+					}
+					if(q < 2){
+						sum += coeff * powf(3 - q, 5) - 6 * powf(2 - q, 5);						
+						continue;
+					} 
+					if(q < 3){
+						sum += coeff * powf(3 - q, 5);						
+						continue;
+					}										               				
 			}
 		}
 		return sum;
 }
 
-__global__ void calcDensityAndPressureD(			
+__global__ void calculatePoiseuilleDensityD(			
 	float4* measures, //output
 	float4* oldPos,	  //input 
 	float4* oldVel,
@@ -185,12 +187,7 @@ __global__ void calcDensityAndPressureD(
 		}			
 		float dens = sum * params.particleMass;
 		measures[index].x = dens;	
-		measures[index].y = powf(params.soundspeed, 2) * dens; 	
-
-		/*float initDensity = measures[index].x;
-		float dens = initDensity * (1 - sum * params.deltaTime);
-		measures[index].x = dens;	
-		measures[index].y = powf(params.soundspeed, 2) * dens;*/
+		measures[index].y = powf(params.soundspeed, 2) * dens; 			
 }
 
 __device__ float4 getVelocityDiff(
@@ -257,33 +254,45 @@ __device__ float3 sumNavierStokesForces(
 							relPos = make_float3(pos) - make_float3(pos2.x + worldXSize, pos2.y, pos2.z); 
 										
 					float dist = length(relPos);
-					float q = dist / params.smoothingRadius;
+					float q = dist / params.smoothingRadius;				
 
-					if (dist < params.smoothingRadius) {					
-						float temp = 1.0f / params.smoothingRadius *
-							(-12.0f * q + 24.0f * powf(q,2) - 12.0f * powf(q,3));
-
-						float4 Vab = getVelocityDiff(vel, pos, vel2, pos2);
-
-						tmpForce +=  
-							-1.0f * params.particleMass *
+					float coeff = -7.0f / 478.0f / CUDART_PI_F / powf(params.smoothingRadius, 3);
+					float temp = 0.0f;
+					float4 Vab = getVelocityDiff(vel, pos, vel2, pos2);
+					if(q < 1){
+						temp = coeff *5* powf(3 - q, 4) - 30 * powf(2 - q, 4) + 75 * powf(1 - q, 4);						
+						tmpForce += -1.0f * params.particleMass *
 							(pressure / powf(density,2) + pressure2 / powf(density2,2)) * 
-							5.0f / CUDART_PI_F / powf(params.smoothingRadius, 2) *
 							normalize(relPos) * temp +
 							params.particleMass * (params.mu + params.mu) * 
-							make_float3(Vab) / (density * density2) * 1.0f / dist * temp
-							;
-
-						//tmpForce += normalize(relPos);
-						//tmpForce += make_float3(Vab);						
-					}                
+							make_float3(Vab) / (density * density2) * 1.0f / dist * temp;
+						continue;
+					}
+					if(q < 2){
+						temp = coeff *5* powf(3 - q, 4) - 30 * powf(2 - q, 4);						
+						tmpForce += -1.0f * params.particleMass *
+							(pressure / powf(density,2) + pressure2 / powf(density2,2)) * 
+							normalize(relPos) * temp +
+							params.particleMass * (params.mu + params.mu) * 
+							make_float3(Vab) / (density * density2) * 1.0f / dist * temp;
+						continue;
+					} 
+					if(q < 3){
+						temp = coeff *5* powf(3 - q, 4);						
+						tmpForce += -1.0f * params.particleMass *
+							(pressure / powf(density,2) + pressure2 / powf(density2,2)) * 
+							normalize(relPos) * temp +
+							params.particleMass * (params.mu + params.mu) * 
+							make_float3(Vab) / (density * density2) * 1.0f / dist * temp;
+						continue;
+					}	
 				}
 			}
 		}
 		return tmpForce;				
 }
 
-__global__ void calcAndApplyAccelerationD(
+__global__ void calculatePoiseuilleAccelerationD(
 	float4* acceleration,			
 	float4* oldMeasures,
 	float4* oldPos,			
@@ -327,7 +336,7 @@ __global__ void calcAndApplyAccelerationD(
 		acceleration[originalIndex] = make_float4(acc, 0.0f);
 }
 
-__global__ void integrate(
+__global__ void integratePoiseuilleSystemD(
 	float4* posArray,		 // input, output
 	float4* velArray,		 // input, output  
 	float4* velLeapFrogArray, // output
@@ -347,9 +356,7 @@ __global__ void integrate(
 		float3 vel = make_float3(velData.x, velData.y, velData.z);
 		float3 acc = make_float3(accData.x, accData.y, accData.z);
 		
-		float3 nextVel = vel + (params.gravity + acc) * params.deltaTime;		
-		//float3 nextVel = vel + params.gravity * params.deltaTime;		
-		//float3 nextVel = vel + acc * params.deltaTime;		
+		float3 nextVel = vel + (params.gravity + acc) * params.deltaTime;						
 
 		float3 velLeapFrog = vel + nextVel;
 		velLeapFrog *= 0.5f;
@@ -357,26 +364,12 @@ __global__ void integrate(
 		vel = nextVel;   	
 		pos += vel * params.deltaTime;   
 
-		float halfWorldXSize = params.gridSize.x * params.particleRadius;	
-		//pos += make_float3(0.0000001f,0,0);
+		float halfWorldXSize = params.gridSize.x * params.particleRadius;			
 
 		if(pos.x > halfWorldXSize){
 			pos.x -= 2 * halfWorldXSize;
 		}
-
-		/*float scale = params.gridSize.x * params.particleRadius;
-		float bound = 2.0f * params.particleRadius * params.fluidParticlesSize.z - 1.0f * scale;	
-		float offset = 0.0f;			
-		if (pos.x > 1.0f * scale - offset - params.particleRadius) {
-			pos.x = 1.0f * scale - offset - params.particleRadius; vel.x *= params.boundaryDamping; }
-		if (pos.x < -1.0f * scale + offset + params.particleRadius) {
-			pos.x = -1.0f * scale + offset + params.particleRadius; vel.x *= params.boundaryDamping;}
-		if (pos.y < -1.0f * scale + offset + params.particleRadius) {
-			pos.y = -1.0f * scale + offset + params.particleRadius; vel.y *= params.boundaryDamping;}			
-		if (pos.z > bound + offset - params.particleRadius) {
-			pos.z = bound + offset - params.particleRadius; vel.z *= params.boundaryDamping; }			
-		if (pos.z < -1.0f * scale + offset + params.particleRadius) {
-			pos.z = -1.0f * scale + offset + params.particleRadius; vel.z *= params.boundaryDamping;}	*/	    
+		  
 		posArray[index] = make_float4(pos, posData.w);
 		velArray[index] = make_float4(vel, velData.w);
 		velLeapFrogArray[index] = make_float4(velLeapFrog, velLeapFrogData.w);

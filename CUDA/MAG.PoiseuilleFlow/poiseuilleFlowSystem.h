@@ -1,5 +1,5 @@
-#ifndef __FLUIDSYSTEM_H__
-#define __FLUIDSYSTEM_H__
+#ifndef __POISEUILLE_FLOW_SYSTEM_H__
+#define __POISEUILLE_FLOW_SYSTEM_H__
 
 #include "poiseuilleFlowKernel.cuh"
 #include "vector_functions.h"
@@ -109,8 +109,8 @@ protected: // data
 	CUDPPHandle sortHandle;
 
 	// params
-	SimParams params;
+	PoiseuilleParams params;
 	//uint3 gridSize;
 	uint numGridCells;    
 };
-#endif //__FLUIDSYSTEM_H__
+#endif //__POISEUILLE_FLOW_SYSTEM_H__

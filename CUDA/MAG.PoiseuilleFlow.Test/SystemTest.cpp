@@ -13,8 +13,8 @@ BOOST_FIXTURE_TEST_SUITE(SystemTest)//, InitCuda)
 BOOST_AUTO_TEST_CASE(SystemTest1)
 {		
 	int boundaryOffset = 3;	
-	//uint3 gridSize = make_uint3(16, 64, 2);    
 	uint3 gridSize = make_uint3(16, 64, 4);    
+	//uint3 gridSize = make_uint3(4, 8, 4);    
 	float particleRadius = 1.0f / (2 * gridSize.y * 1000);	
 	uint3 fluidParticlesSize = make_uint3(gridSize.x, gridSize.y -  2 * boundaryOffset, 1);	       
 		

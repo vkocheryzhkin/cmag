@@ -41,12 +41,13 @@ PoiseuilleFlowSystem::PoiseuilleFlowSystem(
 		params.boundaryOffset = boundaryOffset;
 	    			
 		params.particleRadius = particleRadius;		
-		params.smoothingRadius = 5.0f * params.particleRadius;	
+		params.smoothingRadius = 1.5f * params.particleRadius;	
 		params.restDensity = 1000.0f;
 		
-		params.particleMass = 1000.0f / 4097116689.379310;//todo:
+		params.particleMass = 1000.0f / 10228272445.793104;
 		
 		params.cellcount = (5 - 1) / 2;		
+		//params.cellcount = 1;		
 	    			
 		params.worldOrigin = make_float3(-getHalfWorldXSize(), -getHalfWorldYSize(), -getHalfWorldZSize());
 		float cellSize = params.particleRadius * 2.0f;  
@@ -54,9 +55,9 @@ PoiseuilleFlowSystem::PoiseuilleFlowSystem(
 	    
 		params.boundaryDamping = -1.0f;
 
-		params.gravity = make_float3(powf(10.0f, -4.0f), 0.0f, 0.0f);    	  
+		params.gravity = make_float3(2.0f * powf(10.0f, -4.0f), 0.0f, 0.0f);    	  
 
-		params.soundspeed = powf(10.0f, -3.0f);			
+		params.soundspeed = 2.4f * powf(10.0f, -4.0f);			
 		params.mu = powf(10.0f, -3.0f);	
 
 		params.deltaTime = powf(10.0f, -4.0f);
@@ -149,12 +150,13 @@ void PoiseuilleFlowSystem::_initialize(int numParticles){
 		glBindBufferARB(GL_ARRAY_BUFFER, colorVBO);
 		float *data = (float *) glMapBufferARB(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
 		float *ptr = data;
+		uint fluidParticles = params.fluidParticlesSize.x * params.fluidParticlesSize.y * params.fluidParticlesSize.z;
 		for(uint i=0; i < numParticles; i++) {
 			float t = 0.7f;  
-			if(i < params.fluidParticlesSize.x * params.fluidParticlesSize.y * params.fluidParticlesSize.z)
+			if(i < fluidParticles)
 				t = 0.5f;  
-			if((i % params.gridSize.x) == 0)
-				t = 0.3f;    			
+			if(((i % params.gridSize.x) == 0) && i < fluidParticles)
+				t = 0.2f;    			
 			colorRamp(t, ptr);
 			ptr+=3;
 			*ptr++ = 1.0f;
@@ -221,13 +223,13 @@ void PoiseuilleFlowSystem::update(){
 	if (IsOpenGL) 
 		dPos = (float *) mapGLBufferObject(&cuda_posvbo_resource);
 	else 
-		dPos = (float *) cudaPosVBO;    	
+		dPos = (float *) cudaPosVBO;    		
 	
-	calcHash(dHash, dIndex, dPos, numParticles);
+	calculatePoiseuilleHash(dHash, dIndex, dPos, numParticles);
 
 	cudppSort(sortHandle, dHash, dIndex, gridSortBits, numParticles);
 
-	reorderDataAndFindCellStart(
+	reorderPoiseuilleData(
 		dCellStart,
 		dCellEnd,
 		dSortedPos,		
@@ -239,7 +241,7 @@ void PoiseuilleFlowSystem::update(){
 		numParticles,
 		numGridCells);
 	
-	calcDensityAndPressure(		
+	calculatePoiseuilleDensity(		
 		dMeasures,
 		dSortedPos,	
 		dSortedVel,
@@ -249,7 +251,7 @@ void PoiseuilleFlowSystem::update(){
 		numParticles,
 		numGridCells);
 
-	calcAndApplyAcceleration(
+	calculatePoiseuilleAcceleration(
 		dAcceleration,
 		dMeasures,		
 		dSortedPos,			
@@ -260,7 +262,7 @@ void PoiseuilleFlowSystem::update(){
 		numParticles,
 		numGridCells);    
 
-	integrateSystem(
+	integratePoiseuilleSystem(
 		dPos,
 		dVel,	
 		dVelLeapFrog,

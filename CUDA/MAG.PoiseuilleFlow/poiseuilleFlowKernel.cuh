@@ -1,5 +1,5 @@
-#ifndef __POISEUILLEFlow_KERNEL_CUH__
-#define __POISEUILLEFlow_KERNEL_CUH__
+#ifndef __POISEUILLEFLOW_KERNEL_CUH__
+#define __POISEUILLEFLOW_KERNEL_CUH__
 #include "vector_types.h"
 #ifndef __DEVICE_EMULATION__
 #define USE_TEX 1
@@ -13,12 +13,12 @@
 
 typedef unsigned int uint;
 
-struct SimParams {     
+struct PoiseuilleParams {     
 	uint3 gridSize;
 	float3 worldOrigin;
 	float3 cellSize;
 	uint3 fluidParticlesSize;
-	int cellcount; //how many neigbours cell to look
+	int cellcount; //how many neigbours cells to look at
 
 	float3 gravity;    
 	float particleRadius;        		        
@@ -26,13 +26,11 @@ struct SimParams {
 	float particleMass;
 	float restDensity;
 	float soundspeed;	
-	
-	/*float Poly6Kern;
-	float SpikyKern;		*/
+		
 	float deltaTime;		
 	float boundaryDamping;	
 	float mu;
 
 	int boundaryOffset;
 };
-#endif//__POISEUILLEFlow_KERNEL_CUH__
+#endif//__POISEUILLEFLOW_KERNEL_CUH__

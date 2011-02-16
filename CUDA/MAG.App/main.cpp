@@ -7,39 +7,39 @@
 #include <cutil_inline.h>
 #include <cutil_gl_inline.h>
 #include <cuda_gl_interop.h>
-//#include "fluidSystem.h"
-#include "beamSystem.h"
+#include "fluidSystem.h"
+//#include "beamSystem.h"
 #include "poiseuilleFlowSystem.h"
 #include "render_particles.h"
 #include "magUtil.cuh"
 
-//#define GRID_SIZE       64
 #define MAX(a,b) ((a > b) ? a : b)
+#define DamBreak 0
+#define PoiseuilleFlow 1
 
-const int width = 1280, height = 1024;
+#if (DamBreak) 
+float camera_trans[] = {0.0, 0.5, -1.4};
+DamBreakSystem *psystem = 0; 	
+#endif
+#if (PoiseuilleFlow)
+float camera_trans[] = {0.0, 0.0, -0.0012};
+PoiseuilleFlowSystem *psystem = 0;
+#endif
 
-uint3 fluidParticlesSize;
-float particleRadius;
-int boundaryOffset;
-
-int ox, oy;
-int buttonState = 0;
-//float camera_trans[] = {0.0, 0.5, -1.2};
-float camera_trans[] = {0.0, 0.0, -0.002};
 float camera_rot[]   = {0, 0, 0};
 float camera_trans_lag[] = {0, 0, 0};
 float camera_rot_lag[] = {0, 0, 0};
 const float inertia = 0.1;
 
+const int width = 1280, height = 1024;
+//uint3 fluidParticlesSize;
+//float particleRadius;
+//int boundaryOffset;
+//uint3 gridSize;
+int ox, oy;
+int buttonState = 0;
 bool bPause = true;
 bool IsFirstTime = true; //make one iteration
-uint3 gridSize;
-
-#if (Beam) 
-	BeamSystem *psystem = 0; 
-#else
-	PoiseuilleFlowSystem *psystem = 0;
-#endif
 
 
 static int fpsCount = 0;
@@ -50,6 +50,7 @@ ParticleRenderer *renderer = 0;
 
 float modelView[16];
 unsigned int frameCount = 0;
+void ConditionalDisplay();
 
 void cleanup(){
 	cutilCheckError( cutDeleteTimer( timer));    
@@ -98,30 +99,26 @@ void computeFPS()
 	}
 }
 
+
 void display()
 {
 	cutilCheckError(cutStartTimer(timer));  
-	if(IsFirstTime)
-	{
+	if(IsFirstTime){
 		IsFirstTime = false;
 		psystem->update(); 
 		if (renderer) 
 			renderer->setVertexBuffer(psystem->getCurrentReadBuffer(), psystem->getNumParticles());
 	}
-
-	if (!bPause)
-	{
+	if (!bPause){
 		psystem->update(); 
 		if (renderer) 
 			renderer->setVertexBuffer(psystem->getCurrentReadBuffer(), psystem->getNumParticles());
 	}
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);  
-
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	for (int c = 0; c < 3; ++c)
-	{
+	for (int c = 0; c < 3; ++c)	{
 		camera_trans_lag[c] += (camera_trans[c] - camera_trans_lag[c]) * inertia;
 		camera_rot_lag[c] += (camera_rot[c] - camera_rot_lag[c]) * inertia;
 	}
@@ -132,41 +129,12 @@ void display()
 	glGetFloatv(GL_MODELVIEW_MATRIX, modelView);
 
 	glColor3f(0.0, 0.0, 0.0);
-	glutWireCube(2.0);
+	ConditionalDisplay();
 
-	float hx= particleRadius * gridSize.x;	
-	float hy= particleRadius * gridSize.y;
-	float hz= particleRadius * gridSize.z;	
-	float zb = 2.0f * particleRadius * (fluidParticlesSize.z) - hz;	
-	float yb = 2.0f * particleRadius * (fluidParticlesSize.y + 2 * boundaryOffset) - hy;		
-	glLineWidth (2.0f);	
-	glBegin(GL_LINE_STRIP);	
-	glVertex3f(-hx, -hy, -hz);
-	glVertex3f(hx, -hy, -hz);
-	glVertex3f(hx, yb, -hz);
-	glVertex3f(-hx, yb, -hz);
-	glVertex3f(-hx, -hy, -hz);
-	glVertex3f(-hx, -hy, zb);	
-	glVertex3f(hx, -hy, zb);
-	glVertex3f(hx, yb, zb);
-	glVertex3f(-hx, yb, zb);
-	glVertex3f(-hx, -hy, zb);
-	glVertex3f(-hx, yb, zb);
-	glVertex3f(-hx, yb, -hz);
-	glVertex3f(hx, yb, -hz);
-	glVertex3f(hx, yb, zb);
-	glVertex3f(hx, -hy, zb);
-	glVertex3f(hx, -hy, -hz);
-	glEnd();
-
-	if (renderer)
-		renderer->display();
-
+	if (renderer) renderer->display();
 	cutilCheckError(cutStopTimer(timer));  
-
 	glutSwapBuffers();
 	glutReportErrors();
-
 	computeFPS();
 }
 
@@ -274,41 +242,104 @@ void mainMenu(int i)
 	key((unsigned char) i, 0, 0);
 }
 
-void initParticleSystem(
-	uint3 fluidParticlesSize,
-	int boundaryOffset,
-	uint3 gridSize,
-	float particleRadius,
-	bool bUseOpenGL){
-		#if (Beam) 
-			psystem = new BeamSystem(20 * 5 * 5, gridSize, true); 		
-		#else 
-			psystem = new PoiseuilleFlowSystem(fluidParticlesSize, boundaryOffset, gridSize, particleRadius, bUseOpenGL); 
+void ConditionalDisplay() 
+{
+	uint3 fluidParticlesSize;
+	float particleRadius;
+	int boundaryOffset;
+	uint3 gridSize;
+	
+	#if (PoiseuilleFlow) 	
+	glutWireCube(2.0);
+	gridSize = make_uint3(16, 64, 4);
+	fluidParticlesSize =make_uint3(16, 64 -  2 * 3, 1);
+	particleRadius = 1.0f / (2 * 64 * 1000);		
+	boundaryOffset = 3;
+	float hx= particleRadius * gridSize.x;	
+	float hy= particleRadius * gridSize.y;
+	float hz= particleRadius * gridSize.z;	
+	float zb = 2.0f * particleRadius * (fluidParticlesSize.z) - hz;	
+	float yb = 2.0f * particleRadius * (fluidParticlesSize.y + 2 * boundaryOffset) - hy;		
+	glLineWidth (2.0f);	
+	glBegin(GL_LINE_STRIP);	
+	glVertex3f(-hx, -hy, -hz);
+	glVertex3f(hx, -hy, -hz);
+	glVertex3f(hx, yb, -hz);
+	glVertex3f(-hx, yb, -hz);
+	glVertex3f(-hx, -hy, -hz);
+	glVertex3f(-hx, -hy, zb);	
+	glVertex3f(hx, -hy, zb);
+	glVertex3f(hx, yb, zb);
+	glVertex3f(-hx, yb, zb);
+	glVertex3f(-hx, -hy, zb);
+	glVertex3f(-hx, yb, zb);
+	glVertex3f(-hx, yb, -hz);
+	glVertex3f(hx, yb, -hz);
+	glVertex3f(hx, yb, zb);
+	glVertex3f(hx, -hy, zb);
+	glVertex3f(hx, -hy, -hz);
+	glEnd();
+	#endif	
+	#if (DamBreak) 
+	gridSize = make_uint3(64,64,64);
+	fluidParticlesSize = make_uint3(25, 25, 25);
+	particleRadius = 1.0f / 64;		
+	float hx= particleRadius * gridSize.x;	
+	float hy= particleRadius * gridSize.y;
+	float hz= particleRadius * gridSize.z;	
+	float zb = 2.0f * particleRadius * fluidParticlesSize.z - hz;	
+	float yb = 2.5f * particleRadius * fluidParticlesSize.y - hy;		
+	
+	glLineWidth (2.0f);	
+	glBegin(GL_LINE_STRIP);	
+	glVertex3f(-hx, -hy, -hz);
+	glVertex3f(hx, -hy, -hz);
+	glVertex3f(hx, yb, -hz);
+	glVertex3f(-hx, yb, -hz);
+	glVertex3f(-hx, -hy, -hz);
+	glVertex3f(-hx, -hy, zb);	
+	glVertex3f(hx, -hy, zb);
+	glVertex3f(hx, yb, zb);
+	glVertex3f(-hx, yb, zb);
+	glVertex3f(-hx, -hy, zb);
+	glVertex3f(-hx, yb, zb);
+	glVertex3f(-hx, yb, -hz);
+	glVertex3f(hx, yb, -hz);
+	glVertex3f(hx, yb, zb);
+	glVertex3f(hx, -hy, zb);
+	glVertex3f(hx, -hy, -hz);
+	glEnd();
+	#endif 
+}
+
+void ConditionalInit()
+{
+		#if (DamBreak) 
+			psystem = new DamBreakSystem(make_uint3(25, 25, 25), make_uint3(64,64,64), 1.0f / 64, true); 			
+		#endif 
+		#if (PoiseuilleFlow) 
+			psystem = new PoiseuilleFlowSystem(
+				make_uint3(16, 64 -  2 * 3, 1),
+				3,
+				make_uint3(16, 64, 4), 1.0f / (2 * 64 * 1000),
+				true);
 		#endif						
 			
 		psystem->reset();
-
-		if (bUseOpenGL) {
-			renderer = new ParticleRenderer;
-			renderer->setParticleRadius(psystem->getParticleRadius());
-			renderer->setColorBuffer(psystem->getColorBuffer());
-		}
+		
+		renderer = new ParticleRenderer;
+		renderer->setParticleRadius(psystem->getParticleRadius());
+		renderer->setColorBuffer(psystem->getColorBuffer());		
 
 		cutilCheckError(cutCreateTimer(&timer));
 }
 
 int main(int argc, char** argv) 
 {
-	boundaryOffset = 3;	
-	//gridSize = make_uint3(16, 64, 4);    
-	gridSize = make_uint3(16, 64, 4);    
-	particleRadius = 1.0f / (2 * gridSize.y * 1000);	
-	fluidParticlesSize = make_uint3(gridSize.x, gridSize.y -  2 * boundaryOffset, 1);	    	
-
 	initGL(argc, argv);
 	cudaGLInit(argc, argv);
 
-	initParticleSystem(fluidParticlesSize, boundaryOffset, gridSize, particleRadius, true);
+	ConditionalInit();
 
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
@@ -316,14 +347,8 @@ int main(int argc, char** argv)
 	glutMotionFunc(motion);
 	glutKeyboardFunc(key);    
 	glutIdleFunc(idle);
-
 	atexit(cleanup);
-
 	glutMainLoop();
-
-
-	if (psystem)
-		delete psystem;
-
+	if (psystem) delete psystem;
 	cudaThreadExit();
 }

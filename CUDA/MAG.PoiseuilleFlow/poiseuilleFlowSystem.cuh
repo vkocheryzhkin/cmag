@@ -1,24 +1,24 @@
-#ifndef FLUID_SYSTEM_CUH
-#define FLUID_SYSTEM_CUH
+#ifndef __POISEUILLE_FLOW_SYSTEM_CUH__
+#define __POISEUILLE_FLOW_SYSTEM_CUH__
 #include "poiseuilleFlowKernel.cuh"
 extern "C"
 {		
-	void setParameters(SimParams *hostParams);
+	void setParameters(PoiseuilleParams *hostParams);	
 
-	void integrateSystem(
+	void integratePoiseuilleSystem(
 		float* pos,
 		float* vel,  
 		float* velLeapFrog,
 		float* acc,
 		uint numParticles);
 
-	void calcHash(
+	void calculatePoiseuilleHash(
 		uint*  gridParticleHash,
 		uint*  gridParticleIndex,
 		float* pos, 
 		int    numParticles);
 
-	void reorderDataAndFindCellStart(
+	void reorderPoiseuilleData(
 		uint*  cellStart,
 		uint*  cellEnd,
 		float* sortedPos,
@@ -30,7 +30,7 @@ extern "C"
 		uint   numParticles,
 		uint   numCells);
 
-	void calcDensityAndPressure(			
+	void calculatePoiseuilleDensity(			
 		float* measures,
 		float* sortedPos,
 		float* sortedVel,
@@ -40,7 +40,7 @@ extern "C"
 		uint numParticles,
 		uint numGridCells);
 
-	void calcAndApplyAcceleration(	
+	void calculatePoiseuilleAcceleration(	
 		float* acceleration,			
 		float* measures,
 		float* sortedPos,			
