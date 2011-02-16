@@ -25,7 +25,7 @@ BOOST_AUTO_TEST_CASE(CalculateHash_ReturnOne)
 {	
 	
 	const int numParticles = 1;
-	SimParams params;
+	PoiseuilleParams params;
 	params.worldOrigin = make_float3(-1.0f, -1.0f, -1.0f);
 	params.particleRadius = 1.0f / 64;
 	params.gridSize = make_uint3(64, 64, 64);
@@ -45,7 +45,7 @@ BOOST_AUTO_TEST_CASE(CalculateHash_ReturnOne)
 	allocateArray((void**)&dPosition,  memSize);
 	copyArrayToDevice(dPosition, hPosition, 0, memSize);
 
-	calcHash(dHash, dIndex, dPosition, numParticles);
+	calculatePoiseuilleHash(dHash, dIndex, dPosition, numParticles);
 
 	copyArrayFromDevice(hHash, dHash, 0, numParticles * sizeof(uint));
 
@@ -61,7 +61,7 @@ BOOST_AUTO_TEST_CASE(CalculateHash_ReturnOne)
 BOOST_AUTO_TEST_CASE(CalculateImageHash_ReturnOppositeHash)
 {		
 	const int numParticles = 1;
-	SimParams params;
+	PoiseuilleParams params;
 	params.worldOrigin = make_float3(-1.0f, -1.0f, -1.0f);
 	params.particleRadius = 1.0f / 64;
 	params.gridSize = make_uint3(64, 64, 64);
@@ -81,7 +81,7 @@ BOOST_AUTO_TEST_CASE(CalculateImageHash_ReturnOppositeHash)
 	allocateArray((void**)&dPosition,  memSize);
 	copyArrayToDevice(dPosition, hPosition, 0, memSize);
 
-	calcHash(dHash, dIndex, dPosition, numParticles);
+	calculatePoiseuilleHash(dHash, dIndex, dPosition, numParticles);
 
 	copyArrayFromDevice(hHash, dHash, 0, numParticles * sizeof(uint));
 

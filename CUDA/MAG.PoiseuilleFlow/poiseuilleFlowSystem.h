@@ -47,6 +47,7 @@ public:
 	void * getCudaSortedPosition()      const { return (void *)dSortedPos; }
 	void * getCudaMeasures()            const { return (void *)dMeasures; }    
 	void * getCudaAcceleration()        const {return (void *)dAcceleration;}	
+	void * getLeapFrogVelocity() const {return (void*) dVelLeapFrog;}
 
 	void changeGravity();
 
