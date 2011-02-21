@@ -253,7 +253,7 @@ void ConditionalDisplay()
 	glutWireCube(2.0);
 	gridSize = make_uint3(16, 64, 4);
 	fluidParticlesSize =make_uint3(16, 64 -  2 * 3, 1);
-	particleRadius = 1.0f / (2 * 64 * 1000);		
+	particleRadius = 1.0f / (2 * (64 - 6) * 1000);		
 	boundaryOffset = 3;
 	float hx= particleRadius * gridSize.x;	
 	float hy= particleRadius * gridSize.y;
@@ -321,7 +321,7 @@ void ConditionalInit()
 			psystem = new PoiseuilleFlowSystem(
 				make_uint3(16, 64 -  2 * 3, 1),
 				3,
-				make_uint3(16, 64, 4), 1.0f / (2 * 64 * 1000),
+				make_uint3(16, 64, 4), 1.0f / (2 * (64 - 6) * 1000),
 				true);
 		#endif						
 			

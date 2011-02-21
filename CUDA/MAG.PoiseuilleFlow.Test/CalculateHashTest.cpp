@@ -1,3 +1,4 @@
+#define BOOST_TEST_MODULE PoiseuilleFlowTest
 #include <boost/test/unit_test.hpp>
 #include <vector_types.h>
 #include <vector_functions.h>
@@ -6,20 +7,7 @@ typedef unsigned int uint;
 #include "poiseuilleFlowSystem.cuh"
 #include "magUtil.cuh"
 
-//struct InitCuda
-//{	
-//	InitCuda() 
-//	{
-//		BOOST_TEST_MESSAGE("setup");		
-//	}
-//	~InitCuda()
-//	{
-//		BOOST_TEST_MESSAGE("teardown");
-//	}
-//};
-
-
-BOOST_FIXTURE_TEST_SUITE(CalculateHash)//, InitCuda)
+BOOST_FIXTURE_TEST_SUITE(CalculateHash)
 
 BOOST_AUTO_TEST_CASE(CalculateHash_ReturnOne)
 {	

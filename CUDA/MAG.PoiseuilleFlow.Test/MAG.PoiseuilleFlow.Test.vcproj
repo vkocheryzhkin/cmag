@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="windows-1251"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9,00"
+	Version="9.00"
 	Name="MAG.PoiseuilleFlow.Test"
 	ProjectGUID="{3EE22F48-AA38-466F-9ABC-9557D27D1EF0}"
 	RootNamespace="MAGPoiseuilleFlowTest"
@@ -163,6 +163,10 @@
 	<Files>
 		<File
 			RelativePath=".\CalculateHashTest.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\CalculateMassTest.cpp"
 			>
 		</File>
 		<File

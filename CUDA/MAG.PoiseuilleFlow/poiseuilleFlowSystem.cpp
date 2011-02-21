@@ -41,13 +41,15 @@ PoiseuilleFlowSystem::PoiseuilleFlowSystem(
 		params.boundaryOffset = boundaryOffset;
 	    			
 		params.particleRadius = particleRadius;		
-		params.smoothingRadius = 1.5f * params.particleRadius;	
+		//params.smoothingRadius = 1.5f * params.particleRadius;	
+		params.smoothingRadius = 2.5f * params.particleRadius;	
 		params.restDensity = 1000.0f;
+				
+		//see CalculateMassTest
+		params.particleMass = 1000.0f / 3363758080;		
 		
-		params.particleMass = 1000.0f / 10228272445.793104;
-		
-		params.cellcount = (5 - 1) / 2;		
-		//params.cellcount = 1;		
+		//params.cellcount = (5 - 1) / 2;		
+		params.cellcount = 3;		
 	    			
 		params.worldOrigin = make_float3(-getHalfWorldXSize(), -getHalfWorldYSize(), -getHalfWorldZSize());
 		float cellSize = params.particleRadius * 2.0f;  
@@ -55,10 +57,8 @@ PoiseuilleFlowSystem::PoiseuilleFlowSystem(
 	    
 		params.boundaryDamping = -1.0f;
 
-		//params.gravity = make_float3(2.0f * powf(10.0f, -4.0f), 0.0f, 0.0f);    	  
 		params.gravity = make_float3(powf(10.0f, -4.0f), 0.0f, 0.0f);    	  
 
-		//params.soundspeed = 2.4f * powf(10.0f, -4.0f);			
 		params.soundspeed = powf(10.0f, -4.0f);			
 		params.mu = powf(10.0f, -3.0f);	
 
@@ -367,8 +367,8 @@ void PoiseuilleFlowSystem::initFluid( float spacing, float jitter, uint numParti
 			for(uint x = 0; x < xsize; x++) {				
 				uint i = (z * ysize * xsize) + y * xsize + x;
 				if (i < numParticles) {
-					hPos[i*4] = (spacing * x) + params.particleRadius - getHalfWorldXSize();
-						//+params.particleRadius * (y % 2);
+					hPos[i*4] = (spacing * x) + params.particleRadius - getHalfWorldXSize()
+						;//+ params.particleRadius * (y % 2);
 					hPos[i*4+1] = (spacing * y) + params.particleRadius - getHalfWorldYSize()
 						+params.boundaryOffset * 2 * params.particleRadius;						
 					hPos[i*4+2] = (spacing * z) + params.particleRadius - getHalfWorldZSize();		
@@ -395,7 +395,7 @@ void PoiseuilleFlowSystem::initBoundaryParticles(float spacing)
 			for(uint x=0; x < size[0]; x++) {
 				uint i = numAllocatedParticles + (z * size[1] * size[0]) + (y * size[0]) + x;				
 				hPos[i*4] = (spacing * x) + params.particleRadius + params.worldOrigin.x
-					;//- params.boundaryOffset * 2 * params.particleRadius;
+					 ;//+params.particleRadius * (y % 2);
 				hPos[i*4+1] = (spacing * y) + params.particleRadius + params.worldOrigin.y
 					;// params.boundaryOffset * 2 * params.particleRadius;
 				hPos[i*4+2] = (spacing * z) + params.particleRadius + params.worldOrigin.z;					
@@ -411,7 +411,7 @@ void PoiseuilleFlowSystem::initBoundaryParticles(float spacing)
 			for(uint x=0; x < size[0]; x++) {
 				uint i = numAllocatedParticles + (z * size[1] * size[0]) + (y * size[0]) + x;				
 				hPos[i*4] = (spacing * x) + params.particleRadius + params.worldOrigin.x
-					;//- params.boundaryOffset * 2 * params.particleRadius;					
+					 ;//+params.particleRadius * (y % 2);			
 				hPos[i*4+1] = (spacing * y) + params.particleRadius + params.worldOrigin.y
 					+ params.boundaryOffset * 2 * params.particleRadius
 					+ params.fluidParticlesSize.y * 2.0f * params.particleRadius;			
