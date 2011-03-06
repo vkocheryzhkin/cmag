@@ -31,8 +31,7 @@ PoiseuilleFlowSystem::PoiseuilleFlowSystem(
 	dVel(0),
 	dMeasures(0),		
 	elapsedTime(0.0f){		
-		numParticles = fluidParticlesSize.x * fluidParticlesSize.y * fluidParticlesSize.z +
-			//2 * (gridSize.x + 2 * boundaryOffset) * boundaryOffset;
+		numParticles = fluidParticlesSize.x * fluidParticlesSize.y * fluidParticlesSize.z +			
 			2 * gridSize.x * boundaryOffset;
 		numGridCells = gridSize.x * gridSize.y * gridSize.z;
 		gridSortBits = 18;	//see radix sort for details
@@ -40,15 +39,13 @@ PoiseuilleFlowSystem::PoiseuilleFlowSystem(
 		params.gridSize = gridSize;	
 		params.boundaryOffset = boundaryOffset;
 	    			
-		params.particleRadius = particleRadius;		
-		//params.smoothingRadius = 1.5f * params.particleRadius;	
+		params.particleRadius = particleRadius;				
 		params.smoothingRadius = 2.5f * params.particleRadius;	
 		params.restDensity = 1000.0f;
 				
-		//see CalculateMassTest
+		//see CalculateMassTest (shortly: i need to get density to be 1000, to do so I have to choose mass correctly)
 		params.particleMass = 1000.0f / 3363758080;		
-		
-		//params.cellcount = (5 - 1) / 2;		
+					
 		params.cellcount = 3;		
 	    			
 		params.worldOrigin = make_float3(-getHalfWorldXSize(), -getHalfWorldYSize(), -getHalfWorldZSize());
@@ -367,13 +364,11 @@ void PoiseuilleFlowSystem::initFluid( float spacing, float jitter, uint numParti
 			for(uint x = 0; x < xsize; x++) {				
 				uint i = (z * ysize * xsize) + y * xsize + x;
 				if (i < numParticles) {
-					hPos[i*4] = (spacing * x) + params.particleRadius - getHalfWorldXSize()
-						;//+ params.particleRadius * (y % 2);
+					hPos[i*4] = (spacing * x) + params.particleRadius - getHalfWorldXSize();
 					hPos[i*4+1] = (spacing * y) + params.particleRadius - getHalfWorldYSize()
 						+params.boundaryOffset * 2 * params.particleRadius;						
 					hPos[i*4+2] = (spacing * z) + params.particleRadius - getHalfWorldZSize();		
-					hPos[i*4+3] = 0.0f; //fluid
-					//hVel[i*4+3] = 1.0f;
+					hPos[i*4+3] = 0.0f; //fluid					
 				}
 			}
 		}
@@ -387,20 +382,17 @@ void PoiseuilleFlowSystem::initBoundaryParticles(float spacing)
 		params.fluidParticlesSize.y * 
 		params.fluidParticlesSize.z;
 	////bottom
-	size[0] = params.gridSize.x;// + 2 * params.boundaryOffset;
+	size[0] = params.gridSize.x;
 	size[1] = params.boundaryOffset;
 	size[2] = 1;	 
 	for(uint z=0; z < size[2]; z++) {
 		for(uint y=0; y < size[1]; y++) {
 			for(uint x=0; x < size[0]; x++) {
 				uint i = numAllocatedParticles + (z * size[1] * size[0]) + (y * size[0]) + x;				
-				hPos[i*4] = (spacing * x) + params.particleRadius + params.worldOrigin.x
-					 ;//+params.particleRadius * (y % 2);
-				hPos[i*4+1] = (spacing * y) + params.particleRadius + params.worldOrigin.y
-					;// params.boundaryOffset * 2 * params.particleRadius;
+				hPos[i*4] = (spacing * x) + params.particleRadius + params.worldOrigin.x;					 
+				hPos[i*4+1] = (spacing * y) + params.particleRadius + params.worldOrigin.y;
 				hPos[i*4+2] = (spacing * z) + params.particleRadius + params.worldOrigin.z;					
-				hPos[i*4+3] = 1.0f;//boundary
-				//hVel[i*4+3] = 0.0f;
+				hPos[i*4+3] = 1.0f;//boundary				
 			}
 		}
 	}	
@@ -410,14 +402,12 @@ void PoiseuilleFlowSystem::initBoundaryParticles(float spacing)
 		for(uint y=0; y < size[1]; y++) {
 			for(uint x=0; x < size[0]; x++) {
 				uint i = numAllocatedParticles + (z * size[1] * size[0]) + (y * size[0]) + x;				
-				hPos[i*4] = (spacing * x) + params.particleRadius + params.worldOrigin.x
-					 ;//+params.particleRadius * (y % 2);			
+				hPos[i*4] = (spacing * x) + params.particleRadius + params.worldOrigin.x;					 
 				hPos[i*4+1] = (spacing * y) + params.particleRadius + params.worldOrigin.y
 					+ params.boundaryOffset * 2 * params.particleRadius
 					+ params.fluidParticlesSize.y * 2.0f * params.particleRadius;			
 				hPos[i*4+2] = (spacing * z) + params.particleRadius + params.worldOrigin.z;					
-				hPos[i*4+3] = 1.0f;//boundary
-				//hVel[i*4+3] = 0.0f;
+				hPos[i*4+3] = 1.0f;//boundary				
 			}
 		}
 	}

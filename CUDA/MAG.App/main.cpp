@@ -8,22 +8,20 @@
 #include <cutil_gl_inline.h>
 #include <cuda_gl_interop.h>
 #include "fluidSystem.h"
-//#include "beamSystem.h"
 #include "poiseuilleFlowSystem.h"
 #include "render_particles.h"
 #include "magUtil.cuh"
 
 #define MAX(a,b) ((a > b) ? a : b)
-#define DamBreak 0
-#define PoiseuilleFlow 1
+#define DamBreak
+//#define PoiseuilleFlow
 
-#if (DamBreak) 
-float camera_trans[] = {0.0, 0.5, -1.4};
-DamBreakSystem *psystem = 0; 	
-#endif
-#if (PoiseuilleFlow)
-float camera_trans[] = {0.0, 0.0, -0.0012};
-PoiseuilleFlowSystem *psystem = 0;
+#if defined(DamBreak)
+    float camera_trans[] = {0.0, 0.5, -1.4};
+	DamBreakSystem *psystem = 0; 	
+#elif defined(PoiseuilleFlow)
+    float camera_trans[] = {0.0, 0.0, -0.0012};
+	PoiseuilleFlowSystem *psystem = 0;
 #endif
 
 float camera_rot[]   = {0, 0, 0};
@@ -32,15 +30,10 @@ float camera_rot_lag[] = {0, 0, 0};
 const float inertia = 0.1;
 
 const int width = 1280, height = 1024;
-//uint3 fluidParticlesSize;
-//float particleRadius;
-//int boundaryOffset;
-//uint3 gridSize;
 int ox, oy;
 int buttonState = 0;
 bool bPause = true;
-bool IsFirstTime = true; //make one iteration
-
+bool IsFirstTime = true; 
 
 static int fpsCount = 0;
 static int fpsLimit = 1;
@@ -70,8 +63,7 @@ void initGL(int argc, char **argv)
 	}
 
 #if defined (_WIN32)
-	if (wglewIsSupported("WGL_EXT_swap_control")) {
-		// disable vertical sync
+	if (wglewIsSupported("WGL_EXT_swap_control")) {		
 		wglSwapIntervalEXT(0);
 	}
 #endif
@@ -146,8 +138,7 @@ inline float frand()
 void reshape(int w, int h)
 {
 	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	//gluPerspective(60.0, (float) w / (float) h, 0.1, 100.0);
+	glLoadIdentity();	
 	gluPerspective(60.0, (float) w / (float) h, 0.001, 100.0);
 
 	glMatrixMode(GL_MODELVIEW);
@@ -186,16 +177,13 @@ void motion(int x, int y)
 	dx = x - ox;
 	dy = y - oy;
 	if (buttonState == 3) {
-		// left+middle = zoom
 		camera_trans[2] += (dy / 100.0) * 0.5 * fabs(camera_trans[2]);
 	} 
 	else if (buttonState & 2) {
-		// middle = translate
 		camera_trans[0] += dx / 100.0;
 		camera_trans[1] -= dy / 100.0;
 	}
 	else if (buttonState & 1) {
-		// left = rotate
 		camera_rot[0] += dy / 5.0;
 		camera_rot[1] += dx / 5.0;
 	}       
@@ -222,10 +210,7 @@ void key(unsigned char key, int , int)
 	case '\033':
 	case 'q':
 		exit(0);
-		break;        
-	/*case '3':		
-		psystem->changeGravity();
-		break;     */
+		break;        	
 	}
 
 	glutPostRedisplay();
@@ -247,83 +232,80 @@ void ConditionalDisplay()
 	uint3 fluidParticlesSize;
 	float particleRadius;
 	int boundaryOffset;
-	uint3 gridSize;
+	uint3 gridSize;	
 	
-	#if (PoiseuilleFlow) 	
-	glutWireCube(2.0);
-	gridSize = make_uint3(16, 64, 4);
-	fluidParticlesSize =make_uint3(16, 64 -  2 * 3, 1);
-	particleRadius = 1.0f / (2 * (64 - 6) * 1000);		
-	boundaryOffset = 3;
-	float hx= particleRadius * gridSize.x;	
-	float hy= particleRadius * gridSize.y;
-	float hz= particleRadius * gridSize.z;	
-	float zb = 2.0f * particleRadius * (fluidParticlesSize.z) - hz;	
-	float yb = 2.0f * particleRadius * (fluidParticlesSize.y + 2 * boundaryOffset) - hy;		
-	glLineWidth (2.0f);	
-	glBegin(GL_LINE_STRIP);	
-	glVertex3f(-hx, -hy, -hz);
-	glVertex3f(hx, -hy, -hz);
-	glVertex3f(hx, yb, -hz);
-	glVertex3f(-hx, yb, -hz);
-	glVertex3f(-hx, -hy, -hz);
-	glVertex3f(-hx, -hy, zb);	
-	glVertex3f(hx, -hy, zb);
-	glVertex3f(hx, yb, zb);
-	glVertex3f(-hx, yb, zb);
-	glVertex3f(-hx, -hy, zb);
-	glVertex3f(-hx, yb, zb);
-	glVertex3f(-hx, yb, -hz);
-	glVertex3f(hx, yb, -hz);
-	glVertex3f(hx, yb, zb);
-	glVertex3f(hx, -hy, zb);
-	glVertex3f(hx, -hy, -hz);
-	glEnd();
+	#if defined(DamBreak)
+		gridSize = make_uint3(64,64,64);
+		fluidParticlesSize = make_uint3(25, 25, 25);
+		particleRadius = 1.0f / 64;		
+		float hx= particleRadius * gridSize.x;	
+		float hy= particleRadius * gridSize.y;
+		float hz= particleRadius * gridSize.z;	
+		float zb = 2.0f * particleRadius * fluidParticlesSize.z - hz;	
+		float yb = 2.5f * particleRadius * fluidParticlesSize.y - hy;				
+		glLineWidth (2.0f);	
+		glBegin(GL_LINE_STRIP);	
+		glVertex3f(-hx, -hy, -hz);
+		glVertex3f(hx, -hy, -hz);
+		glVertex3f(hx, yb, -hz);
+		glVertex3f(-hx, yb, -hz);
+		glVertex3f(-hx, -hy, -hz);
+		glVertex3f(-hx, -hy, zb);	
+		glVertex3f(hx, -hy, zb);
+		glVertex3f(hx, yb, zb);
+		glVertex3f(-hx, yb, zb);
+		glVertex3f(-hx, -hy, zb);
+		glVertex3f(-hx, yb, zb);
+		glVertex3f(-hx, yb, -hz);
+		glVertex3f(hx, yb, -hz);
+		glVertex3f(hx, yb, zb);
+		glVertex3f(hx, -hy, zb);
+		glVertex3f(hx, -hy, -hz);
+		glEnd();	
+	#elif defined(PoiseuilleFlow)
+		glutWireCube(2.0);
+		gridSize = make_uint3(16, 64, 4);
+		fluidParticlesSize =make_uint3(16, 64 -  2 * 3, 1);
+		particleRadius = 1.0f / (2 * (64 - 6) * 1000);		
+		boundaryOffset = 3;
+		float hx= particleRadius * gridSize.x;	
+		float hy= particleRadius * gridSize.y;
+		float hz= particleRadius * gridSize.z;	
+		float zb = 2.0f * particleRadius * (fluidParticlesSize.z) - hz;	
+		float yb = 2.0f * particleRadius * (fluidParticlesSize.y + 2 * boundaryOffset) - hy;		
+		glLineWidth (2.0f);	
+		glBegin(GL_LINE_STRIP);	
+		glVertex3f(-hx, -hy, -hz);
+		glVertex3f(hx, -hy, -hz);
+		glVertex3f(hx, yb, -hz);
+		glVertex3f(-hx, yb, -hz);
+		glVertex3f(-hx, -hy, -hz);
+		glVertex3f(-hx, -hy, zb);	
+		glVertex3f(hx, -hy, zb);
+		glVertex3f(hx, yb, zb);
+		glVertex3f(-hx, yb, zb);
+		glVertex3f(-hx, -hy, zb);
+		glVertex3f(-hx, yb, zb);
+		glVertex3f(-hx, yb, -hz);
+		glVertex3f(hx, yb, -hz);
+		glVertex3f(hx, yb, zb);
+		glVertex3f(hx, -hy, zb);
+		glVertex3f(hx, -hy, -hz);
+		glEnd();
 	#endif	
-	#if (DamBreak) 
-	gridSize = make_uint3(64,64,64);
-	fluidParticlesSize = make_uint3(25, 25, 25);
-	particleRadius = 1.0f / 64;		
-	float hx= particleRadius * gridSize.x;	
-	float hy= particleRadius * gridSize.y;
-	float hz= particleRadius * gridSize.z;	
-	float zb = 2.0f * particleRadius * fluidParticlesSize.z - hz;	
-	float yb = 2.5f * particleRadius * fluidParticlesSize.y - hy;		
-	
-	glLineWidth (2.0f);	
-	glBegin(GL_LINE_STRIP);	
-	glVertex3f(-hx, -hy, -hz);
-	glVertex3f(hx, -hy, -hz);
-	glVertex3f(hx, yb, -hz);
-	glVertex3f(-hx, yb, -hz);
-	glVertex3f(-hx, -hy, -hz);
-	glVertex3f(-hx, -hy, zb);	
-	glVertex3f(hx, -hy, zb);
-	glVertex3f(hx, yb, zb);
-	glVertex3f(-hx, yb, zb);
-	glVertex3f(-hx, -hy, zb);
-	glVertex3f(-hx, yb, zb);
-	glVertex3f(-hx, yb, -hz);
-	glVertex3f(hx, yb, -hz);
-	glVertex3f(hx, yb, zb);
-	glVertex3f(hx, -hy, zb);
-	glVertex3f(hx, -hy, -hz);
-	glEnd();
-	#endif 
 }
 
 void ConditionalInit()
 {
-		#if (DamBreak) 
-			psystem = new DamBreakSystem(make_uint3(25, 25, 25), make_uint3(64,64,64), 1.0f / 64, true); 			
-		#endif 
-		#if (PoiseuilleFlow) 
+		#if defined(DamBreak)
+			psystem = new DamBreakSystem(make_uint3(25, 25, 25), make_uint3(64,64,64), 1.0f / 64, true); 	
+		#elif defined(PoiseuilleFlow)
 			psystem = new PoiseuilleFlowSystem(
-				make_uint3(16, 64 -  2 * 3, 1),
-				3,
-				make_uint3(16, 64, 4), 1.0f / (2 * (64 - 6) * 1000),
-				true);
-		#endif						
+					make_uint3(16, 64 -  2 * 3, 1),
+					3,
+					make_uint3(16, 64, 4), 1.0f / (2 * (64 - 6) * 1000),
+					true);
+		#endif					
 			
 		psystem->reset();
 		

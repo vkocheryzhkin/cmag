@@ -132,17 +132,14 @@ __device__ float sumParticlesInDomain(
 					float coeff = 7.0f / 478.0f / CUDART_PI_F / powf(params.smoothingRadius, 2);
 					if(q < 1){
 						sum += coeff * (powf(3 - q, 5) - 6 * powf(2 - q, 5) + 15 * powf(1 - q, 5));	
-						//sum +=1;
 						continue;
 					}
 					if(q < 2){
 						sum += coeff * (powf(3 - q, 5) - 6 * powf(2 - q, 5));
-						//sum +=1;
 						continue;
 					} 
 					if(q < 3){
 						sum += coeff * powf(3 - q, 5);						
-						//sum +=1;
 						continue;
 					}										               				
 			}
