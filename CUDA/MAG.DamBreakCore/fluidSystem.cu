@@ -88,9 +88,10 @@ extern "C"
 			#endif
 	}
 
-	void calcDensityAndPressure(			
-		float* measures,
+	void calculateDensityVariation(			
+		float* sortedMeasures,
 		float* sortedPos,			
+		float* sortedVel,		
 		uint* gridParticleIndex,
 		uint* cellStart,
 		uint* cellEnd,
@@ -98,6 +99,8 @@ extern "C"
 		uint numGridCells){
 			#if USE_TEX
 			cutilSafeCall(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(float4)));
+			cutilSafeCall(cudaBindTexture(0, oldMeasuresTex, sortedMeasures, numParticles*sizeof(float4)));
+			cutilSafeCall(cudaBindTexture(0, oldVelTex, sortedVel, numParticles*sizeof(float4)));
 			cutilSafeCall(cudaBindTexture(0, cellStartTex, cellStart, numGridCells*sizeof(uint)));
 			cutilSafeCall(cudaBindTexture(0, cellEndTex, cellEnd, numGridCells*sizeof(uint)));    
 			#endif
@@ -105,9 +108,11 @@ extern "C"
 			uint numThreads, numBlocks;
 			computeGridSize(numParticles, 64, numBlocks, numThreads);
 
-			calcDensityAndPressureD<<< numBlocks, numThreads >>>(										  
-				(float4*)measures,
+			calculateDensityVariationD<<< numBlocks, numThreads >>>(										  
+				(float4*)sortedMeasures,
+				(float4*)sortedMeasures,
 				(float4*)sortedPos,                                          
+				(float4*)sortedVel, 
 				gridParticleIndex,
 				cellStart,
 				cellEnd,
@@ -117,8 +122,32 @@ extern "C"
 
 			#if USE_TEX
 			cutilSafeCall(cudaUnbindTexture(oldPosTex));
+			cutilSafeCall(cudaUnbindTexture(oldVelTex));
 			cutilSafeCall(cudaUnbindTexture(cellStartTex));
 			cutilSafeCall(cudaUnbindTexture(cellEndTex));
+			cutilSafeCall(cudaUnbindTexture(oldMeasuresTex));
+			#endif
+	}
+
+	void calculateDensity(			
+		float* sortedMeasures,		
+		uint numParticles,
+		uint numGridCells){
+			#if USE_TEX
+			cutilSafeCall(cudaBindTexture(0, oldMeasuresTex, sortedMeasures, numParticles*sizeof(float4)));
+			#endif
+			uint numThreads, numBlocks;
+			computeGridSize(numParticles, 64, numBlocks, numThreads);
+
+			calculateDensityD<<< numBlocks, numThreads >>>(										  
+				(float4*)sortedMeasures,
+				(float4*)sortedMeasures,	
+				numParticles);
+
+			cutilCheckMsg("Kernel execution failed");
+
+			#if USE_TEX
+			cutilSafeCall(cudaUnbindTexture(oldMeasuresTex));
 			#endif
 	}
 

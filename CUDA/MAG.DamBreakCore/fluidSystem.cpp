@@ -39,13 +39,13 @@ DamBreakSystem::DamBreakSystem(
 		params.gridSize = gridSize;		
 	    			
 		params.particleRadius = 1.0f / 64;		
-		params.smoothingRadius = 5 * params.particleRadius;	
+		params.smoothingRadius = 3.0f * params.particleRadius;	
 		params.restDensity = 1000.0f;
 
 		//let choose N = 60 is an avg number of particles in sphere
-		int N = 60;				
-		params.particleMass = params.restDensity * 4.0f / 3.0f * CUDART_PI_F * pow(params.smoothingRadius,3) / N;	
-		
+		/*int N = 60;				
+		params.particleMass = params.restDensity * 4.0f / 3.0f * CUDART_PI_F * pow(params.smoothingRadius,3) / N;	*/
+		params.particleMass = params.restDensity / 731.45; //todo				
 		params.cellcount = (5 - 1) / 2;		
 	    	
 		params.worldOrigin = make_float3(-1.0f, -1.0f, -1.0f);
@@ -54,14 +54,14 @@ DamBreakSystem::DamBreakSystem(
 	    
 		params.boundaryDamping = -1.0f;
 
-		params.gravity = make_float3(0.0f, -9.8f, 0.0f);    	  
-		params.Poly6Kern = 315.0f / (64.0f * CUDART_PI_F * pow(params.smoothingRadius, 9.0f));
-		params.SpikyKern = -45.0f /(CUDART_PI_F * pow(params.smoothingRadius, 6.0f));		
+		params.gravity = make_float3(0.0f, -9.8f, 0.0f);    	  		
+		params.gamma = 7;
+		params.B = 200 * params.restDensity * abs(params.gravity.y) *		
+			(2 * params.particleRadius * fluidParticlesSize.y ) / params.gamma;
 
-		params.soundspeed = 10.0f;
-		params.B = pow(params.soundspeed, 2) * pow(10.0f, 3.0f) / 7;
+		params.soundspeed = sqrt(params.B * params.gamma / params.restDensity);
 
-		params.deltaTime = pow(10.0f, -3.0f);
+		params.deltaTime = pow(10.0f, -4.0f);
 		_initialize(numParticles);
 }
 
@@ -116,7 +116,10 @@ void DamBreakSystem::_initialize(int numParticles){
 	memset(hVel, 0, numParticles*4*sizeof(float));
 	memset(hVelLeapFrog, 0, numParticles*4*sizeof(float));
 	memset(hAcceleration, 0, numParticles*4*sizeof(float));	
-	memset(hMeasures, 0, numParticles*4*sizeof(float));    
+	memset(hMeasures, 0, numParticles*4*sizeof(float)); 
+
+	for(uint i = 0; i < numParticles; i++) 
+		hMeasures[4*i+0] = params.restDensity;
 
 	unsigned int memSize = sizeof(float) * 4 * numParticles;
 
@@ -239,12 +242,18 @@ void DamBreakSystem::update(){
 		numParticles,
 		numGridCells);
 	
-	calcDensityAndPressure(		
+	calculateDensityVariation(		
 		dMeasures,
 		dSortedPos,			
+		dSortedVel,
 		dIndex,
 		dCellStart,
 		dCellEnd,
+		numParticles,
+		numGridCells);
+
+	calculateDensity(		
+		dMeasures,		
 		numParticles,
 		numGridCells);
 

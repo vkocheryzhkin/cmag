@@ -28,9 +28,10 @@ struct SimParams {
 	float soundspeed;
 	float B;//Equation of state    
 	
-	float Poly6Kern;
-	float SpikyKern;		
+	//float Poly6Kern;
+	//float SpikyKern;		
 	float deltaTime;		
+	float gamma;
 	float boundaryDamping;	
 };
 #endif

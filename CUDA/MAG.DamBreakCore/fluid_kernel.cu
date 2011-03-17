@@ -96,12 +96,14 @@ __global__ void reorderDataAndFindCellStartD(
 		}
 }
 
-__device__
-float sumParticlesInDomain(
+__device__ float sumDensityVariation(
 	int3    gridPos,
 	uint    index,
 	float3  pos,
-	float4* oldPos, 
+	float4* oldPos,
+	float3  vel,
+	float4* oldVel,
+	float4* oldMeasures,
 	uint*   cellStart,
 	uint*   cellEnd){
 		uint gridHash = calcGridHash(gridPos);
@@ -113,24 +115,32 @@ float sumParticlesInDomain(
 			for(uint j=startIndex; j<endIndex; j++) {
 				if (j != index) {             
 					float3 pos2 = make_float3(FETCH(oldPos, j));
-					float wpolyExpr = 0.0f;
+					float3 vel2 = make_float3(FETCH(oldVel, j));
+					float density2 =FETCH(oldMeasures, j).x;					
 
 					float3 relPos = pos2 - pos; 
 					float dist = length(relPos);
+					float q = dist / params.smoothingRadius;		
 
-					if (dist < params.smoothingRadius) {
-						wpolyExpr = pow(params.smoothingRadius,2)- pow(dist,2);					
-						sum += pow(wpolyExpr,3);
-					}                
+					//float coeff = 7.0f / 4 / CUDART_PI_F / powf(params.smoothingRadius, 2);
+					//coeff *(powf(1 - 0.5f * q, 4) * (2 * q + 1));	
+					float temp = 0.0f;
+					float coeff = 7.0f / 2 / CUDART_PI_F / powf(params.smoothingRadius, 3);
+					if(q < 2){
+						temp = coeff * (-powf(1 - 0.5f * q,3) * (2 * q + 1) +powf(1 - 0.5f * q, 4));
+						sum += 1.0f / density2 * dot(vel - vel2, normalize(relPos)) * temp;																					
+					}
 				}
 			}
 		}
 		return sum;
 }
 
-__global__ void calcDensityAndPressureD(			
+__global__ void calculateDensityVariationD(			
 	float4* measures, //output
+	float4* oldMeasures, //input
 	float4* oldPos,	  //input 
+	float4* oldVel,   //input
 	uint* gridParticleIndex,
 	uint* cellStart,
 	uint* cellEnd,
@@ -139,22 +149,52 @@ __global__ void calcDensityAndPressureD(
 		if (index >= numParticles) return;    
 
 		float3 pos = make_float3(FETCH(oldPos, index));
+		float3 vel = make_float3(FETCH(oldVel, index));
 
 		int3 gridPos = calcGridPos(pos);
 
-		float sum = 0.0f;
-		int cellcount = 2;
+		float sum = 0.0f;		
 		for(int z=-params.cellcount; z<=params.cellcount; z++) {
 			for(int y=-params.cellcount; y<=params.cellcount; y++) {
 				for(int x=-params.cellcount; x<=params.cellcount; x++) {
 					int3 neighbourPos = gridPos + make_int3(x, y, z);
-					sum += sumParticlesInDomain(neighbourPos, index, pos, oldPos, cellStart, cellEnd);
+					sum += sumDensityVariation(
+						neighbourPos,
+						index,
+						pos,
+						oldPos,
+						vel,
+						oldVel,
+						oldMeasures,
+						cellStart,
+						cellEnd);
 				}
 			}
-		}			
-		float dens =  sum * params.particleMass * params.Poly6Kern;		
-		measures[index].x = dens;	
-		measures[index].y = params.B * (pow(dens / params.restDensity ,7.0f) - 1.0f); 	
+		}					
+		measures[index].w =  params.particleMass * sum;			
+}
+
+__global__ void calculateDensityD(			
+	float4* measures, //output	
+	float4* oldMeasures, //input	
+	uint numParticles){
+		uint index = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
+		if (index >= numParticles) return;    			
+		
+		float oldDens = FETCH(oldMeasures, index).x;
+		float densVar = FETCH(oldMeasures, index).w;
+		float newDens = oldDens *(1 - densVar * params.deltaTime);
+		measures[index].x = newDens;		
+		measures[index].y = params.B * (powf(newDens / params.restDensity ,params.gamma) - 1.0f); 			
+}
+
+__device__ float4 getVelocityDiff(
+	float4 iVelocity, 
+	float4 iPosition, 
+	float4 jVelocity,
+	float4 jPosition)
+{	
+	return iVelocity - jVelocity;
 }
 
 __device__ float3 sumNavierStokesForces(
@@ -187,10 +227,13 @@ __device__ float3 sumNavierStokesForces(
 					float tempExpr = 0.0f;
 
 					float3 relPos = pos - pos2;
-					float dist = length(relPos);
+					float dist = length(relPos);				
 
-					if (dist < params.smoothingRadius) {
-						float temp = (params.smoothingRadius - dist);				
+					float q = dist / params.smoothingRadius;		
+					float temp = 0.0f;
+					float coeff = 7.0f / 2 / CUDART_PI_F / powf(params.smoothingRadius, 3);
+					if(q < 2){
+						temp = coeff * (-powf(1 - 0.5f * q,3) * (2 * q + 1) +powf(1 - 0.5f * q, 4));
 						float artViscosity = 0.0f;
 						float vij_pij = dot((vel - vel2),relPos);
 						if(vij_pij < 0){						
@@ -198,12 +241,12 @@ __device__ float3 sumNavierStokesForces(
 								params.soundspeed / (density + density2);
 
 							artViscosity = -1.0f * nu * vij_pij / 
-								(dot(relPos, relPos) + 0.01f * pow(params.smoothingRadius, 2));
+								(dot(relPos, relPos) + 0.001f * pow(params.smoothingRadius, 2));
 						}
-						tmpForce +=  -1.0f * params.particleMass * params.particleMass *
+						tmpForce +=  -1.0f * params.particleMass *
 							(pressure / pow(density,2) + pressure2 / pow(density2,2) +
-							artViscosity) * params.SpikyKern * normalize(relPos) * temp * temp;
-					}                
+							artViscosity) * normalize(relPos) * temp;						
+					}        
 				}
 			}
 		}
@@ -230,8 +273,7 @@ __global__ void calcAndApplyAccelerationD(
 
 		int3 gridPos = calcGridPos(pos);
 
-		float3 force = make_float3(0.0f);
-		int cellcount = 2;
+		float3 force = make_float3(0.0f);	
 		for(int z=-params.cellcount; z<=params.cellcount; z++) {
 			for(int y=-params.cellcount; y<=params.cellcount; y++) {
 				for(int x=-params.cellcount; x<=params.cellcount; x++) {
@@ -251,7 +293,7 @@ __global__ void calcAndApplyAccelerationD(
 			}
 		}
 		uint originalIndex = gridParticleIndex[index];					
-		float3 acc = force / params.particleMass;			
+		float3 acc = force;			
 		acceleration[originalIndex] =  make_float4(acc, 0.0f);
 }
 
@@ -294,7 +336,7 @@ __global__ void integrate(
 		if (pos.z > bound + offset - params.particleRadius) {
 			pos.z = bound + offset - params.particleRadius; vel.z *= params.boundaryDamping; }			
 		if (pos.z < -1.0f * scale + offset + params.particleRadius) {
-			pos.z = -1.0f * scale + offset + params.particleRadius; vel.z *= params.boundaryDamping;}			
+			pos.z = -1.0f * scale + offset + params.particleRadius; vel.z *= params.boundaryDamping;}	
 	    
 		posArray[index] = make_float4(pos, posData.w);
 		velArray[index] = make_float4(vel, velData.w);

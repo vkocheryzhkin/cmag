@@ -30,12 +30,18 @@ extern "C"
 		uint   numParticles,
 		uint   numCells);
 
-	void calcDensityAndPressure(			
+	void calculateDensityVariation(			
 		float* measures,
 		float* sortedPos,			
+		float* sortedVel,
 		uint* gridParticleIndex,
 		uint* cellStart,
 		uint* cellEnd,
+		uint numParticles,
+		uint numGridCells);
+
+	void calculateDensity(			
+		float* measures,		
 		uint numParticles,
 		uint numGridCells);
 

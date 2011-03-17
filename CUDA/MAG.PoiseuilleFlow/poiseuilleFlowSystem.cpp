@@ -40,11 +40,11 @@ PoiseuilleFlowSystem::PoiseuilleFlowSystem(
 		params.boundaryOffset = boundaryOffset;
 	    			
 		params.particleRadius = particleRadius;				
-		params.smoothingRadius = 2.5f * params.particleRadius;	
+		params.smoothingRadius = 3.0f * params.particleRadius;	
 		params.restDensity = 1000.0f;
 				
 		//see CalculateMassTest (shortly: i need to get density to be 1000, to do so I have to choose mass correctly)
-		params.particleMass = 1000.0f / 3363758080;		
+		params.particleMass = 1000.0f /3381320880.551724;
 					
 		params.cellcount = 3;		
 	    			
@@ -115,7 +115,8 @@ void PoiseuilleFlowSystem::_initialize(int numParticles){
 	memset(hVelLeapFrog, 0, numParticles*4*sizeof(float));
 	memset(hAcceleration, 0, numParticles*4*sizeof(float));	
 	memset(hMeasures, 0, numParticles*4*sizeof(float)); 
-	for(uint i = 0; i < numParticles; i++) 
+
+	for(uint i = 0; i < numParticles; i++) //todo: check density approximation
 		hMeasures[4*i+0] = params.restDensity;
 
 	unsigned int memSize = sizeof(float) * 4 * numParticles;

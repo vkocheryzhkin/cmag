@@ -128,20 +128,11 @@ __device__ float sumParticlesInDomain(
 						
 					float dist = length(relPos);
 					float q = dist / params.smoothingRadius;					
-					
-					float coeff = 7.0f / 478.0f / CUDART_PI_F / powf(params.smoothingRadius, 2);
-					if(q < 1){
-						sum += coeff * (powf(3 - q, 5) - 6 * powf(2 - q, 5) + 15 * powf(1 - q, 5));	
-						continue;
-					}
+				
+					float coeff = 7.0f / 4 / CUDART_PI_F / powf(params.smoothingRadius, 2);
 					if(q < 2){
-						sum += coeff * (powf(3 - q, 5) - 6 * powf(2 - q, 5));
-						continue;
-					} 
-					if(q < 3){
-						sum += coeff * powf(3 - q, 5);						
-						continue;
-					}										               				
+						sum += coeff *(powf(1 - 0.5f * q, 4) * (2 * q + 1));	
+					}
 			}
 		}
 		return sum;
@@ -202,7 +193,7 @@ __device__ float4 getVelocityDiff(
 	{
 		float distanceA = topBoundary - iPosition.y;
 		float distanceB = jPosition.y - topBoundary;
-		float beta = fmin(1.5f, 1 + distanceB / distanceA);
+		float beta = fmin(1000.0f, 1 + distanceB / distanceA);
 		return beta * iVelocity;
 	}
 	
@@ -210,7 +201,7 @@ __device__ float4 getVelocityDiff(
 	{
 		float distanceA = iPosition.y - bottomBoundary;
 		float distanceB = bottomBoundary - jPosition.y;
-		float beta = fmin(1.5f, 1 + distanceB / distanceA);
+		float beta = fmin(1000.0f, 1 + distanceB / distanceA);
 		return beta * iVelocity;
 	}
 	return iVelocity - jVelocity;
@@ -254,38 +245,19 @@ __device__ float3 sumNavierStokesForces(
 							relPos = make_float3(pos) - make_float3(pos2.x + worldXSize, pos2.y, pos2.z); 
 										
 					float dist = length(relPos);
-					float q = dist / params.smoothingRadius;				
+					float q = dist / params.smoothingRadius;									
 
-					float coeff = -7.0f / 478.0f / CUDART_PI_F / powf(params.smoothingRadius, 3);
+					float coeff = 7.0f / 2 / CUDART_PI_F / powf(params.smoothingRadius, 3);
 					float temp = 0.0f;
 					float4 Vab = getVelocityDiff(vel, pos, vel2, pos2);
-					if(q < 1){
-						temp = coeff * (5 * powf(3 - q, 4) - 30 * powf(2 - q, 4) + 75 * powf(1 - q, 4));	
-						tmpForce += -1.0f * params.particleMass *
-							(pressure / powf(density,2) + pressure2 / powf(density2,2)) * 
-							normalize(relPos) * temp +
-							params.particleMass * (params.mu + params.mu) * 
-							make_float3(Vab) / (density * density2) * 1.0f / dist * temp;
-						continue;
-					}
 					if(q < 2){
-						temp = coeff * (5 * powf(3 - q, 4) - 30 * powf(2 - q, 4));
+						temp = coeff * (-powf(1 - 0.5f * q,3) * (2 * q + 1) +powf(1 - 0.5f * q, 4));
 						tmpForce += -1.0f * params.particleMass *
 							(pressure / powf(density,2) + pressure2 / powf(density2,2)) * 
 							normalize(relPos) * temp +
 							params.particleMass * (params.mu + params.mu) * 
 							make_float3(Vab) / (density * density2) * 1.0f / dist * temp;
-						continue;
-					} 
-					if(q < 3){
-						temp = coeff * (5 * powf(3 - q, 4));
-						tmpForce += -1.0f * params.particleMass *
-							(pressure / powf(density,2) + pressure2 / powf(density2,2)) * 
-							normalize(relPos) * temp +
-							params.particleMass * (params.mu + params.mu) * 
-							make_float3(Vab) / (density * density2) * 1.0f / dist * temp;
-						continue;
-					}	
+					}
 				}
 			}
 		}

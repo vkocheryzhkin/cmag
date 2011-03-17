@@ -298,7 +298,7 @@ void ConditionalDisplay()
 void ConditionalInit()
 {
 		#if defined(DamBreak)
-			psystem = new DamBreakSystem(make_uint3(25, 25, 25), make_uint3(64,64,64), 1.0f / 64, true); 	
+			psystem = new DamBreakSystem(make_uint3(25, 25, 1), make_uint3(64,64,64), 1.0f / 64, true); 	
 		#elif defined(PoiseuilleFlow)
 			psystem = new PoiseuilleFlowSystem(
 					make_uint3(16, 64 -  2 * 3, 1),
