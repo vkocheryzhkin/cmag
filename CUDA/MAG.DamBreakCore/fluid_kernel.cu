@@ -237,7 +237,7 @@ __device__ float3 sumNavierStokesForces(
 						float artViscosity = 0.0f;
 						float vij_pij = dot((vel - vel2),relPos);
 						if(vij_pij < 0){						
-							float nu = 2.0f * 0.18f * params.smoothingRadius *
+							float nu = 2.0f * 0.28f * params.smoothingRadius *
 								params.soundspeed / (density + density2);
 
 							artViscosity = -1.0f * nu * vij_pij / 
@@ -324,19 +324,18 @@ __global__ void integrate(
 		pos += vel * params.deltaTime;   
 
 		float scale = params.gridSize.x * params.particleRadius;
-		float bound = 2.0f * params.particleRadius * params.fluidParticlesSize.z - 1.0f * scale;	
-		float offset = 0.0f;	
-		
-		if (pos.x > 1.0f * scale - offset - params.particleRadius) {
-			pos.x = 1.0f * scale - offset - params.particleRadius; vel.x *= params.boundaryDamping; }
-		if (pos.x < -1.0f * scale + offset + params.particleRadius) {
-			pos.x = -1.0f * scale + offset + params.particleRadius; vel.x *= params.boundaryDamping;}
-		if (pos.y < -1.0f * scale + offset + params.particleRadius) {
-			pos.y = -1.0f * scale + offset + params.particleRadius; vel.y *= params.boundaryDamping;}			
-		if (pos.z > bound + offset - params.particleRadius) {
-			pos.z = bound + offset - params.particleRadius; vel.z *= params.boundaryDamping; }			
-		if (pos.z < -1.0f * scale + offset + params.particleRadius) {
-			pos.z = -1.0f * scale + offset + params.particleRadius; vel.z *= params.boundaryDamping;}	
+		float bound = 2.0f * params.particleRadius * params.fluidParticlesSize.z - 1.0f * scale;						
+
+		float halfWorldXSize = params.gridSize.x * params.particleRadius;		
+		float halfWorldYSize = params.gridSize.y * params.particleRadius;		
+
+		if (pos.x < -halfWorldXSize + params.particleRadius) {
+			pos.x = -halfWorldXSize + params.particleRadius; vel.x *= params.boundaryDamping;}
+		if (pos.x > halfWorldXSize * 0.5f  - params.particleRadius) {
+			pos.x = halfWorldXSize * 0.5f - params.particleRadius; vel.x *= params.boundaryDamping; }
+
+		if (pos.y < -1.0f * halfWorldYSize + params.particleRadius) {
+			pos.y = -1.0f * halfWorldYSize + params.particleRadius; vel.y *= params.boundaryDamping;}	
 	    
 		posArray[index] = make_float4(pos, posData.w);
 		velArray[index] = make_float4(vel, velData.w);

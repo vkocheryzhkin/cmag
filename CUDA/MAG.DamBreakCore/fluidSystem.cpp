@@ -29,8 +29,7 @@ DamBreakSystem::DamBreakSystem(
 	hMeasures(0),	
 	dPos(0),
 	dVel(0),
-	dMeasures(0),	
-	gridSize(gridSize),	
+	dMeasures(0),		
 	elapsedTime(0.0f){
 		numParticles = fluidParticlesSize.x * fluidParticlesSize.y * fluidParticlesSize.z;
 		numGridCells = gridSize.x  *gridSize.y * gridSize.z;
@@ -38,17 +37,21 @@ DamBreakSystem::DamBreakSystem(
 		params.fluidParticlesSize = fluidParticlesSize;
 		params.gridSize = gridSize;		
 	    			
-		params.particleRadius = 1.0f / 64;		
-		params.smoothingRadius = 3.0f * params.particleRadius;	
+		params.particleRadius = particleRadius;//1.0f / 64;		
+		params.smoothingRadius = 2.5f * params.particleRadius;	
 		params.restDensity = 1000.0f;
 
 		//let choose N = 60 is an avg number of particles in sphere
 		/*int N = 60;				
 		params.particleMass = params.restDensity * 4.0f / 3.0f * CUDART_PI_F * pow(params.smoothingRadius,3) / N;	*/
 		params.particleMass = params.restDensity / 731.45; //todo				
-		params.cellcount = (5 - 1) / 2;		
+		//params.particleMass = 1.7f;
+		
+		//params.cellcount = (5 - 1) / 2;		
+		params.cellcount = 2;
 	    	
-		params.worldOrigin = make_float3(-1.0f, -1.0f, -1.0f);
+		//params.worldOrigin = make_float3(-1.0f, -1.0f, -1.0f);
+		params.worldOrigin = make_float3(-getHalfWorldXSize(), -getHalfWorldYSize(), -getHalfWorldZSize());
 		float cellSize = params.particleRadius * 2.0f;  
 		params.cellSize = make_float3(cellSize, cellSize, cellSize);
 	    
@@ -373,9 +376,9 @@ void DamBreakSystem::initFluid(uint *size, float spacing, float jitter, uint num
 			for(uint x = 0; x < xsize; x++) {				
 				uint i = (z * ysize * xsize) + y * xsize + x;
 				if (i < numParticles) {
-					hPos[i*4] = (spacing * x) + params.particleRadius - 1.0f;					
-					hPos[i*4+1] = (spacing * y) + params.particleRadius - 1.0f;
-					hPos[i*4+2] = (spacing * z) + params.particleRadius - 1.0f;					
+					hPos[i*4] = (spacing * x) + params.particleRadius - getHalfWorldXSize();					
+					hPos[i*4+1] = (spacing * y) + params.particleRadius -getHalfWorldYSize();
+					hPos[i*4+2] = (spacing * z) + params.particleRadius - getHalfWorldZSize();					
 				}
 			}
 		}

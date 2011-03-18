@@ -25,8 +25,11 @@ public:
 	float* getArray(ParticleArray array);
 	void   setArray(ParticleArray array, const float* data, int start, int count);
 
-	int    getNumParticles() const { return numParticles; }
-	float    getElapsedTime() const { return elapsedTime; }
+	int getNumParticles() const { return numParticles; }
+	float getElapsedTime() const { return elapsedTime; }
+	float getHalfWorldXSize() {return params.gridSize.x * params.particleRadius;}
+	float getHalfWorldYSize() {return params.gridSize.y * params.particleRadius;}
+	float getHalfWorldZSize() {return params.gridSize.z * params.particleRadius;}
 
 	unsigned int getCurrentReadBuffer() const { return posVbo; }
 	unsigned int getColorBuffer()       const { return colorVBO; }
@@ -46,6 +49,7 @@ public:
 	uint3 getGridSize() { return params.gridSize; }
 	float3 getWorldOrigin() { return params.worldOrigin; }
 	float3 getCellSize() { return params.cellSize; }
+	float3 getGravity() {return params.gravity;}
 protected: // methods
 	DamBreakSystem() {}
 	uint createVBO(uint size);
@@ -101,7 +105,7 @@ protected: // data
 
 	// params
 	SimParams params;
-	uint3 gridSize;
+	//uint3 gridSize;
 	uint numGridCells;    
 };
 #endif //__FLUIDSYSTEM_H__

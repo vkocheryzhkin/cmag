@@ -162,7 +162,15 @@
 	</References>
 	<Files>
 		<File
-			RelativePath=".\SystemTest.cpp"
+			RelativePath=".\DamBreak.mw"
+			>
+		</File>
+		<File
+			RelativePath=".\XFrontTest.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\YFrontTest.cpp"
 			>
 		</File>
 	</Files>

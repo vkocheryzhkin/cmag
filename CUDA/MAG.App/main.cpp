@@ -17,7 +17,7 @@
 //#define PoiseuilleFlow
 
 #if defined(DamBreak)
-    float camera_trans[] = {0.0, 0.5, -1.4};
+    float camera_trans[] = {0.5, 0.0, -3.0};
 	DamBreakSystem *psystem = 0; 	
 #elif defined(PoiseuilleFlow)
     float camera_trans[] = {0.0, 0.0, -0.0012};
@@ -235,20 +235,21 @@ void ConditionalDisplay()
 	uint3 gridSize;	
 	
 	#if defined(DamBreak)
-		gridSize = make_uint3(64,64,64);
-		fluidParticlesSize = make_uint3(25, 25, 25);
+		//glutWireCube(2.0);
+		gridSize = make_uint3(128,64,4);
+		fluidParticlesSize = make_uint3(32, 32, 1);
 		particleRadius = 1.0f / 64;		
 		float hx= particleRadius * gridSize.x;	
 		float hy= particleRadius * gridSize.y;
 		float hz= particleRadius * gridSize.z;	
 		float zb = 2.0f * particleRadius * fluidParticlesSize.z - hz;	
-		float yb = 2.5f * particleRadius * fluidParticlesSize.y - hy;				
+		float yb = 2.0f * particleRadius * fluidParticlesSize.y - hy;				
 		glLineWidth (2.0f);	
 		glBegin(GL_LINE_STRIP);	
-		glVertex3f(-hx, -hy, -hz);
+		/*glVertex3f(-hx, -hy, -hz);
 		glVertex3f(hx, -hy, -hz);
 		glVertex3f(hx, yb, -hz);
-		glVertex3f(-hx, yb, -hz);
+		glVertex3f(-hx, yb, -hz);	
 		glVertex3f(-hx, -hy, -hz);
 		glVertex3f(-hx, -hy, zb);	
 		glVertex3f(hx, -hy, zb);
@@ -260,7 +261,14 @@ void ConditionalDisplay()
 		glVertex3f(hx, yb, -hz);
 		glVertex3f(hx, yb, zb);
 		glVertex3f(hx, -hy, zb);
-		glVertex3f(hx, -hy, -hz);
+		glVertex3f(hx, -hy, -hz);*/
+
+		glVertex3f(-hx, yb + hy, -hz / 2);
+		glVertex3f(-hx, -hy, -hz / 2);
+		glVertex3f(0.5f * hx, -hy, -hz / 2);
+		glVertex3f(0.5f * hx, yb + hy, -hz / 2);
+		
+		
 		glEnd();	
 	#elif defined(PoiseuilleFlow)
 		glutWireCube(2.0);
@@ -298,7 +306,11 @@ void ConditionalDisplay()
 void ConditionalInit()
 {
 		#if defined(DamBreak)
-			psystem = new DamBreakSystem(make_uint3(25, 25, 1), make_uint3(64,64,64), 1.0f / 64, true); 	
+			psystem = new DamBreakSystem(
+				make_uint3(32, 32, 1),
+				make_uint3(128,64,4),
+				1.0f / 64,				
+				true); 	
 		#elif defined(PoiseuilleFlow)
 			psystem = new PoiseuilleFlowSystem(
 					make_uint3(16, 64 -  2 * 3, 1),
