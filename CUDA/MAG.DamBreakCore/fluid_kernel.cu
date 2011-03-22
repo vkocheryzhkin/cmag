@@ -340,8 +340,8 @@ __global__ void removeRightBoundaryD(
 			return;
 
 		float halfWorldXSize = params.gridSize.x * params.particleRadius;		
-		float halfWorldYSize = params.gridSize.y * params.particleRadius;	
-		float halfWorldZSize = params.gridSize.z * params.particleRadius;	
+		/*float halfWorldYSize = params.gridSize.y * params.particleRadius;	
+		float halfWorldZSize = params.gridSize.z * params.particleRadius;	*/
 
 		posArray[index] = make_float4(posData.x +halfWorldXSize, posData.y, posData.z, posData.w);
 }

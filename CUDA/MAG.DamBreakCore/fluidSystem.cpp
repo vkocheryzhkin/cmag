@@ -52,10 +52,10 @@ DamBreakSystem::DamBreakSystem(
 		/*int N = 60;				
 		params.particleMass = params.restDensity * 4.0f / 3.0f * CUDART_PI_F * pow(params.smoothingRadius,3) / N;	*/
 		//params.particleMass = params.restDensity / 731.45; //todo				
-		params.particleMass = 1.2f;
+		params.particleMass = 1.0f;
 		
 		//params.cellcount = (5 - 1) / 2;		
-		params.cellcount = 3;
+		params.cellcount = 2;
 	    	
 		//params.worldOrigin = make_float3(-1.0f, -1.0f, -1.0f);
 		params.worldOrigin = make_float3(-getHalfWorldXSize(), -getHalfWorldYSize(), -getHalfWorldZSize());
@@ -430,7 +430,7 @@ void DamBreakSystem::initBoundaryParticles(float spacing)
 		params.fluidParticlesSize.y * 
 		params.fluidParticlesSize.z;
 	//bottom type 1
-	size[0] = params.gridSize.x - 2;
+	size[0] = params.gridSize.x - (params.boundaryOffset -1);
 	size[1] = 1;
 	size[2] = 1;	 
 	for(uint z=0; z < size[2]; z++) {
@@ -469,14 +469,14 @@ void DamBreakSystem::initBoundaryParticles(float spacing)
 	//right type 1
 	numAllocatedParticles += size[2] * size[1] * size[0];
 	size[0] = 1;
-	size[1] = params.gridSize.y - 3;
+	size[1] = params.gridSize.y - params.boundaryOffset;
 	size[2] = 1;	 	
 	for(uint z=0; z < size[2]; z++) {
 		for(uint y=0; y < size[1]; y++) {
 			for(uint x=0; x < size[0]; x++) {
 				uint i = numAllocatedParticles + (z * size[1] * size[0]) + (y * size[0]) + x;				
 				hPos[i*4] = (spacing * x) + params.particleRadius + params.worldOrigin.x					
-					+ 35 * 2 * params.particleRadius;	 
+					+ (params.fluidParticlesSize.x + params.boundaryOffset) * 2 * params.particleRadius;	 
 				hPos[i*4+1] = (spacing * y) + params.particleRadius + params.worldOrigin.y
 					+ params.boundaryOffset * 2 * params.particleRadius;			
 				hPos[i*4+2] = (spacing * z) + params.particleRadius + params.worldOrigin.z;					
@@ -505,7 +505,7 @@ void DamBreakSystem::initBoundaryParticles(float spacing)
 	//left type 2
 	numAllocatedParticles += size[2] * size[1] * size[0];
 	size[0] = params.boundaryOffset - 1;
-	size[1] = params.gridSize.y - params.boundaryOffset + 1;
+	size[1] = params.gridSize.y - (params.boundaryOffset - 1);
 	size[2] = 1;	 	
 	for(uint z=0; z < size[2]; z++) {
 		for(uint y=0; y < size[1]; y++) {
@@ -530,7 +530,7 @@ void DamBreakSystem::initBoundaryParticles(float spacing)
 			for(uint x=0; x < size[0]; x++) {
 				uint i = numAllocatedParticles + (z * size[1] * size[0]) + (y * size[0]) + x;				
 				hPos[i*4] = (spacing * x) + params.particleRadius + params.worldOrigin.x
-					+ (35 + 1) * 2 * params.particleRadius;					 
+					+ (params.fluidParticlesSize.x + params.boundaryOffset + 1) * 2 * params.particleRadius;					 
 				hPos[i*4+1] = (spacing * y) + params.particleRadius + params.worldOrigin.y 
 					+ (params.boundaryOffset ) * 2 * params.particleRadius;			
 				hPos[i*4+2] = (spacing * z) + params.particleRadius + params.worldOrigin.z;					

@@ -311,9 +311,9 @@ void ConditionalInit()
 		#if defined(DamBreak)
 			psystem = new DamBreakSystem(
 				//make_uint3(32, 32, 1),
-				make_uint3(32, 32, 1),
+				make_uint3(4, 4, 1),
 				3,
-				make_uint3(128,64,4),
+				make_uint3(128,128,4),
 				1.0f / 64,				
 				true); 	
 		#elif defined(PoiseuilleFlow)
