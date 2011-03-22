@@ -12,6 +12,19 @@ extern "C"
 		cutilSafeCall( cudaMemcpyToSymbol(params, hostParams, sizeof(SimParams)) );
 	}	
 
+	void removeRightBoundary(
+		float * position,
+		uint numParticles){
+			uint numThreads, numBlocks;
+			computeGridSize(numParticles, 256, numBlocks, numThreads);
+
+			removeRightBoundaryD<<< numBlocks, numThreads >>>(
+				(float4*)position,
+				numParticles);
+		    
+			cutilCheckMsg("removeRightBoundary kernel execution failed");
+	}
+
 	void integrateSystem(
 		float *pos,
 		float *vel,  
@@ -89,6 +102,7 @@ extern "C"
 	}
 
 	void calculateDensityVariation(			
+		float* sortedVariations,
 		float* sortedMeasures,
 		float* sortedPos,			
 		float* sortedVel,		
@@ -109,7 +123,7 @@ extern "C"
 			computeGridSize(numParticles, 64, numBlocks, numThreads);
 
 			calculateDensityVariationD<<< numBlocks, numThreads >>>(										  
-				(float4*)sortedMeasures,
+				(float4*)sortedVariations,
 				(float4*)sortedMeasures,
 				(float4*)sortedPos,                                          
 				(float4*)sortedVel, 
@@ -122,32 +136,33 @@ extern "C"
 
 			#if USE_TEX
 			cutilSafeCall(cudaUnbindTexture(oldPosTex));
+			cutilSafeCall(cudaUnbindTexture(oldMeasuresTex));
 			cutilSafeCall(cudaUnbindTexture(oldVelTex));
 			cutilSafeCall(cudaUnbindTexture(cellStartTex));
-			cutilSafeCall(cudaUnbindTexture(cellEndTex));
-			cutilSafeCall(cudaUnbindTexture(oldMeasuresTex));
+			cutilSafeCall(cudaUnbindTexture(cellEndTex));			
 			#endif
 	}
 
 	void calculateDensity(			
 		float* sortedMeasures,		
+		float* sortedVariations,	
 		uint numParticles,
 		uint numGridCells){
 			#if USE_TEX
-			cutilSafeCall(cudaBindTexture(0, oldMeasuresTex, sortedMeasures, numParticles*sizeof(float4)));
+			cutilSafeCall(cudaBindTexture(0, oldVariationsTex, sortedVariations, numParticles*sizeof(float4)));
 			#endif
 			uint numThreads, numBlocks;
 			computeGridSize(numParticles, 64, numBlocks, numThreads);
 
 			calculateDensityD<<< numBlocks, numThreads >>>(										  
 				(float4*)sortedMeasures,
-				(float4*)sortedMeasures,	
+				(float4*)sortedVariations,	
 				numParticles);
 
 			cutilCheckMsg("Kernel execution failed");
 
 			#if USE_TEX
-			cutilSafeCall(cudaUnbindTexture(oldMeasuresTex));
+			cutilSafeCall(cudaUnbindTexture(oldVariationsTex));
 			#endif
 	}
 

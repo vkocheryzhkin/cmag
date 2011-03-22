@@ -207,6 +207,9 @@ void key(unsigned char key, int , int)
 	case '1':
 		psystem->reset();
 		break;
+	case '2':
+		psystem->changeRightBoundary();
+		break;
 	case '\033':
 	case 'q':
 		exit(0);
@@ -235,7 +238,7 @@ void ConditionalDisplay()
 	uint3 gridSize;	
 	
 	#if defined(DamBreak)
-		//glutWireCube(2.0);
+		//glutWireCube(2.0);		
 		gridSize = make_uint3(128,64,4);
 		fluidParticlesSize = make_uint3(32, 32, 1);
 		particleRadius = 1.0f / 64;		
@@ -307,7 +310,9 @@ void ConditionalInit()
 {
 		#if defined(DamBreak)
 			psystem = new DamBreakSystem(
+				//make_uint3(32, 32, 1),
 				make_uint3(32, 32, 1),
+				3,
 				make_uint3(128,64,4),
 				1.0f / 64,				
 				true); 	

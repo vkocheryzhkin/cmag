@@ -367,7 +367,7 @@ void PoiseuilleFlowSystem::initFluid( float spacing, float jitter, uint numParti
 				if (i < numParticles) {
 					hPos[i*4] = (spacing * x) + params.particleRadius - getHalfWorldXSize();
 					hPos[i*4+1] = (spacing * y) + params.particleRadius - getHalfWorldYSize()
-						+params.boundaryOffset * 2 * params.particleRadius;						
+						+ params.boundaryOffset * 2 * params.particleRadius;						
 					hPos[i*4+2] = (spacing * z) + params.particleRadius - getHalfWorldZSize();		
 					hPos[i*4+3] = 0.0f; //fluid					
 				}

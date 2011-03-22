@@ -7,7 +7,12 @@
 class DamBreakSystem
 {
 public:
-	DamBreakSystem(uint3 fluidParticlesSize, uint3 gridSize, float particleRadius, bool bUseOpenGL);
+	DamBreakSystem(
+		uint3 fluidParticlesSize,
+		int boundaryOffset,
+		uint3 gridSize,
+		float particleRadius,
+		bool bUseOpenGL);
 	~DamBreakSystem();
 
 	enum ParticleArray
@@ -43,7 +48,7 @@ public:
 	void * getCudaMeasures()            const { return (void *)dMeasures; }    
 	void * getCudaAcceleration()        const {return (void *)dAcceleration;}	
 
-	void changeGravity();
+	void changeRightBoundary();
 
 	float getParticleRadius() { return params.particleRadius; }
 	uint3 getGridSize() { return params.gridSize; }
@@ -58,6 +63,7 @@ protected: // methods
 	void _finalize();
 
 	void initFluid(uint *size, float spacing, float jitter, uint numParticles);
+	void initBoundaryParticles(float spacing);	
 
 protected: // data
 	bool IsInitialized, IsOpenGL;
@@ -78,6 +84,7 @@ protected: // data
 	float* dVel;
 	float* dVelLeapFrog;
 	
+	float* dVariations;
 	float* dMeasures;
 	float* dAcceleration;	
 

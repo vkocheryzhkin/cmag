@@ -62,6 +62,7 @@ BOOST_AUTO_TEST_CASE(CalculateImageHash_ReturnOppositeHash)
 	hHash = new uint[numParticles];	
 	hPosition[1] = hPosition[2] = params.worldOrigin.x + params.particleRadius;	
 	hPosition[0] = params.worldOrigin.x - params.particleRadius;
+	//hPosition[0] = 1.0f + params.particleRadius;
 
 	uint memSize = 4 * numParticles * sizeof(float);
 	allocateArray((void**)&dHash,  numParticles * sizeof(uint));

@@ -18,6 +18,7 @@
 #endif
 DamBreakSystem::DamBreakSystem(
 	uint3 fluidParticlesSize,
+	int boundaryOffset,
 	uint3 gridSize,
 	float particleRadius,
 	bool bUseOpenGL) :
@@ -30,25 +31,31 @@ DamBreakSystem::DamBreakSystem(
 	dPos(0),
 	dVel(0),
 	dMeasures(0),		
+	dVariations(0),	
 	elapsedTime(0.0f){
-		numParticles = fluidParticlesSize.x * fluidParticlesSize.y * fluidParticlesSize.z;
-		numGridCells = gridSize.x  *gridSize.y * gridSize.z;
+		numParticles = fluidParticlesSize.x * fluidParticlesSize.y * fluidParticlesSize.z + 
+		+ gridSize.x * boundaryOffset
+		+ 2 * (gridSize.y - boundaryOffset) * boundaryOffset
+		;
+		numGridCells = gridSize.x * gridSize.y * gridSize.z;
 		gridSortBits = 18;	//see radix sort for details
 		params.fluidParticlesSize = fluidParticlesSize;
 		params.gridSize = gridSize;		
+		params.boundaryOffset = boundaryOffset;
 	    			
 		params.particleRadius = particleRadius;//1.0f / 64;		
-		params.smoothingRadius = 2.5f * params.particleRadius;	
+		//params.smoothingRadius = 2.5f * params.particleRadius;	
+		params.smoothingRadius = 3.0f * params.particleRadius;	
 		params.restDensity = 1000.0f;
 
 		//let choose N = 60 is an avg number of particles in sphere
 		/*int N = 60;				
 		params.particleMass = params.restDensity * 4.0f / 3.0f * CUDART_PI_F * pow(params.smoothingRadius,3) / N;	*/
-		params.particleMass = params.restDensity / 731.45; //todo				
-		//params.particleMass = 1.7f;
+		//params.particleMass = params.restDensity / 731.45; //todo				
+		params.particleMass = 1.2f;
 		
 		//params.cellcount = (5 - 1) / 2;		
-		params.cellcount = 2;
+		params.cellcount = 3;
 	    	
 		//params.worldOrigin = make_float3(-1.0f, -1.0f, -1.0f);
 		params.worldOrigin = make_float3(-getHalfWorldXSize(), -getHalfWorldYSize(), -getHalfWorldZSize());
@@ -60,7 +67,10 @@ DamBreakSystem::DamBreakSystem(
 		params.gravity = make_float3(0.0f, -9.8f, 0.0f);    	  		
 		params.gamma = 7;
 		params.B = 200 * params.restDensity * abs(params.gravity.y) *		
-			(2 * params.particleRadius * fluidParticlesSize.y ) / params.gamma;
+			(2 * params.particleRadius * fluidParticlesSize.y ) / params.gamma;		
+
+		params.D = 10 * params.gravity.y * 2 * params.particleRadius * fluidParticlesSize.y;
+		params.a = 1 * params.particleRadius;
 
 		params.soundspeed = sqrt(params.B * params.gamma / params.restDensity);
 
@@ -121,8 +131,9 @@ void DamBreakSystem::_initialize(int numParticles){
 	memset(hAcceleration, 0, numParticles*4*sizeof(float));	
 	memset(hMeasures, 0, numParticles*4*sizeof(float)); 
 
-	for(uint i = 0; i < numParticles; i++) 
+	for(uint i = 0; i < numParticles; i++)
 		hMeasures[4*i+0] = params.restDensity;
+	
 
 	unsigned int memSize = sizeof(float) * 4 * numParticles;
 
@@ -137,7 +148,8 @@ void DamBreakSystem::_initialize(int numParticles){
 	allocateArray((void**)&dVelLeapFrog, memSize);
 	allocateArray((void**)&dAcceleration, memSize);
 	allocateArray((void**)&dMeasures, memSize);
-
+	allocateArray((void**)&dVariations, memSize);
+	
 	allocateArray((void**)&dSortedPos, memSize);
 	allocateArray((void**)&dSortedVel, memSize);
 	
@@ -155,8 +167,15 @@ void DamBreakSystem::_initialize(int numParticles){
 		glBindBufferARB(GL_ARRAY_BUFFER, colorVBO);
 		float *data = (float *) glMapBufferARB(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
 		float *ptr = data;
-		for(uint i=0; i<numParticles; i++) {
-			float t = 0.7f;    
+		uint fluidParticles = params.fluidParticlesSize.x * params.fluidParticlesSize.y * params.fluidParticlesSize.z;
+		uint typeOneParticles = fluidParticles + (params.gridSize.x - params.boundaryOffset + 1) 
+			+ 2 * (params.gridSize.y - params.boundaryOffset);
+		for(uint i=0; i < numParticles; i++) {
+			float t = 0.7f;  
+			if(i < typeOneParticles)
+				t = 0.2f;
+			if(i < fluidParticles)
+				t = 0.5f;			
 			colorRamp(t, ptr);
 			ptr+=3;
 			*ptr++ = 1.0f;
@@ -190,6 +209,7 @@ void DamBreakSystem::_finalize(){
 	freeArray(dVel);
 	freeArray(dVelLeapFrog);	
 	freeArray(dMeasures);
+	freeArray(dVariations);	
 	freeArray(dAcceleration);
 	freeArray(dSortedPos);
 	freeArray(dSortedVel);
@@ -210,12 +230,21 @@ void DamBreakSystem::_finalize(){
 
 	cudppDestroyPlan(sortHandle);
 }
-void DamBreakSystem::changeGravity(){ 
-	params.gravity.y *= -1.0f; 
-	setParameters(&params);  
+void DamBreakSystem::changeRightBoundary(){ 
+	float *dPos;
+
+	if (IsOpenGL) 
+		dPos = (float *) mapGLBufferObject(&cuda_posvbo_resource);
+	else 
+		dPos = (float *) cudaPosVBO;
+
+	removeRightBoundary(dPos, numParticles);
+
+	if (IsOpenGL) {
+		unmapGLBufferObject(cuda_posvbo_resource);
+	}
 }
 
-// step the simulation
 void DamBreakSystem::update(){
 	assert(IsInitialized);
 
@@ -246,7 +275,8 @@ void DamBreakSystem::update(){
 		numGridCells);
 	
 	calculateDensityVariation(		
-		dMeasures,
+		dVariations, //output
+		dMeasures,//input
 		dSortedPos,			
 		dSortedVel,
 		dIndex,
@@ -256,7 +286,8 @@ void DamBreakSystem::update(){
 		numGridCells);
 
 	calculateDensity(		
-		dMeasures,		
+		dMeasures, //output
+		dVariations, //input
 		numParticles,
 		numGridCells);
 
@@ -292,18 +323,17 @@ float* DamBreakSystem::getArray(ParticleArray array){
 
 	unsigned int vbo = 0;
 
-	switch (array)
-	{
-	default:
-	case POSITION:
-		hdata = hPos;
-		ddata = dPos;
-		vbo = posVbo;
-		break;
-	case VELOCITY:
-		hdata = hVel;
-		ddata = dVel;
-		break;	
+	switch (array){
+		default:
+		case POSITION:
+			hdata = hPos;
+			ddata = dPos;
+			vbo = posVbo;
+			break;
+		case VELOCITY:
+			hdata = hVel;
+			ddata = dVel;
+			break;	
 	}
 
 	copyArrayFromDevice(hdata, ddata, vbo, numParticles*4*sizeof(float));
@@ -335,6 +365,7 @@ void DamBreakSystem::setArray(ParticleArray array, const float* data, int start,
 		break;	
 	case MEASURES:
 		copyArrayToDevice(dMeasures, data, start*4*sizeof(float), count*4*sizeof(float));
+		copyArrayToDevice(dVariations, data, start*4*sizeof(float), count*4*sizeof(float));
 		break;
 	case ACCELERATION:		
 		copyArrayToDevice(dAcceleration, data, start*4*sizeof(float), count*4*sizeof(float));
@@ -357,6 +388,7 @@ void DamBreakSystem::reset(){
 	uint gridSize[3];
 	gridSize[0] = gridSize[1] = gridSize[2] = s;
 	initFluid(gridSize, spacing, jitter, numParticles);
+	initBoundaryParticles(spacing);
 
 	setArray(POSITION, hPos, 0, numParticles);
 	setArray(VELOCITY, hVel, 0, numParticles);	
@@ -376,10 +408,133 @@ void DamBreakSystem::initFluid(uint *size, float spacing, float jitter, uint num
 			for(uint x = 0; x < xsize; x++) {				
 				uint i = (z * ysize * xsize) + y * xsize + x;
 				if (i < numParticles) {
-					hPos[i*4] = (spacing * x) + params.particleRadius - getHalfWorldXSize();					
-					hPos[i*4+1] = (spacing * y) + params.particleRadius -getHalfWorldYSize();
+					hPos[i*4] = (spacing * x) + params.particleRadius - getHalfWorldXSize()
+						+ params.boundaryOffset * 2 * params.particleRadius
+						;//+ 1 * 2 * params.particleRadius;					
+					hPos[i*4+1] = (spacing * y) + params.particleRadius -getHalfWorldYSize()
+						+ params.boundaryOffset * 2 * params.particleRadius;
 					hPos[i*4+2] = (spacing * z) + params.particleRadius - getHalfWorldZSize();					
+					hPos[i*4+3] = Fluid;//0.0f;//fluid
 				}
+			}
+		}
+	}
+}
+
+
+void DamBreakSystem::initBoundaryParticles(float spacing)
+{	
+	uint size[3];	
+	int numAllocatedParticles = 
+		params.fluidParticlesSize.x *
+		params.fluidParticlesSize.y * 
+		params.fluidParticlesSize.z;
+	//bottom type 1
+	size[0] = params.gridSize.x - 2;
+	size[1] = 1;
+	size[2] = 1;	 
+	for(uint z=0; z < size[2]; z++) {
+		for(uint y=0; y < size[1]; y++) {
+			for(uint x=0; x < size[0]; x++) {
+				uint i = numAllocatedParticles + (z * size[1] * size[0]) + (y * size[0]) + x;				
+				hPos[i*4] = (spacing * x) + params.particleRadius + params.worldOrigin.x
+					+(params.boundaryOffset - 1) * 2 * params.particleRadius;					
+				hPos[i*4+1] = (spacing * y) + params.particleRadius + params.worldOrigin.y
+					+(params.boundaryOffset - 1) * 2 * params.particleRadius;
+				hPos[i*4+2] = (spacing * z) + params.particleRadius + params.worldOrigin.z;					
+				hPos[i*4+3] = FirstType;
+			}
+		}
+	}	
+
+	//left type 1
+	numAllocatedParticles += size[2] * size[1] * size[0];
+	size[0] = 1;
+	size[1] = params.gridSize.y - params.boundaryOffset;
+	size[2] = 1;	 	
+	for(uint z=0; z < size[2]; z++) {
+		for(uint y=0; y < size[1]; y++) {
+			for(uint x=0; x < size[0]; x++) {
+				uint i = numAllocatedParticles + (z * size[1] * size[0]) + (y * size[0]) + x;				
+				hPos[i*4] = (spacing * x) + params.particleRadius + params.worldOrigin.x
+					+ (params.boundaryOffset - 1) * 2 * params.particleRadius;					 
+				hPos[i*4+1] = (spacing * y) + params.particleRadius + params.worldOrigin.y
+					+ (params.boundaryOffset + 0) * 2 * params.particleRadius;			
+				hPos[i*4+2] = (spacing * z) + params.particleRadius + params.worldOrigin.z;					
+				hPos[i*4+3] = FirstType;
+			}
+		}
+	}
+
+	//right type 1
+	numAllocatedParticles += size[2] * size[1] * size[0];
+	size[0] = 1;
+	size[1] = params.gridSize.y - 3;
+	size[2] = 1;	 	
+	for(uint z=0; z < size[2]; z++) {
+		for(uint y=0; y < size[1]; y++) {
+			for(uint x=0; x < size[0]; x++) {
+				uint i = numAllocatedParticles + (z * size[1] * size[0]) + (y * size[0]) + x;				
+				hPos[i*4] = (spacing * x) + params.particleRadius + params.worldOrigin.x					
+					+ 35 * 2 * params.particleRadius;	 
+				hPos[i*4+1] = (spacing * y) + params.particleRadius + params.worldOrigin.y
+					+ params.boundaryOffset * 2 * params.particleRadius;			
+				hPos[i*4+2] = (spacing * z) + params.particleRadius + params.worldOrigin.z;					
+				hPos[i*4+3] = RightFirstType;
+			}
+		}
+	}
+	
+	//bottom type 2
+	numAllocatedParticles += size[2] * size[1] * size[0];
+	size[0] = params.gridSize.x;
+	size[1] = params.boundaryOffset - 1;
+	size[2] = 1;	 
+	for(uint z=0; z < size[2]; z++) {
+		for(uint y=0; y < size[1]; y++) {
+			for(uint x=0; x < size[0]; x++) {
+				uint i = numAllocatedParticles + (z * size[1] * size[0]) + (y * size[0]) + x;				
+				hPos[i*4] = (spacing * x) + params.particleRadius + params.worldOrigin.x;					
+				hPos[i*4+1] = (spacing * y) + params.particleRadius + params.worldOrigin.y;
+				hPos[i*4+2] = (spacing * z) + params.particleRadius + params.worldOrigin.z;					
+				hPos[i*4+3] = SecondType;
+			}
+		}
+	}		
+
+	//left type 2
+	numAllocatedParticles += size[2] * size[1] * size[0];
+	size[0] = params.boundaryOffset - 1;
+	size[1] = params.gridSize.y - params.boundaryOffset + 1;
+	size[2] = 1;	 	
+	for(uint z=0; z < size[2]; z++) {
+		for(uint y=0; y < size[1]; y++) {
+			for(uint x=0; x < size[0]; x++) {
+				uint i = numAllocatedParticles + (z * size[1] * size[0]) + (y * size[0]) + x;				
+				hPos[i*4] = (spacing * x) + params.particleRadius + params.worldOrigin.x;					 
+				hPos[i*4+1] = (spacing * y) + params.particleRadius + params.worldOrigin.y
+					+ (params.boundaryOffset - 1) * 2 * params.particleRadius;			
+				hPos[i*4+2] = (spacing * z) + params.particleRadius + params.worldOrigin.z;					
+				hPos[i*4+3] = SecondType;
+			}
+		}
+	}
+
+	//right
+	numAllocatedParticles += size[2] * size[1] * size[0];
+	size[0] = params.boundaryOffset - 1;
+	size[1] = params.gridSize.y - params.boundaryOffset;
+	size[2] = 1;	 	
+	for(uint z=0; z < size[2]; z++) {
+		for(uint y=0; y < size[1]; y++) {
+			for(uint x=0; x < size[0]; x++) {
+				uint i = numAllocatedParticles + (z * size[1] * size[0]) + (y * size[0]) + x;				
+				hPos[i*4] = (spacing * x) + params.particleRadius + params.worldOrigin.x
+					+ (35 + 1) * 2 * params.particleRadius;					 
+				hPos[i*4+1] = (spacing * y) + params.particleRadius + params.worldOrigin.y 
+					+ (params.boundaryOffset ) * 2 * params.particleRadius;			
+				hPos[i*4+2] = (spacing * z) + params.particleRadius + params.worldOrigin.z;					
+				hPos[i*4+3] = RightSecondType;
 			}
 		}
 	}

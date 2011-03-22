@@ -18,6 +18,8 @@ extern "C"
 		float* pos, 
 		int    numParticles);
 
+	void removeRightBoundary(float* position, int numParticles);
+
 	void reorderDataAndFindCellStart(
 		uint*  cellStart,
 		uint*  cellEnd,
@@ -32,6 +34,7 @@ extern "C"
 
 	void calculateDensityVariation(			
 		float* measures,
+		float* measuresInput,
 		float* sortedPos,			
 		float* sortedVel,
 		uint* gridParticleIndex,
@@ -41,7 +44,8 @@ extern "C"
 		uint numGridCells);
 
 	void calculateDensity(			
-		float* measures,		
+		float* measures,
+		float* measuresInput,
 		uint numParticles,
 		uint numGridCells);
 

@@ -13,6 +13,15 @@
 
 typedef unsigned int uint;
 
+enum BoundaryTypes
+{
+	RightFirstType,//Virtual type1, Monaghan's like particle 
+	FirstType,// <2
+	RightSecondType,
+	SecondType,
+	Fluid,
+};
+
 struct SimParams {     
 	uint3 gridSize;
 	float3 worldOrigin;
@@ -33,5 +42,10 @@ struct SimParams {
 	float deltaTime;		
 	float gamma;
 	float boundaryDamping;	
+
+	int boundaryOffset;
+
+	float D; //Lennard - Jones
+	float a;
 };
 #endif
