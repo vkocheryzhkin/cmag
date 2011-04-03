@@ -44,6 +44,7 @@ struct SimParams {
 	float boundaryDamping;	
 
 	int boundaryOffset;
+	float rightBoundary;
 
 	float D; //Lennard - Jones
 	float a;

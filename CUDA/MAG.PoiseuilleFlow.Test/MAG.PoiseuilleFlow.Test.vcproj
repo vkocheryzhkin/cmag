@@ -170,6 +170,10 @@
 			>
 		</File>
 		<File
+			RelativePath=".\PoiseuilleFlow.mw"
+			>
+		</File>
+		<File
 			RelativePath=".\SystemTest.cpp"
 			>
 		</File>

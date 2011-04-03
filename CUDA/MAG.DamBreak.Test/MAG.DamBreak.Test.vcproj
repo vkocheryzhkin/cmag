@@ -162,6 +162,14 @@
 	</References>
 	<Files>
 		<File
+			RelativePath=".\Benchmark.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\CheckDensity.cpp"
+			>
+		</File>
+		<File
 			RelativePath=".\DamBreak.mw"
 			>
 		</File>

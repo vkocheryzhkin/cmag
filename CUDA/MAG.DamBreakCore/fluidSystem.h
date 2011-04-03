@@ -49,6 +49,7 @@ public:
 	void * getCudaAcceleration()        const {return (void *)dAcceleration;}	
 
 	void changeRightBoundary();
+	void removeRightBoundary();
 
 	float getParticleRadius() { return params.particleRadius; }
 	uint3 getGridSize() { return params.gridSize; }
@@ -111,8 +112,7 @@ protected: // data
 	CUDPPHandle sortHandle;
 
 	// params
-	SimParams params;
-	//uint3 gridSize;
+	SimParams params;	
 	uint numGridCells;    
 };
 #endif //__FLUIDSYSTEM_H__

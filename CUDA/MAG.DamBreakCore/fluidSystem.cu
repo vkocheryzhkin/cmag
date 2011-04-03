@@ -12,7 +12,19 @@ extern "C"
 		cutilSafeCall( cudaMemcpyToSymbol(params, hostParams, sizeof(SimParams)) );
 	}	
 
-	void removeRightBoundary(
+	void ExtChangeRightBoundary(
+		float * position,
+		uint numParticles){
+			uint numThreads, numBlocks;
+			computeGridSize(numParticles, 256, numBlocks, numThreads);
+
+			shiftRightBoundaryD<<< numBlocks, numThreads >>>(
+				(float4*)position,
+				numParticles);
+		    
+			cutilCheckMsg("removeRightBoundary kernel execution failed");
+	}
+	void ExtRemoveRightBoundary(
 		float * position,
 		uint numParticles){
 			uint numThreads, numBlocks;
@@ -163,6 +175,48 @@ extern "C"
 
 			#if USE_TEX
 			cutilSafeCall(cudaUnbindTexture(oldVariationsTex));
+			#endif
+	}
+
+	void calculateDamBreakDensity(			
+		float* sortedMeasuresOutput,
+		float* sortedMeasures,
+		float* sortedPos,			
+		float* sortedVel,		
+		uint* gridParticleIndex,
+		uint* cellStart,
+		uint* cellEnd,
+		uint numParticles,
+		uint numGridCells){
+			#if USE_TEX
+			cutilSafeCall(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(float4)));
+			cutilSafeCall(cudaBindTexture(0, oldMeasuresTex, sortedMeasures, numParticles*sizeof(float4)));
+			cutilSafeCall(cudaBindTexture(0, oldVelTex, sortedVel, numParticles*sizeof(float4)));
+			cutilSafeCall(cudaBindTexture(0, cellStartTex, cellStart, numGridCells*sizeof(uint)));
+			cutilSafeCall(cudaBindTexture(0, cellEndTex, cellEnd, numGridCells*sizeof(uint)));    
+			#endif
+
+			uint numThreads, numBlocks;
+			computeGridSize(numParticles, 64, numBlocks, numThreads);
+
+			calculateDamBreakDensityD<<< numBlocks, numThreads >>>(										  
+				(float4*)sortedMeasuresOutput,
+				(float4*)sortedMeasures,
+				(float4*)sortedPos,                                          
+				(float4*)sortedVel, 
+				gridParticleIndex,
+				cellStart,
+				cellEnd,
+				numParticles);
+
+			cutilCheckMsg("Kernel execution failed");
+
+			#if USE_TEX
+			cutilSafeCall(cudaUnbindTexture(oldPosTex));
+			cutilSafeCall(cudaUnbindTexture(oldMeasuresTex));
+			cutilSafeCall(cudaUnbindTexture(oldVelTex));
+			cutilSafeCall(cudaUnbindTexture(cellStartTex));
+			cutilSafeCall(cudaUnbindTexture(cellEndTex));			
 			#endif
 	}
 

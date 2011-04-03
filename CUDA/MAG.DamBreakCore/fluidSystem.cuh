@@ -18,8 +18,9 @@ extern "C"
 		float* pos, 
 		int    numParticles);
 
-	void removeRightBoundary(float* position, int numParticles);
-
+	void ExtChangeRightBoundary(float* position, int numParticles);
+	void ExtRemoveRightBoundary(float* position, int numParticles);
+	
 	void reorderDataAndFindCellStart(
 		uint*  cellStart,
 		uint*  cellEnd,
@@ -46,6 +47,17 @@ extern "C"
 	void calculateDensity(			
 		float* measures,
 		float* measuresInput,
+		uint numParticles,
+		uint numGridCells);
+
+	void calculateDamBreakDensity(			
+		float* measures,
+		float* measuresInput,
+		float* sortedPos,			
+		float* sortedVel,
+		uint* gridParticleIndex,
+		uint* cellStart,
+		uint* cellEnd,
 		uint numParticles,
 		uint numGridCells);
 

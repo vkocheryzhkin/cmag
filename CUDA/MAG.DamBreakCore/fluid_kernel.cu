@@ -194,19 +194,82 @@ __global__ void calculateDensityD(
 		float oldDens = FETCH(oldVariations, index).x;
 		float densVar = FETCH(oldVariations, index).w;
 		float newDens = oldDens * (1 + densVar * params.deltaTime);
-
 		measures[index].x = newDens;		
 		measures[index].y = params.B * (powf(newDens / params.restDensity ,params.gamma) - 1.0f); 			
 }
 
-//__device__ float4 getVelocityDiff(
-//	float4 iVelocity, 
-//	float4 iPosition, 
-//	float4 jVelocity,
-//	float4 jPosition)
-//{	
-//	return iVelocity - jVelocity;
-//}
+__device__ float sumDensity(
+	int3    gridPos,
+	uint    index,
+	float3  pos,
+	float4* oldPos, 
+	uint*   cellStart,
+	uint*   cellEnd){
+		uint gridHash = calcGridHash(gridPos);
+		uint startIndex = FETCH(cellStart, gridHash);
+
+		float sum = 0.0f;
+		if (startIndex != 0xffffffff) {        // cell is not empty
+			uint endIndex = FETCH(cellEnd, gridHash);
+			for(uint j=startIndex; j<endIndex; j++) {	
+					float4 post = FETCH(oldPos, j);
+					if(post.w < RightSecondType) // RightFirstType + FirstType
+						continue;
+
+					float3 pos2 = make_float3(post);						
+					float3 relPos = pos - pos2;
+					float dist = length(relPos);
+					float q = dist / params.smoothingRadius;									
+					float coeff = 7.0f / 4 / CUDART_PI_F / powf(params.smoothingRadius, 2);
+					if(q < 2){
+						sum += coeff *(powf(1 - 0.5f * q, 4) * (2 * q + 1));	
+					}
+			}
+		}
+		return sum;
+}
+
+__global__ void calculateDamBreakDensityD(			
+	float4* measuresOutput, //output
+	float4* oldMeasures, //input
+	float4* oldPos,	  //input 
+	float4* oldVel,   //input
+	uint* gridParticleIndex,
+	uint* cellStart,
+	uint* cellEnd,
+	uint numParticles){
+		uint index = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
+		if (index >= numParticles) return;    
+
+		float4 pos1 = FETCH(oldPos, index);
+		if(pos1.w < RightSecondType) 
+			return;
+		float3 pos = make_float3(pos1);
+
+		//float3 pos = make_float3(FETCH(oldPos, index));	
+		float3 vel = make_float3(FETCH(oldVel, index));
+		int3 gridPos = calcGridPos(pos);
+
+		float sum = 0.0f;		
+		for(int z=-params.cellcount; z<=params.cellcount; z++) {
+			for(int y=-params.cellcount; y<=params.cellcount; y++) {
+				for(int x=-params.cellcount; x<=params.cellcount; x++) {
+					int3 neighbourPos = gridPos + make_int3(x, y, z);
+					sum += sumDensity(
+						neighbourPos,
+						index,
+						pos,
+						oldPos,
+						cellStart,
+						cellEnd);
+				}
+			}
+		}					
+		float dens = sum * params.particleMass;
+		measuresOutput[index].x = dens;	
+		measuresOutput[index].y = params.B * (powf(dens / params.restDensity ,params.gamma) - 1.0f);
+}
+
 
 __device__ float3 sumNavierStokesForces(
 	int3    gridPos,
@@ -264,7 +327,7 @@ __device__ float3 sumNavierStokesForces(
 						float vij_pij = dot((vel - vel2),relPos);
 						
 						if(vij_pij < 0){						
-							float nu = 2.0f * 0.18f * params.smoothingRadius *
+							float nu = 2.0f * 0.38f * params.smoothingRadius *
 								params.soundspeed / (density + density2);
 
 							artViscosity = -1.0f * nu * vij_pij / 
@@ -329,6 +392,20 @@ __global__ void calcAndApplyAccelerationD(
 		acceleration[originalIndex] =  make_float4(acc, 0.0f);
 }
 
+__global__ void shiftRightBoundaryD(
+	float4* posArray,		 
+	uint numParticles){
+		uint index = __umul24(blockIdx.x,blockDim.x) + threadIdx.x;
+		if (index >= numParticles) return;          		
+		
+		volatile float4 posData = posArray[index]; 
+		if((posData.w != RightFirstType) && (posData.w != RightSecondType))
+			return;
+
+		float halfWorldXSize = params.fluidParticlesSize.x * 2 * params.particleRadius;				
+		posArray[index] = make_float4(posData.x + halfWorldXSize, posData.y, posData.z, posData.w);
+}
+
 __global__ void removeRightBoundaryD(
 	float4* posArray,		 
 	uint numParticles){
@@ -336,16 +413,13 @@ __global__ void removeRightBoundaryD(
 		if (index >= numParticles) return;          		
 		
 		volatile float4 posData = posArray[index]; 
-		if((posData.w != RightFirstType) && (posData.w != RightSecondType))// it's not a right boundary particle
+		if((posData.w != RightFirstType) && (posData.w != RightSecondType))
 			return;
 
-		float halfWorldXSize = params.gridSize.x * params.particleRadius;		
-		/*float halfWorldYSize = params.gridSize.y * params.particleRadius;	
-		float halfWorldZSize = params.gridSize.z * params.particleRadius;	*/
-
-		posArray[index] = make_float4(posData.x +halfWorldXSize, posData.y, posData.z, posData.w);
+		float fluidWidth = params.fluidParticlesSize.x * 2 * params.particleRadius;				
+		float height = params.gridSize.y * 2 * params.particleRadius;
+		posArray[index] = make_float4(fluidWidth, height, posData.z, posData.w);
 }
-
 
 __global__ void integrate(
 	float4* posArray,		 // input, output
@@ -361,7 +435,7 @@ __global__ void integrate(
 		volatile float4 accData = acceleration[index];
 		volatile float4 velLeapFrogData = velLeapFrogArray[index];
 
-		if(posData.w != Fluid) //it's not a fluid particle
+		if(posData.w != Fluid)
 			return;
 
 		float3 pos = make_float3(posData.x, posData.y, posData.z);
@@ -376,11 +450,16 @@ __global__ void integrate(
 		vel = nextVel;   	
 		pos += vel * params.deltaTime;   
 
-		float scale = params.gridSize.x * params.particleRadius;
-		float bound = 2.0f * params.particleRadius * params.fluidParticlesSize.z - 1.0f * scale;						
+		float leftBorder = params.worldOrigin.x + params.boundaryOffset * 2 * params.particleRadius;		
+		float bottomBorder = params.worldOrigin.y + params.boundaryOffset * 2 * params.particleRadius;	
+		
+		if (pos.x < leftBorder){
+			pos.x = leftBorder; vel.x *= params.boundaryDamping;}
+		if (pos.x > params.rightBoundary) {
+			pos.x = params.rightBoundary; vel.x *= params.boundaryDamping;}
 
-		float halfWorldXSize = params.gridSize.x * params.particleRadius;		
-		float halfWorldYSize = params.gridSize.y * params.particleRadius;				
+		if (pos.y < bottomBorder){
+			pos.y = bottomBorder; vel.y *= params.boundaryDamping;}	
 	    
 		posArray[index] = make_float4(pos, posData.w);
 		velArray[index] = make_float4(vel, velData.w);

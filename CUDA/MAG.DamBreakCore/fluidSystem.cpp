@@ -48,21 +48,21 @@ DamBreakSystem::DamBreakSystem(
 		params.smoothingRadius = 3.0f * params.particleRadius;	
 		params.restDensity = 1000.0f;
 
-		//let choose N = 60 is an avg number of particles in sphere
-		/*int N = 60;				
-		params.particleMass = params.restDensity * 4.0f / 3.0f * CUDART_PI_F * pow(params.smoothingRadius,3) / N;	*/
-		//params.particleMass = params.restDensity / 731.45; //todo				
-		params.particleMass = 1.0f;
+		params.particleMass = params.restDensity / 16327.6; //128
+		//params.particleMass = params.restDensity / 994; //32
 		
-		//params.cellcount = (5 - 1) / 2;		
-		params.cellcount = 2;
+		params.cellcount = 3;
 	    	
-		//params.worldOrigin = make_float3(-1.0f, -1.0f, -1.0f);
 		params.worldOrigin = make_float3(-getHalfWorldXSize(), -getHalfWorldYSize(), -getHalfWorldZSize());
+		//init
+		params.rightBoundary = params.worldOrigin.x +
+			(params.boundaryOffset + params.fluidParticlesSize.x) * 2 * params.particleRadius;
+
 		float cellSize = params.particleRadius * 2.0f;  
 		params.cellSize = make_float3(cellSize, cellSize, cellSize);
 	    
 		params.boundaryDamping = -1.0f;
+		
 
 		params.gravity = make_float3(0.0f, -9.8f, 0.0f);    	  		
 		params.gamma = 7;
@@ -230,19 +230,39 @@ void DamBreakSystem::_finalize(){
 
 	cudppDestroyPlan(sortHandle);
 }
-void DamBreakSystem::changeRightBoundary(){ 
+void DamBreakSystem::removeRightBoundary(){
+	params.rightBoundary = 0xffffffff;
+	setParameters(&params); 
+
 	float *dPos;
 
 	if (IsOpenGL) 
 		dPos = (float *) mapGLBufferObject(&cuda_posvbo_resource);
 	else 
 		dPos = (float *) cudaPosVBO;
+	ExtRemoveRightBoundary(dPos, numParticles);		
+	if (IsOpenGL) {
+		unmapGLBufferObject(cuda_posvbo_resource);
+	}
+	elapsedTime = 0.0f;
+}
 
-	removeRightBoundary(dPos, numParticles);
+void DamBreakSystem::changeRightBoundary(){ 
+	params.rightBoundary += params.fluidParticlesSize.x * 2 * params.particleRadius;
+	setParameters(&params); 
+
+	float *dPos;
+
+	if (IsOpenGL) 
+		dPos = (float *) mapGLBufferObject(&cuda_posvbo_resource);
+	else 
+		dPos = (float *) cudaPosVBO;	
+	ExtChangeRightBoundary(dPos, numParticles);			
 
 	if (IsOpenGL) {
 		unmapGLBufferObject(cuda_posvbo_resource);
 	}
+	elapsedTime = 0.0f;
 }
 
 void DamBreakSystem::update(){
@@ -274,20 +294,32 @@ void DamBreakSystem::update(){
 		numParticles,
 		numGridCells);
 	
-	calculateDensityVariation(		
-		dVariations, //output
+	//calculateDensityVariation(		
+	//	dVariations, //output
+	//	dMeasures,//input
+	//	dSortedPos,			
+	//	dSortedVel,
+	//	dIndex,
+	//	dCellStart,
+	//	dCellEnd,
+	//	numParticles,
+	//	numGridCells);
+
+	//calculateDensity(		
+	//	dMeasures, //output
+	//	dVariations, //input
+	//	numParticles,
+	//	numGridCells);
+
+
+	calculateDamBreakDensity(		
+		dMeasures, //output
 		dMeasures,//input
-		dSortedPos,			
+		dSortedPos,	
 		dSortedVel,
 		dIndex,
 		dCellStart,
 		dCellEnd,
-		numParticles,
-		numGridCells);
-
-	calculateDensity(		
-		dMeasures, //output
-		dVariations, //input
 		numParticles,
 		numGridCells);
 
@@ -388,13 +420,17 @@ void DamBreakSystem::reset(){
 	uint gridSize[3];
 	gridSize[0] = gridSize[1] = gridSize[2] = s;
 	initFluid(gridSize, spacing, jitter, numParticles);
-	initBoundaryParticles(spacing);
+	if(params.boundaryOffset > 0)
+		initBoundaryParticles(spacing);
 
 	setArray(POSITION, hPos, 0, numParticles);
 	setArray(VELOCITY, hVel, 0, numParticles);	
 	setArray(MEASURES, hMeasures, 0, numParticles);
 	setArray(ACCELERATION, hAcceleration, 0, numParticles);
 	setArray(VELOCITYLEAPFROG, hVelLeapFrog, 0, numParticles);
+
+	params.rightBoundary = params.worldOrigin.x +
+		(params.boundaryOffset + params.fluidParticlesSize.x) * 2 * params.particleRadius;
 }
 
 void DamBreakSystem::initFluid(uint *size, float spacing, float jitter, uint numParticles){
