@@ -5,12 +5,18 @@ extern "C"
 {		
 	void setParameters(PoiseuilleParams *hostParams);	
 
+	void ExtSetBoundaryWave(
+		float* pos,
+		float currentWaveHeight,
+		uint nemParticles);
+
 	void integratePoiseuilleSystem(
 		float* pos,
 		float* vel,  
 		float* velLeapFrog,
 		float* acc,
-		uint numParticles);
+		uint numParticles,
+		float elapsedTime);
 
 	void calculatePoiseuilleHash(
 		uint*  gridParticleHash,
@@ -49,6 +55,7 @@ extern "C"
 		uint* cellStart,
 		uint* cellEnd,
 		uint numParticles,
+		float elapsedTime,
 		uint numGridCells);
 }//extern "C"
 #endif

@@ -1,4 +1,4 @@
-//#define BOOST_TEST_MODULE PoiseuilleFlowTest
+#define BOOST_TEST_MODULE PoiseuilleFlowTest
 #include <boost/test/unit_test.hpp>
 #include <boost/format.hpp>
 #include <vector_types.h>
@@ -22,10 +22,20 @@ void mytest(float recordTime)
 	int boundaryOffset = 3;	
 	uint3 gridSize = make_uint3(16, 64, 4);    	
 	float particleRadius = 1.0f / (2 * (gridSize.y - 2 * boundaryOffset) * 1000);	
-	uint3 fluidParticlesSize = make_uint3(gridSize.x, gridSize.y -  2 * boundaryOffset, 1);	       
+	uint3 fluidParticlesSize = make_uint3(gridSize.x, gridSize.y -  2 * boundaryOffset, 1);	       	
+
+	float soundspeed = powf(10.0f, -4.0f);
+	float3 gravity = make_float3(powf(10.0f, -4.0f), 0.0f, 0.0f); 
+	float delaTime = powf(10.0f, -4.0f);
 		
 	PoiseuilleFlowSystem *psystem = new PoiseuilleFlowSystem(
+		delaTime,
 		fluidParticlesSize,
+		0.0f,
+		0.0f,
+		0.0f,
+		soundspeed,
+		gravity,
 		boundaryOffset, 
 		gridSize, 
 		particleRadius,
@@ -56,7 +66,7 @@ void mytest(float recordTime)
 			&& (posx < psystem->getHalfWorldXSize() + 2 * psystem -> getParticleRadius()+ psystem->getWorldOrigin().x)
 			&& (posy > psystem->getWorldOrigin().y + 2 * psystem -> getParticleRadius() * boundaryOffset)
 			&& (posy < psystem->getHalfWorldYSize() - 2 * psystem -> getParticleRadius() * boundaryOffset))
-		{
+		{			
 			fprintf(fp1, "%1.16f %1.16f \n", htemp[4*hIndex[i]+0], hPos[4*i+1]
 			+ abs(psystem->getWorldOrigin().y) - boundaryOffset * 2 *psystem -> getParticleRadius());					
 		}										
@@ -79,8 +89,6 @@ BOOST_AUTO_TEST_CASE(SystemOutput)
 	mytest(0.1125f);
 	mytest(0.225f);
 	mytest(1.0f);
-	//mytest(2.0f);
-	//mytest(3.0f);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -7,22 +7,16 @@
 #include <cutil_inline.h>
 #include <cutil_gl_inline.h>
 #include <cuda_gl_interop.h>
-#include "fluidSystem.h"
 #include "poiseuilleFlowSystem.h"
 #include "render_particles.h"
 #include "magUtil.cuh"
 
 #define MAX(a,b) ((a > b) ? a : b)
-#define DamBreak
-//#define PoiseuilleFlow
 
-#if defined(DamBreak)
-    float camera_trans[] = {0.5, 0.0, -2.5};
-	DamBreakSystem *psystem = 0; 	
-#elif defined(PoiseuilleFlow)
-    float camera_trans[] = {0.0, 0.0, -0.0012};
-	PoiseuilleFlowSystem *psystem = 0;
-#endif
+//float camera_trans[] = {0.0, 0.0, -6.0};
+float camera_trans[] = {0.0, 0.0, -0.0014};
+PoiseuilleFlowSystem *psystem = 0;
+
 
 float camera_rot[]   = {0, 0, 0};
 float camera_trans_lag[] = {0, 0, 0};
@@ -207,14 +201,12 @@ void key(unsigned char key, int , int)
 	case '1':
 		psystem->reset();
 		break;
-	#if defined(DamBreak)
 	case '2':
-		psystem->changeRightBoundary();
+		psystem->StartBoundaryMotion();
 		break;
 	case '3':
-		psystem->removeRightBoundary();
+		psystem->setBoundaryWave();
 		break;
-	#endif	
 	case '\033':
 	case 'q':
 		exit(0);
@@ -236,25 +228,37 @@ void mainMenu(int i)
 }
 
 
-void ConditionalInit()
-{
-		#if defined(DamBreak)
-			float num = 128;
-			psystem = new DamBreakSystem(
-				make_uint3(num, num, 1),
-				1,
-				make_uint3(4 * num, 2 * num, 4),				
-				1.0f / (2 * num),				
-				true); 	
-		#elif defined(PoiseuilleFlow)
-			psystem = new PoiseuilleFlowSystem(
-					make_uint3(16, 64 -  2 * 3, 1),
-					3,
-					make_uint3(16, 64, 4), 1.0f / (2 * (64 - 6) * 1000),
-					true);
-		#endif					
+void SystemInit()
+{		
+		int boundaryOffset = 3;
+		int sizex = 64;
+		//float soundspeed = powf(10.0f, -1.0f);
+		float soundspeed = powf(10.0f, -4.0f);
+		float3 gravity = make_float3(powf(10.0f, -4.0f), 0.0f, 0.0f); 
+		//float3 gravity = make_float3(0.0f, 0.0f, 0.0f); 		
+		float radius = 1.0f / (2 * (sizex - 2 * boundaryOffset) * 1000);
+		uint3 gridSize = make_uint3(sizex, 64, 4);   
+		uint3 fluidParticlesSize = make_uint3(gridSize.x, gridSize.y -  2 * boundaryOffset, 1);
+		float amplitude = 10 * radius;
+		float sigma = (sizex / 32) * CUDART_PI_F / ((fluidParticlesSize.x - 1) * 2 * radius);		
+		float frequency = soundspeed * sigma / (sizex / 64);
+		float delaTime = powf(10.0f, -4.0f);
+		//float delaTime =  1.0f / 4 * 3.0f * radius / soundspeed;		
+		psystem = new PoiseuilleFlowSystem(
+				delaTime,
+				fluidParticlesSize,
+				//0,0,0,
+				amplitude,
+				sigma,
+				frequency,
+				soundspeed,
+				gravity,
+				boundaryOffset, 
+				gridSize,								
+				radius,
+				true);					
 			
-		psystem->reset();
+		psystem->reset();		
 		
 		renderer = new ParticleRenderer;
 		renderer->setParticleRadius(psystem->getParticleRadius());
@@ -268,7 +272,7 @@ int main(int argc, char** argv)
 	initGL(argc, argv);
 	cudaGLInit(argc, argv);
 
-	ConditionalInit();
+	SystemInit();
 
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);

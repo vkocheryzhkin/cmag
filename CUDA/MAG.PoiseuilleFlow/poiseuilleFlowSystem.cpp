@@ -13,11 +13,15 @@
 #include <algorithm>
 #include <GL/glew.h>
 
-#ifndef CUDART_PI_F
-#define CUDART_PI_F         3.141592654f
-#endif
+
 PoiseuilleFlowSystem::PoiseuilleFlowSystem(
+	float deltaTime,
 	uint3 fluidParticlesSize,
+	float amplitude,
+	float sigma,
+	float frequency,
+	float soundspeed,
+	float3 gravity,
 	int boundaryOffset,
 	uint3 gridSize,
 	float particleRadius,
@@ -29,7 +33,7 @@ PoiseuilleFlowSystem::PoiseuilleFlowSystem(
 	hMeasures(0),	
 	dPos(0),
 	dVel(0),
-	dMeasures(0),		
+	dMeasures(0),	
 	elapsedTime(0.0f){		
 		numParticles = fluidParticlesSize.x * fluidParticlesSize.y * fluidParticlesSize.z +			
 			2 * gridSize.x * boundaryOffset;
@@ -38,13 +42,20 @@ PoiseuilleFlowSystem::PoiseuilleFlowSystem(
 		params.fluidParticlesSize = fluidParticlesSize;
 		params.gridSize = gridSize;	
 		params.boundaryOffset = boundaryOffset;
-	    			
+		params.amplitude = amplitude;
+		params.frequency = frequency;
+		params.sigma = sigma;		
+		params.IsBoundaryMotion = false;
+		
+
 		params.particleRadius = particleRadius;				
 		params.smoothingRadius = 3.0f * params.particleRadius;	
 		params.restDensity = 1000.0f;
 				
 		//see CalculateMassTest (shortly: i need to get density to be 1000, to do so I have to choose mass correctly)
-		params.particleMass = 1000.0f /3381320880.551724;
+		//params.particleMass = 1000.0f / 3381320880.551724;
+		params.particleMass = 1000.0f / 3381362970.482759;
+		
 					
 		params.cellcount = 3;		
 	    			
@@ -54,12 +65,14 @@ PoiseuilleFlowSystem::PoiseuilleFlowSystem(
 	    
 		params.boundaryDamping = -1.0f;
 
-		params.gravity = make_float3(powf(10.0f, -4.0f), 0.0f, 0.0f);    	  
+		params.gravity = gravity;
+		params.soundspeed = soundspeed;
 
-		params.soundspeed = powf(10.0f, -4.0f);			
 		params.mu = powf(10.0f, -3.0f);	
 
-		params.deltaTime = powf(10.0f, -4.0f);
+		params.deltaTime = deltaTime;	
+		IsSetWaveBoundary = false;
+		currentWaveHeight = 0.0f;
 		_initialize(numParticles);
 }
 
@@ -210,9 +223,19 @@ void PoiseuilleFlowSystem::_finalize(){
 
 	cudppDestroyPlan(sortHandle);
 }
-void PoiseuilleFlowSystem::changeGravity(){ 
-	params.gravity.y *= -1.0f; 
+
+void PoiseuilleFlowSystem::StartBoundaryMotion()
+{ 
+	params.IsBoundaryMotion = !params.IsBoundaryMotion;
 	setParameters(&params);  
+	update();
+	elapsedTime = 0.0f;
+}
+
+void PoiseuilleFlowSystem::setBoundaryWave()
+{ 
+	IsSetWaveBoundary = !IsSetWaveBoundary;
+	elapsedTime = 0.0f;
 }
 
 void PoiseuilleFlowSystem::update(){
@@ -223,7 +246,18 @@ void PoiseuilleFlowSystem::update(){
 	if (IsOpenGL) 
 		dPos = (float *) mapGLBufferObject(&cuda_posvbo_resource);
 	else 
-		dPos = (float *) cudaPosVBO;    		
+		dPos = (float *) cudaPosVBO;   
+
+	if((IsSetWaveBoundary) && (currentWaveHeight < params.amplitude)){		
+		if(currentWaveHeight < params.amplitude){			
+			ExtSetBoundaryWave(dPos, currentWaveHeight, numParticles);
+			currentWaveHeight += params.deltaTime * params.soundspeed;
+		}
+		else{
+			IsSetWaveBoundary = !IsSetWaveBoundary;
+			elapsedTime = 0.0f;
+		}
+	}
 	
 	calculatePoiseuilleHash(dHash, dIndex, dPos, numParticles);
 
@@ -260,6 +294,7 @@ void PoiseuilleFlowSystem::update(){
 		dCellStart,
 		dCellEnd,
 		numParticles,
+		elapsedTime,
 		numGridCells);    
 
 	integratePoiseuilleSystem(
@@ -267,7 +302,8 @@ void PoiseuilleFlowSystem::update(){
 		dVel,	
 		dVelLeapFrog,
 		dAcceleration,
-		numParticles);
+		numParticles,
+		elapsedTime);
 	
 	if (IsOpenGL) {
 		unmapGLBufferObject(cuda_posvbo_resource);
@@ -342,6 +378,8 @@ inline float frand(){
 
 void PoiseuilleFlowSystem::reset(){
 	elapsedTime = 0.0f;
+	currentWaveHeight = 0.0f;
+	IsSetWaveBoundary = false;
 	float jitter = params.particleRadius * 0.01f;			            
 	float spacing = params.particleRadius * 2.0f;
 	initFluid(spacing, jitter, numParticles);
@@ -367,7 +405,7 @@ void PoiseuilleFlowSystem::initFluid( float spacing, float jitter, uint numParti
 				if (i < numParticles) {
 					hPos[i*4] = (spacing * x) + params.particleRadius - getHalfWorldXSize();
 					hPos[i*4+1] = (spacing * y) + params.particleRadius - getHalfWorldYSize()
-						+ params.boundaryOffset * 2 * params.particleRadius;						
+						+ params.boundaryOffset * 2 * params.particleRadius + params.amplitude;						
 					hPos[i*4+2] = (spacing * z) + params.particleRadius - getHalfWorldZSize();		
 					hPos[i*4+3] = 0.0f; //fluid					
 				}
@@ -382,18 +420,24 @@ void PoiseuilleFlowSystem::initBoundaryParticles(float spacing)
 		params.fluidParticlesSize.x *
 		params.fluidParticlesSize.y * 
 		params.fluidParticlesSize.z;
+
+	float sigma = 1.0f / (params.fluidParticlesSize.x * 2 * params.particleRadius);
 	////bottom
-	size[0] = params.gridSize.x;
+	size[0] = params.fluidParticlesSize.x;
 	size[1] = params.boundaryOffset;
 	size[2] = 1;	 
 	for(uint z=0; z < size[2]; z++) {
 		for(uint y=0; y < size[1]; y++) {
 			for(uint x=0; x < size[0]; x++) {
-				uint i = numAllocatedParticles + (z * size[1] * size[0]) + (y * size[0]) + x;				
-				hPos[i*4] = (spacing * x) + params.particleRadius + params.worldOrigin.x;					 
-				hPos[i*4+1] = (spacing * y) + params.particleRadius + params.worldOrigin.y;
+				uint i = numAllocatedParticles + (z * size[1] * size[0]) + (y * size[0]) + x;								
+				float j = params.particleRadius * (2 * x + 1);
+				hPos[i * 4] = j + params.worldOrigin.x;					 
+				/*hPos[i * 4 + 1] = params.amplitude + params.amplitude * sinf(params.sigma * j) +
+					(spacing * y) + params.particleRadius + params.worldOrigin.y;		*/		
+				hPos[i * 4 + 1] = params.amplitude + (spacing * y) + params.particleRadius + params.worldOrigin.y;
+
 				hPos[i*4+2] = (spacing * z) + params.particleRadius + params.worldOrigin.z;					
-				hPos[i*4+3] = 1.0f;//boundary				
+				hPos[i*4+3] = 2.0f * (1.0f + y);//boundary: 2,4,6				
 			}
 		}
 	}	
@@ -403,12 +447,20 @@ void PoiseuilleFlowSystem::initBoundaryParticles(float spacing)
 		for(uint y=0; y < size[1]; y++) {
 			for(uint x=0; x < size[0]; x++) {
 				uint i = numAllocatedParticles + (z * size[1] * size[0]) + (y * size[0]) + x;				
-				hPos[i*4] = (spacing * x) + params.particleRadius + params.worldOrigin.x;					 
-				hPos[i*4+1] = (spacing * y) + params.particleRadius + params.worldOrigin.y
+				float j = params.particleRadius * (2 * x + 1);
+				hPos[i * 4] = j + params.worldOrigin.x;
+			/*	hPos[i*4+1] = params.amplitude - params.amplitude * sinf(params.sigma * j) 
+					+ spacing * y + params.particleRadius + params.worldOrigin.y
 					+ params.boundaryOffset * 2 * params.particleRadius
-					+ params.fluidParticlesSize.y * 2.0f * params.particleRadius;			
+					+ params.fluidParticlesSize.y * 2.0f * params.particleRadius;*/
+
+				hPos[i*4+1] = (spacing * y) + params.worldOrigin.y
+					+ params.boundaryOffset * 2 * params.particleRadius
+					+ params.fluidParticlesSize.y * 2.0f * params.particleRadius
+					+ params.amplitude + params.particleRadius;	
+
 				hPos[i*4+2] = (spacing * z) + params.particleRadius + params.worldOrigin.z;					
-				hPos[i*4+3] = 1.0f;//boundary				
+				hPos[i*4+3] = -2.0f * (1.0f + y);//boundary				
 			}
 		}
 	}

@@ -8,7 +8,13 @@ class PoiseuilleFlowSystem
 {
 public:
 	PoiseuilleFlowSystem(
+		float deltaTime,
 		uint3 fluidParticlesSize,
+		float amplitude,
+		float sigma,
+		float frequency,
+		float soundspeed,
+		float3 gravity,
 		int boundaryOffset,
 		uint3 gridSize,
 		float particleRadius,
@@ -45,11 +51,13 @@ public:
 	void * getCudaHash()				const {return (void *)dHash;}
 	void * getCudaIndex()				const {return (void *)dIndex;}	
 	void * getCudaSortedPosition()      const { return (void *)dSortedPos; }
+	void * getSortedVelocity()      const { return (void *)dSortedVel; }
 	void * getCudaMeasures()            const { return (void *)dMeasures; }    
 	void * getCudaAcceleration()        const {return (void *)dAcceleration;}	
 	void * getLeapFrogVelocity() const {return (void*) dVelLeapFrog;}
 
-	void changeGravity();
+	void setBoundaryWave();
+	void StartBoundaryMotion();
 
 	float getParticleRadius() { return params.particleRadius; }
 	uint3 getGridSize() { return params.gridSize; }
@@ -68,7 +76,8 @@ protected: // methods
 protected: // data
 	bool IsInitialized, IsOpenGL;
 	uint numParticles;
-	//uint3 fluidParticlesSize;	
+	float currentWaveHeight;
+	bool IsSetWaveBoundary;
 	float elapsedTime;
 
 	// CPU data

@@ -32,5 +32,9 @@ struct PoiseuilleParams {
 	float mu;
 
 	int boundaryOffset;
+	float amplitude;
+	float frequency;
+	float sigma;
+	bool IsBoundaryMotion;	
 };
 #endif//__POISEUILLEFLOW_KERNEL_CUH__

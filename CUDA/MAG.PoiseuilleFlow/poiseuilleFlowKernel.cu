@@ -178,18 +178,23 @@ __global__ void calculatePoiseuilleDensityD(
 		}			
 		float dens = sum * params.particleMass;
 		measures[index].x = dens;	
-		measures[index].y = powf(params.soundspeed, 2) * dens; 			
+		measures[index].y = powf(params.soundspeed, 2) * dens; 
+		//measures[index].z = sum;	
 }
+
 
 __device__ float4 getVelocityDiff(
 	float4 iVelocity, 
 	float4 iPosition, 
 	float4 jVelocity,
-	float4 jPosition)
-{
-	float bottomBoundary = params.worldOrigin.y + params.boundaryOffset * 2.0f * params.particleRadius;	
+	float4 jPosition,
+	float elapsedTime)
+{	
+	
+
+	/*float bottomBoundary = params.worldOrigin.y + params.boundaryOffset * 2.0f * params.particleRadius;	
 	float topBoundary = bottomBoundary + params.fluidParticlesSize.y * 2.0f * params.particleRadius;		
-	if((jPosition.w == 1.0f) && (jPosition.y > topBoundary))
+	if((jPosition.w < 0.0f) && (jPosition.y > topBoundary))
 	{
 		float distanceA = topBoundary - iPosition.y;
 		float distanceB = jPosition.y - topBoundary;
@@ -197,14 +202,123 @@ __device__ float4 getVelocityDiff(
 		return beta * iVelocity;
 	}
 	
-	if((jPosition.w == 1.0f) && (jPosition.y < bottomBoundary))
+	if((jPosition.w > 0.0f) && (jPosition.y < bottomBoundary))
 	{
 		float distanceA = iPosition.y - bottomBoundary;
 		float distanceB = bottomBoundary - jPosition.y;
 		float beta = fmin(1000.0f, 1 + distanceB / distanceA);
 		return beta * iVelocity;
 	}
+	return iVelocity - jVelocity;*/
+
+	float A = params.amplitude;
+	float B = params.boundaryOffset * 2 * params.particleRadius;
+	float W = params.worldOrigin.x;
+
+	//if(jPosition.w > 0.0f){//bottom		
+	//	Funcd fx;
+	//	fx.x0 = iPosition.x;
+	//	fx.y0 = iPosition.y;
+	//	fx.t = elapsedTime;
+	//	float xA = rtnewt(fx, params.worldOrigin.x, -params.worldOrigin.x, params.particleRadius / 100);		
+	//	float yA = W + B + A - A * sinf(-params.sigma * (xA - W) + params.frequency * elapsedTime);
+	//	float distA = sqrtf(powf(iPosition.x - xA,2) + powf(iPosition.y - yA,2));	
+	//	float k = A * cosf(-params.sigma * (xA - W) + params.frequency * elapsedTime) * params.sigma;
+
+	//	float AA = -k;
+	//	float BB = 1;
+	//	float CC = k * xA - yA;
+	//	float distB = abs(AA* jPosition.x + BB * jPosition.y + CC) / sqrt(AA * AA + 1);
+
+	//	float beta = fmin(100.5f, 1 + distB / distA);
+	//	return beta * (iVelocity);
+	//}
+
 	return iVelocity - jVelocity;
+}
+
+__device__ struct Funcd {	
+	float x0, y0, t;
+
+	__device__ float operator() (const float x) {
+		float A = params.amplitude;
+		float B = params.boundaryOffset * 2 * params.particleRadius;
+		float W = params.worldOrigin.x;
+
+		return x0 - x + (y0 - W - B - A + A * sinf(-params.sigma * (x - W) + params.frequency * t)) *
+			A * cosf(-params.sigma * (x - W) + params.frequency * t) * params.sigma;						
+	}
+	__device__ float df(const float x) {
+		float A = params.amplitude;
+		float B = params.boundaryOffset * 2 * params.particleRadius;
+		float W = params.worldOrigin.x;
+
+		return -1 - powf(A * cosf(-params.sigma * (x - W) + params.frequency * t) * params.sigma,2) +
+			(y0 - W - B - A + A * sinf(-params.sigma * (x - W) + params.frequency * t)) *
+			A * sinf(-params.sigma * (x - W) + params.sigma * t) * powf(params.sigma, 2);
+	}
+};
+
+template <class T>
+__device__ float rtnewt(T &funcd, const float x1, const float x2, const float xacc) {
+	const int JMAX=20;
+	float rtn=0.5*(x1+x2);
+	for (int j=0;j<JMAX;j++) {
+		float f=funcd(rtn);
+		float df=funcd.df(rtn);
+		float dx=f/df;
+		rtn -= dx;
+		if ((x1-rtn)*(rtn-x2) < 0.0)
+			return -1;//throw("Jumped out of brackets in rtnewt");
+		if (abs(dx) < xacc) return rtn;
+	}
+	return -1;//throw("Maximum number of iterations exceeded in rtnewt");
+}
+
+__device__ float getBoundaryCurve(float x, float t){
+	float temp = sinf(params.sigma * (x - params.worldOrigin.x) - params.frequency * t);  
+	if(temp > 0.0f)
+		return temp;
+	return 0.0f;
+}
+
+__device__ float getBoundaryVelocity(float x, float t){		
+	return  params.frequency * params.amplitude 
+		* cosf(params.sigma * (x - params.worldOrigin.x) - params.frequency * t);  
+}
+
+
+
+
+__global__ void setBoundaryWaveD(
+	float4* posArray,
+	float currentWaveHeight,
+	uint numParticles){
+		uint index = __umul24(blockIdx.x,blockDim.x) + threadIdx.x;
+		if (index >= numParticles) return;  
+
+		volatile float4 posData = posArray[index]; 	
+
+		if(posData.w > 0.0f){//bottom						
+			posArray[index] = make_float4(
+				posData.x,
+				params.amplitude + 
+				currentWaveHeight * getBoundaryCurve(posData.x, 0) 			
+				+ params.worldOrigin.y + params.particleRadius * (posData.w - 1.0f),
+				posData.z,
+				posData.w);									
+		}
+		if(posData.w < 0.0f){
+			posArray[index] = make_float4(
+				posData.x,
+				params.boundaryOffset * 2 * params.particleRadius +
+				params.fluidParticlesSize.y * 2.0f * params.particleRadius +
+				params.amplitude - 
+				currentWaveHeight * getBoundaryCurve(posData.x, 0)				  
+				+ params.worldOrigin.y + params.particleRadius * (-posData.w - 1.0f),
+				posData.z,
+				posData.w);
+		}
 }
 
 __device__ float3 sumNavierStokesForces(
@@ -218,7 +332,8 @@ __device__ float3 sumNavierStokesForces(
 	float pressure,				   
 	float4* oldMeasures,
 	uint*   cellStart,
-	uint*   cellEnd){
+	uint*   cellEnd,
+	float elapsedTime){
 		uint gridHash = calcGridHash(gridPos);
 		uint startIndex = FETCH(cellStart, gridHash);
 	    
@@ -249,7 +364,7 @@ __device__ float3 sumNavierStokesForces(
 
 					float coeff = 7.0f / 2 / CUDART_PI_F / powf(params.smoothingRadius, 3);
 					float temp = 0.0f;
-					float4 Vab = getVelocityDiff(vel, pos, vel2, pos2);
+					float4 Vab = getVelocityDiff(vel, pos, vel2, pos2, elapsedTime);
 					if(q < 2){
 						temp = coeff * (-powf(1 - 0.5f * q,3) * (2 * q + 1) +powf(1 - 0.5f * q, 4));
 						tmpForce += -1.0f * params.particleMass *
@@ -272,7 +387,8 @@ __global__ void calculatePoiseuilleAccelerationD(
 	uint* gridParticleIndex,
 	uint* cellStart,
 	uint* cellEnd,
-	uint numParticles){
+	uint numParticles,
+	float elapsedTime){
 		uint index = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
 		if (index >= numParticles) return;    
 
@@ -289,7 +405,8 @@ __global__ void calculatePoiseuilleAccelerationD(
 			for(int y=-params.cellcount; y<=params.cellcount; y++) {
 				for(int x=-params.cellcount; x<=params.cellcount; x++) {
 					int3 neighbourPos = gridPos + make_int3(x, y, z);
-					force += sumNavierStokesForces(neighbourPos, 
+					force += sumNavierStokesForces(
+						neighbourPos, 
 						index, 
 						pos, 
 						oldPos,
@@ -299,7 +416,8 @@ __global__ void calculatePoiseuilleAccelerationD(
 						pressure,					
 						oldMeasures,
 						cellStart, 
-						cellEnd);
+						cellEnd,
+						elapsedTime);
 				}
 			}
 		}
@@ -308,18 +426,21 @@ __global__ void calculatePoiseuilleAccelerationD(
 		acceleration[originalIndex] = make_float4(acc, 0.0f);
 }
 
+
+
+
+
 __global__ void integratePoiseuilleSystemD(
 	float4* posArray,		 // input, output
 	float4* velArray,		 // input, output  
 	float4* velLeapFrogArray, // output
 	float4* acceleration,	 // input
-	uint numParticles){
+	uint numParticles,
+	float elapsedTime){
 		uint index = __umul24(blockIdx.x,blockDim.x) + threadIdx.x;
-		if (index >= numParticles) return;          
+		if (index >= numParticles) return;     		
 
-		volatile float4 posData = posArray[index]; 
-		if(posData.w == 1.0f) return;//skip boundary particle
-
+		volatile float4 posData = posArray[index]; 	
 		volatile float4 velData = velArray[index];
 		volatile float4 accData = acceleration[index];
 		volatile float4 velLeapFrogData = velLeapFrogArray[index];
@@ -327,8 +448,40 @@ __global__ void integratePoiseuilleSystemD(
 		float3 pos = make_float3(posData.x, posData.y, posData.z);
 		float3 vel = make_float3(velData.x, velData.y, velData.z);
 		float3 acc = make_float3(accData.x, accData.y, accData.z);
-		
-		float3 nextVel = vel + (params.gravity + acc) * params.deltaTime;						
+		/*
+		if(posData.w !=0.0f)
+			return;	*/
+		if((posData.w !=0.0f) && (params.IsBoundaryMotion == false))
+			return;		
+
+		if(posData.w > 0.0f)//bottom
+		{
+			posArray[index] = make_float4(pos.x,
+				params.amplitude + 
+				params.amplitude * getBoundaryCurve(pos.x, elapsedTime) 
+				+ params.worldOrigin.y + params.particleRadius * (posData.w - 1.0f),
+				pos.z,
+				posData.w);
+					
+			//velLeapFrogArray[index] = make_float4(vel.x, getBoundaryVelocity(pos.x, elapsedTime), 0,0);			
+			return;
+		}				
+
+		if(posData.w < 0.0f)//top
+		{
+			posArray[index] = make_float4(pos.x,
+				params.boundaryOffset * 2 * params.particleRadius +
+				params.fluidParticlesSize.y * 2.0f * params.particleRadius +
+				params.amplitude - 
+				params.amplitude * getBoundaryCurve(pos.x, elapsedTime) 
+				+ params.worldOrigin.y + params.particleRadius * (-posData.w - 1.0f),
+				pos.z,
+				posData.w);		
+			return;
+		}
+
+
+		float3 nextVel = vel + (params.gravity + acc) * params.deltaTime;
 
 		float3 velLeapFrog = vel + nextVel;
 		velLeapFrog *= 0.5f;
@@ -340,6 +493,10 @@ __global__ void integratePoiseuilleSystemD(
 
 		if(pos.x > halfWorldXSize){
 			pos.x -= 2 * halfWorldXSize;
+		}
+
+		if(pos.x < -halfWorldXSize){
+			pos.x += 2 * halfWorldXSize;
 		}
 		  
 		posArray[index] = make_float4(pos, posData.w);

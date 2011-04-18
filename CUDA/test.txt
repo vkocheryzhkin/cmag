@@ -1,0 +1,108 @@
+float A = params.amplitude;
+	float B = params.boundaryOffset * 2 * params.particleRadius;
+	float W = params.worldOrigin.x;
+
+	//if(jPosition.w > 0.0f){//bottom		
+	//	Funcd fx;
+	//	fx.x0 = iPosition.x;
+	//	fx.y0 = iPosition.y;
+	//	fx.t = elapsedTime;
+	//	float xA = rtnewt(fx, params.worldOrigin.x, -params.worldOrigin.x, params.particleRadius / 100);		
+	//	float yA = W + B + A - A * sinf(-params.sigma * (xA - W) + params.frequency * elapsedTime);
+	//	float distA = sqrtf(powf(iPosition.x - xA,2) + powf(iPosition.y - yA,2));	
+	//	float k = A * cosf(-params.sigma * (xA - W) + params.frequency * elapsedTime) * params.sigma;
+
+	//	float AA = -k;
+	//	float BB = 1;
+	//	float CC = k * xA - yA;
+	//	float distB = abs(AA* jPosition.x + BB * jPosition.y + CC) / sqrt(AA * AA + 1);
+
+	//	float beta = fmin(100.5f, 1 + distB / distA);
+	//	return beta * (iVelocity);
+	//}
+
+	return iVelocity - jVelocity;
+
+__device__ struct Funcd {	
+	float x0, y0, t;
+
+	__device__ float operator() (const float x) {
+		float A = params.amplitude;
+		float B = params.boundaryOffset * 2 * params.particleRadius;
+		float W = params.worldOrigin.x;
+
+		return x0 - x + (y0 - W - B - A + A * sinf(-params.sigma * (x - W) + params.frequency * t)) *
+			A * cosf(-params.sigma * (x - W) + params.frequency * t) * params.sigma;						
+	}
+	__device__ float df(const float x) {
+		float A = params.amplitude;
+		float B = params.boundaryOffset * 2 * params.particleRadius;
+		float W = params.worldOrigin.x;
+
+		return -1 - powf(A * cosf(-params.sigma * (x - W) + params.frequency * t) * params.sigma,2) +
+			(y0 - W - B - A + A * sinf(-params.sigma * (x - W) + params.frequency * t)) *
+			A * sinf(-params.sigma * (x - W) + params.sigma * t) * powf(params.sigma, 2);
+	}
+};
+
+template <class T>
+__device__ float rtnewt(T &funcd, const float x1, const float x2, const float xacc) {
+	const int JMAX=20;
+	float rtn=0.5*(x1+x2);
+	for (int j=0;j<JMAX;j++) {
+		float f=funcd(rtn);
+		float df=funcd.df(rtn);
+		float dx=f/df;
+		rtn -= dx;
+		if ((x1-rtn)*(rtn-x2) < 0.0)
+			return -1;//throw("Jumped out of brackets in rtnewt");
+		if (abs(dx) < xacc) return rtn;
+	}
+	return -1;//throw("Maximum number of iterations exceeded in rtnewt");
+}
+
+__device__ float getBoundaryCurve(float x, float t){
+	float temp = sinf(params.sigma * (x - params.worldOrigin.x) - params.frequency * t);  
+	if(temp > 0.0f)
+		return temp;
+	return 0.0f;
+}
+
+__device__ float getBoundaryVelocity(float x, float t){		
+	return  params.frequency * params.amplitude 
+		* cosf(params.sigma * (x - params.worldOrigin.x) - params.frequency * t);  
+}
+
+
+
+
+__global__ void setBoundaryWaveD(
+	float4* posArray,
+	float currentWaveHeight,
+	uint numParticles){
+		uint index = __umul24(blockIdx.x,blockDim.x) + threadIdx.x;
+		if (index >= numParticles) return;  
+
+		volatile float4 posData = posArray[index]; 	
+
+		if(posData.w > 0.0f){//bottom						
+			posArray[index] = make_float4(
+				posData.x,
+				params.amplitude + 
+				currentWaveHeight * getBoundaryCurve(posData.x, 0) 			
+				+ params.worldOrigin.y + params.particleRadius * (posData.w - 1.0f),
+				posData.z,
+				posData.w);									
+		}
+		if(posData.w < 0.0f){
+			posArray[index] = make_float4(
+				posData.x,
+				params.boundaryOffset * 2 * params.particleRadius +
+				params.fluidParticlesSize.y * 2.0f * params.particleRadius +
+				params.amplitude - 
+				currentWaveHeight * getBoundaryCurve(posData.x, 0)				  
+				+ params.worldOrigin.y + params.particleRadius * (-posData.w - 1.0f),
+				posData.z,
+				posData.w);
+		}
+}

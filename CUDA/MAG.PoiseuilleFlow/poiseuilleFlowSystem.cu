@@ -12,12 +12,29 @@ extern "C"
 		cutilSafeCall( cudaMemcpyToSymbol(params, hostParams, sizeof(PoiseuilleParams)) );
 	}		
 
+	void ExtSetBoundaryWave(
+		float* pos,
+		float currentWaveHeight,
+		uint numParticles){
+			uint numThreads, numBlocks;
+			computeGridSize(numParticles, 256, numBlocks, numThreads);
+
+			setBoundaryWaveD<<< numBlocks, numThreads >>>(
+				(float4*)pos,
+				currentWaveHeight,
+				numParticles);
+		    
+			cutilCheckMsg("SetBoundaryWave kernel execution failed");
+	}
+
+
 	void integratePoiseuilleSystem(
 		float *pos,
 		float *vel,  
 		float* velLeapFrog,
 		float *acc,
-		uint numParticles){
+		uint numParticles,
+		float elapsedTime){
 			uint numThreads, numBlocks;
 			computeGridSize(numParticles, 256, numBlocks, numThreads);
 
@@ -26,7 +43,8 @@ extern "C"
 				(float4*)vel,
 				(float4*)velLeapFrog,
 				(float4*)acc,
-				numParticles);
+				numParticles,
+				elapsedTime);
 		    
 			cutilCheckMsg("integrate kernel execution failed");
 	}
@@ -135,6 +153,7 @@ extern "C"
 		uint* cellStart,
 		uint* cellEnd,
 		uint numParticles,
+		float elapsedTime,
 		uint numGridCells){
 			#if USE_TEX
 			cutilSafeCall(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(float4)));
@@ -155,7 +174,8 @@ extern "C"
 				gridParticleIndex,
 				cellStart,
 				cellEnd,
-				numParticles);
+				numParticles,
+				elapsedTime);
 
 			cutilCheckMsg("Kernel execution failed");
 

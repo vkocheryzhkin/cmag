@@ -177,6 +177,10 @@
 			RelativePath=".\SystemTest.cpp"
 			>
 		</File>
+		<File
+			RelativePath=".\VectorField.cpp"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>
