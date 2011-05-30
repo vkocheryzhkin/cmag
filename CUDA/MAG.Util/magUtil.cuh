@@ -4,6 +4,8 @@ typedef unsigned int uint;
 #ifndef CUDART_PI_F
 #define CUDART_PI_F         3.141592654f
 #endif
+
+
 extern "C"
 {	
 	void cudaInit(int argc, char **argv);

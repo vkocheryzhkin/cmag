@@ -24,16 +24,17 @@ public:
 	enum ParticleArray
 	{
 		POSITION,
+		PREDICTEDPOSITION,
 		VELOCITY,		
 		MEASURES,
-		ACCELERATION,
+		VISCOUSFORCE,
+		PRESSUREFORCE,
 		VELOCITYLEAPFROG,
 	};
 
 	void update();
 	void reset();
 
-	float* getArray(ParticleArray array);
 	void   setArray(ParticleArray array, const float* data, int start, int count);
 
 	int getNumParticles() const { return numParticles; }
@@ -44,6 +45,8 @@ public:
 
 	unsigned int getCurrentReadBuffer() const { return posVbo; }
 	unsigned int getColorBuffer()       const { return colorVBO; }
+	void setBoundaryWave();
+	//void startBoundaryMotion();
 
 	void * getCudaPosVBO()              const { return (void *)cudaPosVBO; }
 	void * getCudaVelVBO()              const { return (void *)dVel; }
@@ -52,12 +55,11 @@ public:
 	void * getCudaIndex()				const {return (void *)dIndex;}	
 	void * getCudaSortedPosition()      const { return (void *)dSortedPos; }
 	void * getSortedVelocity()      const { return (void *)dSortedVel; }
-	void * getCudaMeasures()            const { return (void *)dMeasures; }    
-	void * getCudaAcceleration()        const {return (void *)dAcceleration;}	
-	void * getLeapFrogVelocity() const {return (void*) dVelLeapFrog;}
-
-	void setBoundaryWave();
-	void StartBoundaryMotion();
+	void * getMeasures()            const { return (void *)dMeasures; }    
+	void * getViscousForce()        const {return (void *)viscousForce;}	
+	void * getPressureForce()        const {return (void *)pressureForce;}		
+	void * getPredictedPos()        const {return (void *)predictedPosition;}	
+	void * getLeapFrogVelocity() const {return (void*) dVelLeapFrog;}	
 
 	float getParticleRadius() { return params.particleRadius; }
 	uint3 getGridSize() { return params.gridSize; }
@@ -70,7 +72,8 @@ protected: // methods
 	void _initialize(int numParticles);
 	void _finalize();
 
-	void initFluid( float spacing, float jitter, uint numParticles);
+	void initFluid(float spacing, float jitter, uint numParticles);
+	float CalculateMass(float* positions, uint3 gridSize);
 	void initBoundaryParticles(float spacing);
 
 protected: // data
@@ -79,22 +82,23 @@ protected: // data
 	float currentWaveHeight;
 	bool IsSetWaveBoundary;
 	float elapsedTime;
+	float epsDensity;
 
 	// CPU data
-	float* hPos;              // particle positions
-	float* hVel;              // particle velocities
-	float* hVelLeapFrog;
-	
+	float* hPos;              
+	float* hVel;              
 	float* hMeasures;
-	float* hAcceleration;	        
 
 	// GPU data
 	float* dPos;
+	float* predictedPosition;
+	float* predictedVelocity;
 	float* dVel;
 	float* dVelLeapFrog;
 	
 	float* dMeasures;
-	float* dAcceleration;	
+	float* viscousForce;	
+	float* pressureForce;
 
 	float* dSortedPos;
 	float* dSortedVel;

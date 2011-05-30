@@ -1,10 +1,7 @@
 #include "magUtil.cuh"
 #include "poiseuilleFlowSystem.h"
 #include "poiseuilleFlowSystem.cuh"
-#include "poiseuilleFlowKernel.cuh"
-
 #include <cutil_inline.h>
-
 #include <assert.h>
 #include <math.h>
 #include <memory.h>
@@ -12,7 +9,7 @@
 #include <cstdlib>
 #include <algorithm>
 #include <GL/glew.h>
-
+#include <stdio.h>
 
 PoiseuilleFlowSystem::PoiseuilleFlowSystem(
 	float deltaTime,
@@ -30,49 +27,55 @@ PoiseuilleFlowSystem::PoiseuilleFlowSystem(
 	IsOpenGL(bUseOpenGL),    	
 	hPos(0),
 	hVel(0),
-	hMeasures(0),	
+	hMeasures(0),
 	dPos(0),
 	dVel(0),
 	dMeasures(0),	
+	predictedPosition(0),
+	viscousForce(0),
+	pressureForce(0),
 	elapsedTime(0.0f){		
 		numParticles = fluidParticlesSize.x * fluidParticlesSize.y * fluidParticlesSize.z +			
 			2 * gridSize.x * boundaryOffset;
 		numGridCells = gridSize.x * gridSize.y * gridSize.z;
-		gridSortBits = 18;	//see radix sort for details
+		gridSortBits = 18;	
 		params.fluidParticlesSize = fluidParticlesSize;
 		params.gridSize = gridSize;	
 		params.boundaryOffset = boundaryOffset;
 		params.amplitude = amplitude;
 		params.frequency = frequency;
 		params.sigma = sigma;		
-		params.IsBoundaryMotion = false;
-		
-
+		params.IsBoundaryMotion = false;		
 		params.particleRadius = particleRadius;				
 		params.smoothingRadius = 3.0f * params.particleRadius;	
-		params.restDensity = 1000.0f;
-				
-		//see CalculateMassTest (shortly: i need to get density to be 1000, to do so I have to choose mass correctly)
-		//params.particleMass = 1000.0f / 3381320880.551724;
-		params.particleMass = 1000.0f / 3381362970.482759;
-		
-					
-		params.cellcount = 3;		
-	    			
+		params.restDensity = 1000.0f;				
+		//params.particleMass = 1000.0f / 3381298464.827586f;									
+		//params.particleMass = 0.0442170704422149f;
+		params.particleMass = 0.0f;
+		params.cellcount = 3;			    			
 		params.worldOrigin = make_float3(-getHalfWorldXSize(), -getHalfWorldYSize(), -getHalfWorldZSize());
 		float cellSize = params.particleRadius * 2.0f;  
-		params.cellSize = make_float3(cellSize, cellSize, cellSize);
-	    
-		params.boundaryDamping = -1.0f;
+		params.cellSize = make_float3(cellSize, cellSize, cellSize);	    		
 
+		params.worldSize = make_float3(
+			params.gridSize.x * 2.0f * params.particleRadius,
+			params.gridSize.y * 2.0f * params.particleRadius,
+			params.gridSize.z * 2.0f * params.particleRadius);	    
+
+		params.boundaryDamping = -1.0f;
 		params.gravity = gravity;
 		params.soundspeed = soundspeed;
-
 		params.mu = powf(10.0f, -3.0f);	
-
 		params.deltaTime = deltaTime;	
+
+	/*	params.gamma = 7.0f;
+		params.B = 200 * params.restDensity * abs(params.gravity.y) *		
+			(2 * params.particleRadius * fluidParticlesSize.y ) / params.gamma;	
+		params.soundspeed = sqrt(params.B * params.gamma / params.restDensity);*/
+
 		IsSetWaveBoundary = false;
 		currentWaveHeight = 0.0f;
+		epsDensity = 0.01f;
 		_initialize(numParticles);
 }
 
@@ -117,67 +120,54 @@ void PoiseuilleFlowSystem::_initialize(int numParticles){
 	assert(!IsInitialized);
 
 	numParticles = numParticles;
+	unsigned int memSize = sizeof(float) * 4 * numParticles;
 
 	hPos = new float[numParticles*4];
-	hVel = new float[numParticles*4];
-	hVelLeapFrog = new float[numParticles*4];		
+	hVel = new float[numParticles*4];	
 	hMeasures = new float[numParticles*4];
-	hAcceleration = new float[numParticles*4];
 	memset(hPos, 0, numParticles*4*sizeof(float));
 	memset(hVel, 0, numParticles*4*sizeof(float));
-	memset(hVelLeapFrog, 0, numParticles*4*sizeof(float));
-	memset(hAcceleration, 0, numParticles*4*sizeof(float));	
-	memset(hMeasures, 0, numParticles*4*sizeof(float)); 
-
-	for(uint i = 0; i < numParticles; i++) //todo: check density approximation
-		hMeasures[4*i+0] = params.restDensity;
-
-	unsigned int memSize = sizeof(float) * 4 * numParticles;
+	memset(hMeasures, 0, numParticles*4*sizeof(float));	
 
 	if (IsOpenGL) {
 		posVbo = createVBO(memSize);    
-	registerGLBufferObject(posVbo, &cuda_posvbo_resource);
-	} else {
-		cutilSafeCall( cudaMalloc( (void **)&cudaPosVBO, memSize )) ;
-	}
-
-	allocateArray((void**)&dVel, memSize);
-	allocateArray((void**)&dVelLeapFrog, memSize);
-	allocateArray((void**)&dAcceleration, memSize);
-	allocateArray((void**)&dMeasures, memSize);
-
-	allocateArray((void**)&dSortedPos, memSize);
-	allocateArray((void**)&dSortedVel, memSize);
-	
-	allocateArray((void**)&dHash, numParticles*sizeof(uint));
-	allocateArray((void**)&dIndex, numParticles*sizeof(uint));
-
-	allocateArray((void**)&dCellStart, numGridCells*sizeof(uint));
-	allocateArray((void**)&dCellEnd, numGridCells*sizeof(uint));
-
-	if (IsOpenGL) {
+		registerGLBufferObject(posVbo, &cuda_posvbo_resource);
 		colorVBO = createVBO(numParticles*4*sizeof(float));
-	registerGLBufferObject(colorVBO, &cuda_colorvbo_resource);
-
-		// fill color buffer
+		registerGLBufferObject(colorVBO, &cuda_colorvbo_resource);
+		
 		glBindBufferARB(GL_ARRAY_BUFFER, colorVBO);
 		float *data = (float *) glMapBufferARB(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
 		float *ptr = data;
 		uint fluidParticles = params.fluidParticlesSize.x * params.fluidParticlesSize.y * params.fluidParticlesSize.z;
-		for(uint i=0; i < numParticles; i++) {
-			float t = 0.7f;  
+		for(int i=0; i < numParticles; i++) {
+			float t = 0.5f;  
 			if(i < fluidParticles)
-				t = 0.5f;  
+				t = 0.7f;  
 			if(((i % params.gridSize.x) == 0) && i < fluidParticles)
-				t = 0.2f;    			
+				t = 0.1f;    			
 			colorRamp(t, ptr);
 			ptr+=3;
 			*ptr++ = 1.0f;
 		}
 		glUnmapBufferARB(GL_ARRAY_BUFFER);
 	} else {
+		cutilSafeCall( cudaMalloc( (void **)&cudaPosVBO, memSize ));
 		cutilSafeCall( cudaMalloc( (void **)&cudaColorVBO, sizeof(float)*numParticles*4) );
 	}
+
+	allocateArray((void**)&dVel, memSize);
+	allocateArray((void**)&dVelLeapFrog, memSize);
+	allocateArray((void**)&viscousForce, memSize);
+	allocateArray((void**)&pressureForce, memSize);
+	allocateArray((void**)&dMeasures, memSize);
+	allocateArray((void**)&predictedPosition, memSize);
+	allocateArray((void**)&predictedVelocity, memSize);	
+	allocateArray((void**)&dSortedPos, memSize);
+	allocateArray((void**)&dSortedVel, memSize);	
+	allocateArray((void**)&dHash, numParticles*sizeof(uint));
+	allocateArray((void**)&dIndex, numParticles*sizeof(uint));
+	allocateArray((void**)&dCellStart, numGridCells*sizeof(uint));
+	allocateArray((void**)&dCellEnd, numGridCells*sizeof(uint));	
 
 	CUDPPConfiguration sortConfig;
 	sortConfig.algorithm = CUDPP_SORT_RADIX;
@@ -187,7 +177,6 @@ void PoiseuilleFlowSystem::_initialize(int numParticles){
 	cudppPlan(&sortHandle, sortConfig, numParticles, 1, 0);    
 
 	setParameters(&params);
-
 	IsInitialized = true;
 }
 
@@ -195,18 +184,18 @@ void PoiseuilleFlowSystem::_finalize(){
 	assert(IsInitialized);
 
 	delete [] hPos;
-	delete [] hVel;
-	delete [] hVelLeapFrog;	
-	delete [] hMeasures;
-	delete [] hAcceleration;    
+	delete [] hVel;	
+	delete [] hMeasures;	
 
 	freeArray(dVel);
 	freeArray(dVelLeapFrog);	
 	freeArray(dMeasures);
-	freeArray(dAcceleration);
+	freeArray(viscousForce);
+	freeArray(pressureForce);
+	freeArray(predictedPosition);
+	freeArray(predictedVelocity);	
 	freeArray(dSortedPos);
 	freeArray(dSortedVel);
-
 	freeArray(dHash);
 	freeArray(dIndex);
 	freeArray(dCellStart);
@@ -222,119 +211,6 @@ void PoiseuilleFlowSystem::_finalize(){
 	}
 
 	cudppDestroyPlan(sortHandle);
-}
-
-void PoiseuilleFlowSystem::StartBoundaryMotion()
-{ 
-	params.IsBoundaryMotion = !params.IsBoundaryMotion;
-	setParameters(&params);  
-	update();
-	elapsedTime = 0.0f;
-}
-
-void PoiseuilleFlowSystem::setBoundaryWave()
-{ 
-	IsSetWaveBoundary = !IsSetWaveBoundary;
-	elapsedTime = 0.0f;
-}
-
-void PoiseuilleFlowSystem::update(){
-	assert(IsInitialized);
-
-	float *dPos;
-
-	if (IsOpenGL) 
-		dPos = (float *) mapGLBufferObject(&cuda_posvbo_resource);
-	else 
-		dPos = (float *) cudaPosVBO;   
-
-	if((IsSetWaveBoundary) && (currentWaveHeight < params.amplitude)){		
-		if(currentWaveHeight < params.amplitude){			
-			ExtSetBoundaryWave(dPos, currentWaveHeight, numParticles);
-			currentWaveHeight += params.deltaTime * params.soundspeed;
-		}
-		else{
-			IsSetWaveBoundary = !IsSetWaveBoundary;
-			elapsedTime = 0.0f;
-		}
-	}
-	
-	calculatePoiseuilleHash(dHash, dIndex, dPos, numParticles);
-
-	cudppSort(sortHandle, dHash, dIndex, gridSortBits, numParticles);
-
-	reorderPoiseuilleData(
-		dCellStart,
-		dCellEnd,
-		dSortedPos,		
-		dSortedVel,
-		dHash,
-		dIndex,
-		dPos,		
-		dVelLeapFrog,
-		numParticles,
-		numGridCells);
-	
-	calculatePoiseuilleDensity(		
-		dMeasures,
-		dSortedPos,	
-		dSortedVel,
-		dIndex,
-		dCellStart,
-		dCellEnd,
-		numParticles,
-		numGridCells);
-
-	calculatePoiseuilleAcceleration(
-		dAcceleration,
-		dMeasures,		
-		dSortedPos,			
-		dSortedVel,
-		dIndex,
-		dCellStart,
-		dCellEnd,
-		numParticles,
-		elapsedTime,
-		numGridCells);    
-
-	integratePoiseuilleSystem(
-		dPos,
-		dVel,	
-		dVelLeapFrog,
-		dAcceleration,
-		numParticles,
-		elapsedTime);
-	
-	if (IsOpenGL) {
-		unmapGLBufferObject(cuda_posvbo_resource);
-	}
-	elapsedTime+= params.deltaTime;
-}
-
-float* PoiseuilleFlowSystem::getArray(ParticleArray array){
-	assert(IsInitialized);
- 
-	float* hdata = 0;
-	float* ddata = 0;
-
-	unsigned int vbo = 0;
-
-	switch (array)
-	{
-	default:
-	case POSITION:
-		hdata = hPos;
-		ddata = dPos;
-		vbo = posVbo;
-		break;
-	case VELOCITY:
-		hdata = hVel;
-		ddata = dVel;
-		break;	
-	}
-
-	copyArrayFromDevice(hdata, ddata, vbo, numParticles*4*sizeof(float));
-	return hdata;
 }
 
 void PoiseuilleFlowSystem::setArray(ParticleArray array, const float* data, int start, int count){
@@ -363,12 +239,18 @@ void PoiseuilleFlowSystem::setArray(ParticleArray array, const float* data, int 
 	case MEASURES:
 		copyArrayToDevice(dMeasures, data, start*4*sizeof(float), count*4*sizeof(float));
 		break;
-	case ACCELERATION:		
-		copyArrayToDevice(dAcceleration, data, start*4*sizeof(float), count*4*sizeof(float));
+	case VISCOUSFORCE:		
+		copyArrayToDevice(viscousForce, data, start*4*sizeof(float), count*4*sizeof(float));
+		break;
+	case PRESSUREFORCE:		
+		copyArrayToDevice(pressureForce, data, start*4*sizeof(float), count*4*sizeof(float));
 		break;
 	case VELOCITYLEAPFROG:		
 		copyArrayToDevice(dVelLeapFrog, data, start*4*sizeof(float), count*4*sizeof(float));
-		break;		
+		break;	
+	case PREDICTEDPOSITION:		
+		copyArrayToDevice(predictedPosition, data, start*4*sizeof(float), count*4*sizeof(float));
+		break;	
 	}       
 }
 
@@ -377,19 +259,41 @@ inline float frand(){
 }
 
 void PoiseuilleFlowSystem::reset(){
-	elapsedTime = 0.0f;
+	elapsedTime = 0.0f;	
 	currentWaveHeight = 0.0f;
 	IsSetWaveBoundary = false;
 	float jitter = params.particleRadius * 0.01f;			            
 	float spacing = params.particleRadius * 2.0f;
 	initFluid(spacing, jitter, numParticles);
 	initBoundaryParticles(spacing);
-
-	setArray(POSITION, hPos, 0, numParticles);
+	memset(hMeasures, 0, numParticles*4*sizeof(float));	
+	setArray(POSITION, hPos, 0, numParticles);	
 	setArray(VELOCITY, hVel, 0, numParticles);	
 	setArray(MEASURES, hMeasures, 0, numParticles);
-	setArray(ACCELERATION, hAcceleration, 0, numParticles);
-	setArray(VELOCITYLEAPFROG, hVelLeapFrog, 0, numParticles);
+	setArray(VISCOUSFORCE, hMeasures, 0, numParticles);
+	setArray(PRESSUREFORCE, hMeasures, 0, numParticles);
+	setArray(VELOCITYLEAPFROG, hMeasures, 0, numParticles);
+	setArray(PREDICTEDPOSITION, hMeasures, 0, numParticles);
+
+	params.particleMass = params.restDensity / CalculateMass(hPos, params.gridSize);
+	setParameters(&params);
+}
+
+float PoiseuilleFlowSystem::CalculateMass(float* positions, uint3 gridSize){
+	float x = positions[(gridSize.x / 2) * 4 + 0];
+	float y = positions[(gridSize.x / 2) * 4 + 1];
+	float2 testPoint  = make_float2(x,y);
+	float sum = 0.0f;
+	for(int i = 0; i < numParticles; i++){		
+		float2 tempPoint = make_float2(positions[4 * i + 0], positions[4 * i + 1]);
+		float2 r = make_float2(testPoint.x - tempPoint.x, testPoint.y - tempPoint.y);
+		float dist = sqrt(r.x * r.x + r.y * r.y);
+		float q = dist / params.smoothingRadius;	
+		float coeff = 7.0f / 4 / CUDART_PI_F / powf(params.smoothingRadius, 2);
+		if(q < 2)
+			sum +=coeff *(powf(1 - 0.5f * q, 4) * (2 * q + 1));
+	}
+	return sum;
 }
 
 void PoiseuilleFlowSystem::initFluid( float spacing, float jitter, uint numParticles){
@@ -398,9 +302,9 @@ void PoiseuilleFlowSystem::initFluid( float spacing, float jitter, uint numParti
 	int ysize = params.fluidParticlesSize.y;
 	int zsize = params.fluidParticlesSize.z;
 	
-	for(uint z = 0; z < zsize; z++) {
-		for(uint y = 0; y < ysize; y++) {
-			for(uint x = 0; x < xsize; x++) {				
+	for(int z = 0; z < zsize; z++) {
+		for(int y = 0; y < ysize; y++) {
+			for(int x = 0; x < xsize; x++) {				
 				uint i = (z * ysize * xsize) + y * xsize + x;
 				if (i < numParticles) {
 					hPos[i*4] = (spacing * x) + params.particleRadius - getHalfWorldXSize();
@@ -466,3 +370,93 @@ void PoiseuilleFlowSystem::initBoundaryParticles(float spacing)
 	}
 }
 
+void PoiseuilleFlowSystem::setBoundaryWave()
+{ 
+	IsSetWaveBoundary = !IsSetWaveBoundary;
+	elapsedTime = 0.0f;
+}
+
+
+void PoiseuilleFlowSystem::update(){
+	assert(IsInitialized);
+
+	float *dPos;
+
+	if (IsOpenGL) 
+		dPos = (float *) mapGLBufferObject(&cuda_posvbo_resource);
+	else 
+		dPos = (float *) cudaPosVBO;   
+
+	/*if((IsSetWaveBoundary) && (currentWaveHeight < params.amplitude)){		
+		if(currentWaveHeight < params.amplitude){			
+			ExtSetBoundaryWave(dPos, currentWaveHeight, numParticles);
+			currentWaveHeight += params.deltaTime * params.soundspeed;
+		}
+		else{
+			IsSetWaveBoundary = !IsSetWaveBoundary;
+			elapsedTime = 0.0f;
+		}
+	}*/
+
+	calculatePoiseuilleHash(dHash, dIndex, dPos, numParticles);
+
+	cudppSort(sortHandle, dHash, dIndex, gridSortBits, numParticles);
+
+	reorderPoiseuilleData(
+		dCellStart,
+		dCellEnd,
+		dSortedPos,		
+		dSortedVel,
+		dHash,
+		dIndex,
+		dPos,		
+		dVelLeapFrog,
+		numParticles,
+		numGridCells);	
+
+	computeDensityVariation(		
+		dMeasures, //output
+		dMeasures, //input
+		dSortedPos, //input				
+		dIndex,
+		dCellStart,
+		dCellEnd,
+		numParticles,
+		numGridCells);
+
+	computeViscousForce(
+		viscousForce,//not sorted			
+		dMeasures, //input
+		dSortedPos,			
+		dSortedVel,
+		dIndex,
+		dCellStart,
+		dCellEnd,
+		numParticles,
+		elapsedTime,
+		numGridCells);    
+
+	computePressureForce(
+		pressureForce,//not sorted		
+		dMeasures, //input
+		dSortedPos, 
+		dIndex,
+		dCellStart,
+		dCellEnd,
+		numParticles,
+		elapsedTime,
+		numGridCells);
+
+	computeCoordinates(
+		dPos,
+		dVel,	
+		dVelLeapFrog,
+		viscousForce,
+		pressureForce,
+		numParticles);
+
+	if (IsOpenGL) {
+		unmapGLBufferObject(cuda_posvbo_resource);
+	}
+	elapsedTime+= params.deltaTime;
+}

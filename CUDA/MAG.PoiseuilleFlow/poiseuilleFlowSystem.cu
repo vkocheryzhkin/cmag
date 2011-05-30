@@ -5,12 +5,16 @@
 #include <GL/glut.h>
 #include <cuda_gl_interop.h>
 #include "poiseuilleFlowKernel.cu"
+#include "poiseuilleFlowDensity.cu"
+#include "poiseuilleFlowPressureForce.cu"
+#include "poiseuilleFlowViscousForce.cu"
+#include "poiseuilleFlowIntegrate.cu"
 #include "magUtil.cuh"
 extern "C"
 {	
 	void setParameters(PoiseuilleParams *hostParams){
 		cutilSafeCall( cudaMemcpyToSymbol(params, hostParams, sizeof(PoiseuilleParams)) );
-	}		
+	}	
 
 	void ExtSetBoundaryWave(
 		float* pos,
@@ -25,28 +29,6 @@ extern "C"
 				numParticles);
 		    
 			cutilCheckMsg("SetBoundaryWave kernel execution failed");
-	}
-
-
-	void integratePoiseuilleSystem(
-		float *pos,
-		float *vel,  
-		float* velLeapFrog,
-		float *acc,
-		uint numParticles,
-		float elapsedTime){
-			uint numThreads, numBlocks;
-			computeGridSize(numParticles, 256, numBlocks, numThreads);
-
-			integratePoiseuilleSystemD<<< numBlocks, numThreads >>>(
-				(float4*)pos,
-				(float4*)vel,
-				(float4*)velLeapFrog,
-				(float4*)acc,
-				numParticles,
-				elapsedTime);
-		    
-			cutilCheckMsg("integrate kernel execution failed");
 	}
 
 	void calculatePoiseuilleHash(
@@ -106,10 +88,10 @@ extern "C"
 			#endif
 	}
 
-	void calculatePoiseuilleDensity(			
+	void computeDensityVariation(			
 		float* measures,
-		float* sortedPos,	
-		float* sortedVel,
+		float* measuresInput,
+		float* sortedPos,			
 		uint* gridParticleIndex,
 		uint* cellStart,
 		uint* cellEnd,
@@ -117,7 +99,7 @@ extern "C"
 		uint numGridCells){
 			#if USE_TEX
 			cutilSafeCall(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(float4)));
-			cutilSafeCall(cudaBindTexture(0, oldVelTex, sortedVel, numParticles*sizeof(float4)));
+			cutilSafeCall(cudaBindTexture(0, oldMeasuresTex, measuresInput, numParticles*sizeof(float4)));			
 			cutilSafeCall(cudaBindTexture(0, cellStartTex, cellStart, numGridCells*sizeof(uint)));
 			cutilSafeCall(cudaBindTexture(0, cellEndTex, cellEnd, numGridCells*sizeof(uint)));    
 			#endif
@@ -125,10 +107,10 @@ extern "C"
 			uint numThreads, numBlocks;
 			computeGridSize(numParticles, 64, numBlocks, numThreads);
 
-			calculatePoiseuilleDensityD<<< numBlocks, numThreads >>>(										  
+			computeDensityVariationD<<< numBlocks, numThreads >>>(										  
 				(float4*)measures,
+				(float4*)measuresInput,
 				(float4*)sortedPos,  
-				(float4*)sortedVel,
 				gridParticleIndex,
 				cellStart,
 				cellEnd,
@@ -138,15 +120,15 @@ extern "C"
 
 			#if USE_TEX
 			cutilSafeCall(cudaUnbindTexture(oldPosTex));
-			cutilSafeCall(cudaUnbindTexture(oldVelTex));
+				cutilSafeCall(cudaUnbindTexture(oldMeasuresTex));	
 			cutilSafeCall(cudaUnbindTexture(cellStartTex));
 			cutilSafeCall(cudaUnbindTexture(cellEndTex));
 			#endif
 	}
 
-	void calculatePoiseuilleAcceleration(
-		float* acceleration,
-		float* sortedMeasures,			
+	void computeViscousForce(
+		float* viscousForce,
+		float* sortedMeasures,
 		float* sortedPos,			
 		float* sortedVel,
 		uint* gridParticleIndex,
@@ -157,7 +139,7 @@ extern "C"
 		uint numGridCells){
 			#if USE_TEX
 			cutilSafeCall(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(float4)));
-			cutilSafeCall(cudaBindTexture(0, oldVelTex, sortedVel, numParticles*sizeof(float4)));
+			cutilSafeCall(cudaBindTexture(0, oldVelTex, sortedVel, numParticles*sizeof(float4)));		
 			cutilSafeCall(cudaBindTexture(0, oldMeasuresTex, sortedMeasures, numParticles*sizeof(float4)));
 			cutilSafeCall(cudaBindTexture(0, cellStartTex, cellStart, numGridCells*sizeof(uint)));
 			cutilSafeCall(cudaBindTexture(0, cellEndTex, cellEnd, numGridCells*sizeof(uint)));    
@@ -166,9 +148,9 @@ extern "C"
 			uint numThreads, numBlocks;
 			computeGridSize(numParticles, 64, numBlocks, numThreads);
 
-			calculatePoiseuilleAccelerationD<<< numBlocks, numThreads >>>(
-				(float4*)acceleration,
-				(float4*)sortedMeasures,										  
+			computeViscousForceD<<< numBlocks, numThreads >>>(
+				(float4*)viscousForce,
+				(float4*)sortedMeasures,		
 				(float4*)sortedPos,                                          
 				(float4*)sortedVel, 
 				gridParticleIndex,
@@ -181,11 +163,96 @@ extern "C"
 
 			#if USE_TEX
 			cutilSafeCall(cudaUnbindTexture(oldPosTex));
-			cutilSafeCall(cudaUnbindTexture(oldVelTex));
+			cutilSafeCall(cudaUnbindTexture(oldVelTex));	
 			cutilSafeCall(cudaUnbindTexture(oldMeasuresTex));
 			cutilSafeCall(cudaUnbindTexture(cellStartTex));
 			cutilSafeCall(cudaUnbindTexture(cellEndTex));
 			#endif
 	}
+
+	void computePressureForce(
+		float* pressureForce,		
+		float* sortedMeasures,
+		float* sortedPos,					
+		uint* gridParticleIndex,
+		uint* cellStart,
+		uint* cellEnd,
+		uint numParticles,
+		float elapsedTime,
+		uint numGridCells){
+			#if USE_TEX
+			cutilSafeCall(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(float4)));
+			cutilSafeCall(cudaBindTexture(0, oldMeasuresTex, sortedMeasures, numParticles*sizeof(float4)));			
+			cutilSafeCall(cudaBindTexture(0, cellStartTex, cellStart, numGridCells*sizeof(uint)));
+			cutilSafeCall(cudaBindTexture(0, cellEndTex, cellEnd, numGridCells*sizeof(uint)));    
+			#endif
+
+			uint numThreads, numBlocks;
+			computeGridSize(numParticles, 64, numBlocks, numThreads);
+
+			computePressureForceD<<< numBlocks, numThreads >>>(
+				(float4*)pressureForce,
+				(float4*)sortedMeasures,										  
+				(float4*)sortedPos,				
+				gridParticleIndex,
+				cellStart,
+				cellEnd,
+				numParticles,
+				elapsedTime);
+
+			cutilCheckMsg("Kernel execution failed");
+
+			#if USE_TEX
+			cutilSafeCall(cudaUnbindTexture(oldPosTex));
+			cutilSafeCall(cudaUnbindTexture(oldMeasuresTex));			
+			cutilSafeCall(cudaUnbindTexture(cellStartTex));
+			cutilSafeCall(cudaUnbindTexture(cellEndTex));
+			#endif
+	}
+
+	void predictCoordinates(
+		float* predictedPosition,
+		float* predictedVelocity,
+		float* pos,
+		float* vel,  
+		float* viscousForce,
+		float* pressureForce,
+		uint numParticles){
+			uint numThreads, numBlocks;
+			computeGridSize(numParticles, 256, numBlocks, numThreads);
+
+			predictCoordinatesD<<< numBlocks, numThreads >>>(
+				(float4*)predictedPosition,
+				(float4*)predictedVelocity,
+				(float4*)pos,
+				(float4*)vel,
+				(float4*)viscousForce,
+				(float4*)pressureForce,
+				numParticles);
+		    
+			cutilCheckMsg("predictCoordinates kernel execution failed");
+	}
+	
+	void computeCoordinates(
+		float* pos,
+		float* vel,  
+		float* velLeapFrog,
+		float* viscousForce,
+		float* pressureForce,
+		uint numParticles){
+			uint numThreads, numBlocks;
+			computeGridSize(numParticles, 256, numBlocks, numThreads);
+
+			computeCoordinatesD<<< numBlocks, numThreads >>>(
+				(float4*)pos,
+				(float4*)vel,
+				(float4*)velLeapFrog,
+				(float4*)viscousForce,
+				(float4*)pressureForce,
+				numParticles);
+		    
+			cutilCheckMsg("computeCoordinates kernel execution failed");
+	}
+
 }// extern "C"
 

@@ -201,9 +201,9 @@ void key(unsigned char key, int , int)
 	case '1':
 		psystem->reset();
 		break;
-	case '2':
-		psystem->StartBoundaryMotion();
-		break;
+	/*case '2':
+		psystem->startBoundaryMotion();
+		break;*/
 	case '3':
 		psystem->setBoundaryWave();
 		break;
@@ -230,27 +230,29 @@ void mainMenu(int i)
 
 void SystemInit()
 {		
-		int boundaryOffset = 3;
-		int sizex = 64;
-		//float soundspeed = powf(10.0f, -1.0f);
-		float soundspeed = powf(10.0f, -4.0f);
-		float3 gravity = make_float3(powf(10.0f, -4.0f), 0.0f, 0.0f); 
-		//float3 gravity = make_float3(0.0f, 0.0f, 0.0f); 		
-		float radius = 1.0f / (2 * (sizex - 2 * boundaryOffset) * 1000);
-		uint3 gridSize = make_uint3(sizex, 64, 4);   
-		uint3 fluidParticlesSize = make_uint3(gridSize.x, gridSize.y -  2 * boundaryOffset, 1);
-		float amplitude = 10 * radius;
+		int boundaryOffset = 3;		
+		uint3 gridSize = make_uint3(64, 64, 4);   
+		uint3 fluidParticlesSize = make_uint3(64, 64 -  2 * boundaryOffset, 1);
+		float soundspeed = powf(10.0f, -4.0f);														
+		
+		float radius = 1.0f / (2 * (64 - 6) * 1000);						
+		//float3 gravity = make_float3(10 * pow(10.0, -4),0,0);		
+		float3 gravity = make_float3(0,0,0);		
+		
+		/*uint3 gridSize = make_uint3(8, 16, 4);   
+		uint3 fluidParticlesSize = make_uint3(8, 16 -  2 * boundaryOffset, 1);*/
+
+		/*float amplitude =6 * radius;
 		float sigma = (sizex / 32) * CUDART_PI_F / ((fluidParticlesSize.x - 1) * 2 * radius);		
-		float frequency = soundspeed * sigma / (sizex / 64);
+		float frequency = soundspeed * sigma;*/
 		float delaTime = powf(10.0f, -4.0f);
-		//float delaTime =  1.0f / 4 * 3.0f * radius / soundspeed;		
 		psystem = new PoiseuilleFlowSystem(
 				delaTime,
 				fluidParticlesSize,
-				//0,0,0,
-				amplitude,
+				0,0,0,
+				/*amplitude,
 				sigma,
-				frequency,
+				frequency,*/
 				soundspeed,
 				gravity,
 				boundaryOffset, 
@@ -271,6 +273,7 @@ int main(int argc, char** argv)
 {
 	initGL(argc, argv);
 	cudaGLInit(argc, argv);
+
 
 	SystemInit();
 

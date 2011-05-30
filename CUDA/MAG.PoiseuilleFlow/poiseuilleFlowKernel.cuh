@@ -17,6 +17,7 @@ struct PoiseuilleParams {
 	uint3 gridSize;
 	float3 worldOrigin;
 	float3 cellSize;
+	float3 worldSize;
 	uint3 fluidParticlesSize;
 	int cellcount; //how many neigbours cells to look at
 
@@ -36,5 +37,9 @@ struct PoiseuilleParams {
 	float frequency;
 	float sigma;
 	bool IsBoundaryMotion;	
+
+
+	float B;
+	float gamma;
 };
 #endif//__POISEUILLEFLOW_KERNEL_CUH__

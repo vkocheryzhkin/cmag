@@ -9,15 +9,7 @@ extern "C"
 		float* pos,
 		float currentWaveHeight,
 		uint nemParticles);
-
-	void integratePoiseuilleSystem(
-		float* pos,
-		float* vel,  
-		float* velLeapFrog,
-		float* acc,
-		uint numParticles,
-		float elapsedTime);
-
+	
 	void calculatePoiseuilleHash(
 		uint*  gridParticleHash,
 		uint*  gridParticleIndex,
@@ -34,20 +26,20 @@ extern "C"
 		float* oldPos,
 		float* oldVel,
 		uint   numParticles,
-		uint   numCells);
+		uint   numGridCells);
 
-	void calculatePoiseuilleDensity(			
+	void computeDensityVariation(			
 		float* measures,
-		float* sortedPos,
-		float* sortedVel,
+		float* measuresInput,
+		float* sortedPos,		
 		uint* gridParticleIndex,
 		uint* cellStart,
 		uint* cellEnd,
 		uint numParticles,
 		uint numGridCells);
 
-	void calculatePoiseuilleAcceleration(	
-		float* acceleration,			
+	void computeViscousForce(	
+		float* viscousForce,					
 		float* measures,
 		float* sortedPos,			
 		float* sortedVel,
@@ -56,6 +48,34 @@ extern "C"
 		uint* cellEnd,
 		uint numParticles,
 		float elapsedTime,
-		uint numGridCells);
+		uint numGridCells);	
+
+	void computePressureForce(	
+		float* pressureForce,					
+		float* measures,
+		float* sortedPos,					
+		uint* gridParticleIndex,
+		uint* cellStart,
+		uint* cellEnd,
+		uint numParticles,
+		float elapsedTime,
+		uint numGridCells);	
+
+	void predictCoordinates(
+		float* predictedPosition,
+		float* predictedVelocity,
+		float* pos,
+		float* vel,  
+		float* viscousForce,
+		float* pressureForce,
+		uint numParticles);
+
+	void computeCoordinates(
+		float* pos,
+		float* vel,  
+		float* velLeapFrog,
+		float* viscousForce,
+		float* pressureForce,
+		uint numParticles);
 }//extern "C"
 #endif
