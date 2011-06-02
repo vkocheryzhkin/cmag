@@ -1,4 +1,4 @@
-- clone it inside C:\ProgramData\NVIDIA Corporation\NVIDIA GPU Computing SDK 3.2
+- clone it inside C:\ProgramData\NVIDIA Corporation\NVIDIA GPU Computing SDK 4.0
 
 Poiseuille Moving Boundaries
 

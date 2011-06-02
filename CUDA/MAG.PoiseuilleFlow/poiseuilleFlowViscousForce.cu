@@ -8,7 +8,7 @@ __device__ float4 getVelocityDiff(
 	float4 jPosition,
 	float elapsedTime)
 {		
-	/*float bottomBoundary = params.worldOrigin.y + params.boundaryOffset * 2.0f * params.particleRadius + params.amplitude;	
+	float bottomBoundary = params.worldOrigin.y + params.boundaryOffset * 2.0f * params.particleRadius + params.amplitude;	
 	float topBoundary = bottomBoundary + params.fluidParticlesSize.y * 2.0f * params.particleRadius ;		
 	if(jPosition.w < 0.0f)
 	{
@@ -24,7 +24,7 @@ __device__ float4 getVelocityDiff(
 		float distanceB = bottomBoundary - jPosition.y;
 		float beta = fmin(1000.0f, 1 + distanceB / distanceA);
 		return beta * iVelocity;
-	}*/
+	}
 	return iVelocity - jVelocity;	
 }
 

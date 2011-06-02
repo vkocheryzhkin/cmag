@@ -33,8 +33,12 @@
 			/>
 			<Tool
 				Name="Cudart Build Rule"
-				Include="$(NVSDKCOMPUTE_ROOT)\C\common\inc;..\MAG.Util"
+				Include="$(NVSDKCOMPUTE_ROOT)\C\common\inc;$(NVSDKCOMPUTE_ROOT)\shared\inc;..\MAG.Util"
 				AddedDependencies=""
+				Arch1="20"
+				Arch2="0"
+				Optimization="0"
+				Runtime="1"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -173,6 +177,8 @@
 				<Tool
 					Name="Cudart Build Rule"
 					AddedDependencies="poiseuilleFlowKernel.cu; poiseuilleFlowDensity.cu; poiseuilleFlowPressureForce.cu; poiseulleFlowUtil.cu; poiseuilleFlowSystem.cuh; poiseuilleFlowViscousForce.cu;poiseuilleFlowIntegrate.cu;"
+					Optimization="0"
+					Runtime="1"
 				/>
 			</FileConfiguration>
 		</File>

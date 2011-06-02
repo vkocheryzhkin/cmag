@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="windows-1251"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9,00"
+	Version="9.00"
 	Name="MAG.Util"
 	ProjectGUID="{645E4439-91F2-4F56-8445-9F8071620200}"
 	RootNamespace="MAGUtil"
@@ -33,8 +33,11 @@
 			/>
 			<Tool
 				Name="Cudart Build Rule"
-				Include="$(NVSDKCOMPUTE_ROOT)\C\common\inc"
+				Include="$(NVSDKCOMPUTE_ROOT)\C\common\inc;$(NVSDKCOMPUTE_ROOT)\shared\inc"
+				Arch1="20"
 				Arch2="0"
+				Optimization="0"
+				Runtime="1"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"

@@ -3,7 +3,6 @@
 
 #include "poiseuilleFlowKernel.cuh"
 #include "vector_functions.h"
-#include "cudpp/cudpp.h"
 class PoiseuilleFlowSystem
 {
 public:
@@ -65,18 +64,18 @@ public:
 	uint3 getGridSize() { return params.gridSize; }
 	float3 getWorldOrigin() { return params.worldOrigin; }
 	float3 getCellSize() { return params.cellSize; }
-protected: // methods
+protected:
 	PoiseuilleFlowSystem() {}
 	uint createVBO(uint size);
 
-	void _initialize(int numParticles);
+	void _initialize(uint numParticles);
 	void _finalize();
 
 	void initFluid(float spacing, float jitter, uint numParticles);
 	float CalculateMass(float* positions, uint3 gridSize);
 	void initBoundaryParticles(float spacing);
 
-protected: // data
+protected:
 	bool IsInitialized, IsOpenGL;
 	uint numParticles;
 	float currentWaveHeight;
@@ -102,12 +101,11 @@ protected: // data
 
 	float* dSortedPos;
 	float* dSortedVel;
-
-	// grid data for sorting method
-	uint*  dHash; // grid hash value for each particle
-	uint*  dIndex;// particle index for each particle
-	uint*  dCellStart;        // index of start of each cell in sorted list
-	uint*  dCellEnd;          // index of end of cell
+	
+	uint*  dHash; 
+	uint*  dIndex;
+	uint*  dCellStart;
+	uint*  dCellEnd; 
 
 	uint   gridSortBits;
 
@@ -118,13 +116,9 @@ protected: // data
 	float *cudaColorVBO;      // these are the CUDA deviceMem Color
 
 	struct cudaGraphicsResource *cuda_posvbo_resource; // handles OpenGL-CUDA exchange
-	struct cudaGraphicsResource *cuda_colorvbo_resource; // handles OpenGL-CUDA exchange
-
-	CUDPPHandle sortHandle;
-
-	// params
-	PoiseuilleParams params;
-	//uint3 gridSize;
+	struct cudaGraphicsResource *cuda_colorvbo_resource; // handles OpenGL-CUDA exchange	
+	
+	PoiseuilleParams params;	
 	uint numGridCells;    
 };
 #endif //__POISEUILLE_FLOW_SYSTEM_H__

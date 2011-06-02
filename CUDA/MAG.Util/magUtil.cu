@@ -1,5 +1,5 @@
 #include <cutil_inline.h>
-#include <GL/glut.h>
+#include <GL/freeglut.h>
 #include <cuda_gl_interop.h>
 typedef unsigned int uint;
 

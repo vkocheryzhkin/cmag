@@ -2,8 +2,14 @@
 #include <cstdlib>
 #include <cstdio>
 #include <string.h>
-#include <GL/glut.h>
+#include <GL/freeglut.h>
 #include <cuda_gl_interop.h>
+
+#include "thrust/device_ptr.h"
+#include "thrust/for_each.h"
+#include "thrust/iterator/zip_iterator.h"
+#include "thrust/sort.h"
+
 #include "poiseuilleFlowKernel.cu"
 #include "poiseuilleFlowDensity.cu"
 #include "poiseuilleFlowPressureForce.cu"
@@ -46,6 +52,14 @@ extern "C"
 				numParticles);
 		    
 			cutilCheckMsg("Kernel execution failed: calculatePoiseuilleHashD");
+	}
+
+	
+	void sortParticles(uint *dHash, uint *dIndex, uint numParticles)
+	{
+		thrust::sort_by_key(thrust::device_ptr<uint>(dHash),
+							thrust::device_ptr<uint>(dHash + numParticles),
+							thrust::device_ptr<uint>(dIndex));
 	}
 
 	void reorderPoiseuilleData(
@@ -120,7 +134,7 @@ extern "C"
 
 			#if USE_TEX
 			cutilSafeCall(cudaUnbindTexture(oldPosTex));
-				cutilSafeCall(cudaUnbindTexture(oldMeasuresTex));	
+			cutilSafeCall(cudaUnbindTexture(oldMeasuresTex));	
 			cutilSafeCall(cudaUnbindTexture(cellStartTex));
 			cutilSafeCall(cudaUnbindTexture(cellEndTex));
 			#endif

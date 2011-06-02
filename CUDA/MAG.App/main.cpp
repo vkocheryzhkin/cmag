@@ -3,7 +3,7 @@
 #include <GL/wglew.h>
 #endif
 
-#include <GL/glut.h>
+#include <GL/freeglut.h>
 #include <cutil_inline.h>
 #include <cutil_gl_inline.h>
 #include <cuda_gl_interop.h>
@@ -14,14 +14,14 @@
 #define MAX(a,b) ((a > b) ? a : b)
 
 //float camera_trans[] = {0.0, 0.0, -6.0};
-float camera_trans[] = {0.0, 0.0, -0.0014};
+float camera_trans[] = {0.0f, 0.0f, -0.0014f};
 PoiseuilleFlowSystem *psystem = 0;
 
 
 float camera_rot[]   = {0, 0, 0};
 float camera_trans_lag[] = {0, 0, 0};
 float camera_rot_lag[] = {0, 0, 0};
-const float inertia = 0.1;
+const float inertia = 0.1f;
 
 const int width = 1280, height = 1024;
 int ox, oy;
@@ -168,18 +168,18 @@ void mouse(int button, int state, int x, int y)
 void motion(int x, int y)
 {
 	float dx, dy;
-	dx = x - ox;
-	dy = y - oy;
+	dx = (float)x - ox;
+	dy = (float)y - oy;
 	if (buttonState == 3) {
-		camera_trans[2] += (dy / 100.0) * 0.5 * fabs(camera_trans[2]);
+		camera_trans[2] += (dy / 100.0f) * 0.5f * fabs(camera_trans[2]);
 	} 
 	else if (buttonState & 2) {
-		camera_trans[0] += dx / 100.0;
-		camera_trans[1] -= dy / 100.0;
+		camera_trans[0] += dx / 100.0f;
+		camera_trans[1] -= dy / 100.0f;
 	}
 	else if (buttonState & 1) {
-		camera_rot[0] += dy / 5.0;
-		camera_rot[1] += dx / 5.0;
+		camera_rot[0] += dy / 5.0f;
+		camera_rot[1] += dx / 5.0f;
 	}       
 	ox = x; oy = y;
 
@@ -236,8 +236,8 @@ void SystemInit()
 		float soundspeed = powf(10.0f, -4.0f);														
 		
 		float radius = 1.0f / (2 * (64 - 6) * 1000);						
-		//float3 gravity = make_float3(10 * pow(10.0, -4),0,0);		
-		float3 gravity = make_float3(0,0,0);		
+		float3 gravity = make_float3(10 * powf(10.0, -4),0,0);		
+		//float3 gravity = make_float3(0,0,0);		
 		
 		/*uint3 gridSize = make_uint3(8, 16, 4);   
 		uint3 fluidParticlesSize = make_uint3(8, 16 -  2 * boundaryOffset, 1);*/

@@ -1,4 +1,4 @@
-#define BOOST_TEST_MODULE PoiseuilleFlowTest
+#define BOOST_TEST_MODULE Default
 #include <boost/test/unit_test.hpp>
 #include <boost/format.hpp>
 #include <vector_types.h>
@@ -98,13 +98,13 @@ void mytest(float recordTime)
 	delete psystem;
 }
 
-BOOST_AUTO_TEST_CASE(SystemOutput)
+BOOST_AUTO_TEST_CASE(DumpVelocityProfile)
 {
-	/*mytest(0.0225f);
+	mytest(0.0225f);
 	mytest(0.045f);
 	mytest(0.1125f);
 	mytest(0.225f);
-	mytest(1.0f);*/
+	mytest(1.0f);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

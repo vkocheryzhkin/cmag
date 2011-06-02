@@ -116,7 +116,7 @@ void colorRamp(float t, float *r){
 	r[2] = lerp(c[i][2], c[i+1][2], u);
 }
 
-void PoiseuilleFlowSystem::_initialize(int numParticles){
+void PoiseuilleFlowSystem::_initialize(uint numParticles){
 	assert(!IsInitialized);
 
 	numParticles = numParticles;
@@ -139,7 +139,7 @@ void PoiseuilleFlowSystem::_initialize(int numParticles){
 		float *data = (float *) glMapBufferARB(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
 		float *ptr = data;
 		uint fluidParticles = params.fluidParticlesSize.x * params.fluidParticlesSize.y * params.fluidParticlesSize.z;
-		for(int i=0; i < numParticles; i++) {
+		for(uint i=0; i < numParticles; i++) {
 			float t = 0.5f;  
 			if(i < fluidParticles)
 				t = 0.7f;  
@@ -167,14 +167,7 @@ void PoiseuilleFlowSystem::_initialize(int numParticles){
 	allocateArray((void**)&dHash, numParticles*sizeof(uint));
 	allocateArray((void**)&dIndex, numParticles*sizeof(uint));
 	allocateArray((void**)&dCellStart, numGridCells*sizeof(uint));
-	allocateArray((void**)&dCellEnd, numGridCells*sizeof(uint));	
-
-	CUDPPConfiguration sortConfig;
-	sortConfig.algorithm = CUDPP_SORT_RADIX;
-	sortConfig.datatype = CUDPP_UINT;
-	sortConfig.op = CUDPP_ADD;
-	sortConfig.options = CUDPP_OPTION_KEY_VALUE_PAIRS;
-	cudppPlan(&sortHandle, sortConfig, numParticles, 1, 0);    
+	allocateArray((void**)&dCellEnd, numGridCells*sizeof(uint));		
 
 	setParameters(&params);
 	IsInitialized = true;
@@ -208,9 +201,7 @@ void PoiseuilleFlowSystem::_finalize(){
 	} else {
 		cutilSafeCall( cudaFree(cudaPosVBO) );
 		cutilSafeCall( cudaFree(cudaColorVBO) );
-	}
-
-	cudppDestroyPlan(sortHandle);
+	}	
 }
 
 void PoiseuilleFlowSystem::setArray(ParticleArray array, const float* data, int start, int count){
@@ -284,7 +275,7 @@ float PoiseuilleFlowSystem::CalculateMass(float* positions, uint3 gridSize){
 	float y = positions[(gridSize.x / 2) * 4 + 1];
 	float2 testPoint  = make_float2(x,y);
 	float sum = 0.0f;
-	for(int i = 0; i < numParticles; i++){		
+	for(uint i = 0; i < numParticles; i++){		
 		float2 tempPoint = make_float2(positions[4 * i + 0], positions[4 * i + 1]);
 		float2 r = make_float2(testPoint.x - tempPoint.x, testPoint.y - tempPoint.y);
 		float dist = sqrt(r.x * r.x + r.y * r.y);
@@ -399,8 +390,8 @@ void PoiseuilleFlowSystem::update(){
 	}*/
 
 	calculatePoiseuilleHash(dHash, dIndex, dPos, numParticles);
-
-	cudppSort(sortHandle, dHash, dIndex, gridSortBits, numParticles);
+	
+	sortParticles(dHash, dIndex, numParticles);
 
 	reorderPoiseuilleData(
 		dCellStart,
