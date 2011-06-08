@@ -145,7 +145,7 @@ __device__ float getBoundaryCurve(float x, float t){
 }
 
 
-__global__ void setBoundaryWaveD(
+__global__ void configureBoundaryD(
 	float4* posArray,
 	float currentWaveHeight,
 	uint numParticles){
@@ -157,18 +157,16 @@ __global__ void setBoundaryWaveD(
 		if(posData.w > 0.0f){//bottom						
 			posArray[index] = make_float4(
 				posData.x,
-				params.amplitude + 
+				params.amplitude + params.BoundaryHeight() +
 				currentWaveHeight * getBoundaryCurve(posData.x, 0) 			
-				+ params.worldOrigin.y + params.particleRadius * (posData.w - 1.0f),
+				+ params.worldOrigin.y - params.particleRadius * (posData.w - 1.0f),
 				posData.z,
 				posData.w);									
 		}
 		if(posData.w < 0.0f){
 			posArray[index] = make_float4(
 				posData.x,
-				params.boundaryOffset * 2 * params.particleRadius +
-				params.fluidParticlesSize.y * 2.0f * params.particleRadius +
-				params.amplitude - 
+				params.BoundaryHeight() + params.FluidHeight() + params.amplitude - 
 				currentWaveHeight * getBoundaryCurve(posData.x, 0)				  
 				+ params.worldOrigin.y + params.particleRadius * (-posData.w - 1.0f),
 				posData.z,

@@ -22,19 +22,19 @@ extern "C"
 		cutilSafeCall( cudaMemcpyToSymbol(params, hostParams, sizeof(PoiseuilleParams)) );
 	}	
 
-	void ExtSetBoundaryWave(
+	void ExtConfigureBoundary(
 		float* pos,
 		float currentWaveHeight,
 		uint numParticles){
 			uint numThreads, numBlocks;
 			computeGridSize(numParticles, 256, numBlocks, numThreads);
 
-			setBoundaryWaveD<<< numBlocks, numThreads >>>(
+			configureBoundaryD<<< numBlocks, numThreads >>>(
 				(float4*)pos,
 				currentWaveHeight,
 				numParticles);
 		    
-			cutilCheckMsg("SetBoundaryWave kernel execution failed");
+			cutilCheckMsg("configureBoundary kernel execution failed");
 	}
 
 	void calculatePoiseuilleHash(

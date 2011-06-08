@@ -23,7 +23,7 @@ __global__ void computeCoordinatesD(
 				
 
 		float3 nextVel = vel + (params.gravity + vis + pres) * params.deltaTime;		
-		//float3 nextVel = vel + (params.gravity) * params.deltaTime;		
+		//float3 nextVel = vel + (params.gravity + pres) * params.deltaTime;		
 
 		float3 velLeapFrog = vel + nextVel;
 		velLeapFrog *= 0.5f;
@@ -32,9 +32,11 @@ __global__ void computeCoordinatesD(
 		pos += vel * params.deltaTime;   
 
 		float halfWorldXSize = params.gridSize.x * params.particleRadius;			
-		if(pos.x > halfWorldXSize){
-			pos.x -= 2 * halfWorldXSize;
-		}
+		if(pos.x > halfWorldXSize)
+			pos.x -= 2 * halfWorldXSize;		
+		if(pos.x < -halfWorldXSize)
+			pos.x += 2 * halfWorldXSize;
+
 				  
 		posArray[index] = make_float4(pos, posData.w);
 		velArray[index] = make_float4(vel, velData.w);

@@ -38,7 +38,7 @@
 //		false); 
 //	psystem->reset();
 //
-//	psystem->setBoundaryWave();
+//	psystem->configureBoundary();
 //
 //	//relax system
 //	while(psystem->getElapsedTime() < 1.5f)

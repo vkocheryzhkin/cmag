@@ -31,20 +31,23 @@ public:
 		VELOCITYLEAPFROG,
 	};
 
-	void update();
+	void Update();	
+
+	void SetupBoundary( float * dPos );
+
 	void reset();
 
 	void   setArray(ParticleArray array, const float* data, int start, int count);
 
 	int getNumParticles() const { return numParticles; }
 	float getElapsedTime() const { return elapsedTime; }
-	float getHalfWorldXSize() {return params.gridSize.x * params.particleRadius;}
-	float getHalfWorldYSize() {return params.gridSize.y * params.particleRadius;}
-	float getHalfWorldZSize() {return params.gridSize.z * params.particleRadius;}
+	float getHalfWorldXSize() {return cfg.gridSize.x * cfg.particleRadius;}
+	float getHalfWorldYSize() {return cfg.gridSize.y * cfg.particleRadius;}
+	float getHalfWorldZSize() {return cfg.gridSize.z * cfg.particleRadius;}
 
 	unsigned int getCurrentReadBuffer() const { return posVbo; }
 	unsigned int getColorBuffer()       const { return colorVBO; }
-	void setBoundaryWave();
+	void SwitchBoundarySetup();
 	//void startBoundaryMotion();
 
 	void * getCudaPosVBO()              const { return (void *)cudaPosVBO; }
@@ -55,15 +58,15 @@ public:
 	void * getCudaSortedPosition()      const { return (void *)dSortedPos; }
 	void * getSortedVelocity()      const { return (void *)dSortedVel; }
 	void * getMeasures()            const { return (void *)dMeasures; }    
-	void * getViscousForce()        const {return (void *)viscousForce;}	
-	void * getPressureForce()        const {return (void *)pressureForce;}		
+	void * viscous_force()        const {return (void *)viscousForce;}	
+	void * pressure_force()        const {return (void *)pressureForce;}		
 	void * getPredictedPos()        const {return (void *)predictedPosition;}	
 	void * getLeapFrogVelocity() const {return (void*) dVelLeapFrog;}	
 
-	float getParticleRadius() { return params.particleRadius; }
-	uint3 getGridSize() { return params.gridSize; }
-	float3 getWorldOrigin() { return params.worldOrigin; }
-	float3 getCellSize() { return params.cellSize; }
+	float getParticleRadius() { return cfg.particleRadius; }
+	uint3 getGridSize() { return cfg.gridSize; }
+	float3 getWorldOrigin() { return cfg.worldOrigin; }
+	float3 getCellSize() { return cfg.cellSize; }
 protected:
 	PoiseuilleFlowSystem() {}
 	uint createVBO(uint size);
@@ -79,7 +82,7 @@ protected:
 	bool IsInitialized, IsOpenGL;
 	uint numParticles;
 	float currentWaveHeight;
-	bool IsSetWaveBoundary;
+	bool IsBoundaryConfiguration;
 	float elapsedTime;
 	float epsDensity;
 
@@ -118,7 +121,7 @@ protected:
 	struct cudaGraphicsResource *cuda_posvbo_resource; // handles OpenGL-CUDA exchange
 	struct cudaGraphicsResource *cuda_colorvbo_resource; // handles OpenGL-CUDA exchange	
 	
-	PoiseuilleParams params;	
+	PoiseuilleParams cfg;	
 	uint numGridCells;    
 };
 #endif //__POISEUILLE_FLOW_SYSTEM_H__

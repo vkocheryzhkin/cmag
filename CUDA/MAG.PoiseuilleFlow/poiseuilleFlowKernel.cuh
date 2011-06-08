@@ -41,5 +41,14 @@ struct PoiseuilleParams {
 
 	float B;
 	float gamma;
+
+	__host__ __device__
+	float PoiseuilleParams::BoundaryHeight()	{		
+		return boundaryOffset * 2.0f * particleRadius;
+	}
+	__host__ __device__
+	float PoiseuilleParams::FluidHeight()	{		
+		return fluidParticlesSize.y * 2.0f * particleRadius;
+	}
 };
 #endif//__POISEUILLEFLOW_KERNEL_CUH__

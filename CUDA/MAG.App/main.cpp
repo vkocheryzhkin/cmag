@@ -76,7 +76,7 @@ void computeFPS()
 	if (fpsCount == fpsLimit) {
 		char fps[256];
 		float ifps = 1.f / (cutGetAverageTimerValue(timer) / 1000.f);
-		sprintf(fps, "Dam Break (%d particles): %3.1f fps; elapsed Time: %f",
+		sprintf(fps, "Poiseuille (%d particles): %3.1f fps; Elapsed time: %1.4f",
 			psystem->getNumParticles(), ifps, psystem->getElapsedTime()); 
 		glutSetWindowTitle(fps);
 		fpsCount = 0;         
@@ -91,12 +91,12 @@ void display()
 	cutilCheckError(cutStartTimer(timer));  
 	if(IsFirstTime){
 		IsFirstTime = false;
-		psystem->update(); 
+		psystem->Update(); 
 		if (renderer) 
 			renderer->setVertexBuffer(psystem->getCurrentReadBuffer(), psystem->getNumParticles());
 	}
 	if (!bPause){
-		psystem->update(); 
+		psystem->Update(); 
 		if (renderer) 
 			renderer->setVertexBuffer(psystem->getCurrentReadBuffer(), psystem->getNumParticles());
 	}
@@ -194,19 +194,20 @@ void key(unsigned char key, int , int)
 		bPause = !bPause;
 		break;
 	case 13:
-		psystem->update(); 
+		psystem->Update(); 
 		if (renderer)
 			renderer->setVertexBuffer(psystem->getCurrentReadBuffer(), psystem->getNumParticles());
 		break;
 	case '1':
 		psystem->reset();
 		break;
-	/*case '2':
-		psystem->startBoundaryMotion();
-		break;*/
-	case '3':
-		psystem->setBoundaryWave();
+	case '2':
+		//psystem->startBoundaryMotion();
+		psystem->SwitchBoundarySetup();
 		break;
+	/*case '3':
+		psystem->setBoundaryWave();
+		break;*/
 	case '\033':
 	case 'q':
 		exit(0);
@@ -227,56 +228,49 @@ void mainMenu(int i)
 	key((unsigned char) i, 0, 0);
 }
 
-
 void SystemInit()
 {		
-		int boundaryOffset = 3;		
-		uint3 gridSize = make_uint3(64, 64, 4);   
-		uint3 fluidParticlesSize = make_uint3(64, 64 -  2 * boundaryOffset, 1);
-		float soundspeed = powf(10.0f, -4.0f);														
-		
-		float radius = 1.0f / (2 * (64 - 6) * 1000);						
-		float3 gravity = make_float3(10 * powf(10.0, -4),0,0);		
-		//float3 gravity = make_float3(0,0,0);		
-		
-		/*uint3 gridSize = make_uint3(8, 16, 4);   
-		uint3 fluidParticlesSize = make_uint3(8, 16 -  2 * boundaryOffset, 1);*/
+	int boundary_offset = 3;		
+	uint3 gridSize = make_uint3(64, 128, 4);   
+	uint3 fluidParticlesSize = make_uint3(64, 64 -  2 * boundary_offset, 1);
+	float soundspeed = powf(10.0f, -4.0f);															
+	float radius = 1.0f / (2 * (64 - 6) * 1000);						
+	//float3 gravity = make_float3(1000 * powf(10.0, -4),0,0);								
+	float3 gravity = make_float3(0,0,0);
+	float amplitude = 6 * radius;
+	//float sigma = (64 / 32) * CUDART_PI_F / ((fluidParticlesSize.x - 1) * 2 * radius);		
+	float sigma = (64 / 32) * CUDART_PI_F / ((fluidParticlesSize.x - 0) * 2 * radius);//!!!!!
+	float frequency = soundspeed * sigma;
 
-		/*float amplitude =6 * radius;
-		float sigma = (sizex / 32) * CUDART_PI_F / ((fluidParticlesSize.x - 1) * 2 * radius);		
-		float frequency = soundspeed * sigma;*/
-		float delaTime = powf(10.0f, -4.0f);
-		psystem = new PoiseuilleFlowSystem(
-				delaTime,
-				fluidParticlesSize,
-				0,0,0,
-				/*amplitude,
-				sigma,
-				frequency,*/
-				soundspeed,
-				gravity,
-				boundaryOffset, 
-				gridSize,								
-				radius,
-				true);					
-			
-		psystem->reset();		
+	float delaTime = powf(10.0f, -4.0f);
+	psystem = new PoiseuilleFlowSystem(
+			delaTime,
+			fluidParticlesSize,			
+			//0,0,0,
+			amplitude,
+			sigma,
+			frequency,
+			soundspeed,
+			gravity,
+			boundary_offset, 
+			gridSize,								
+			radius,
+			true);					
 		
-		renderer = new ParticleRenderer;
-		renderer->setParticleRadius(psystem->getParticleRadius());
-		renderer->setColorBuffer(psystem->getColorBuffer());		
+	psystem->reset();		
+	
+	renderer = new ParticleRenderer;
+	renderer->setParticleRadius(psystem->getParticleRadius());
+	renderer->setColorBuffer(psystem->getColorBuffer());		
 
-		cutilCheckError(cutCreateTimer(&timer));
+	cutilCheckError(cutCreateTimer(&timer));
 }
 
 int main(int argc, char** argv) 
 {
 	initGL(argc, argv);
 	cudaGLInit(argc, argv);
-
-
 	SystemInit();
-
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
 	glutMouseFunc(mouse);
@@ -285,6 +279,7 @@ int main(int argc, char** argv)
 	glutIdleFunc(idle);
 	atexit(cleanup);
 	glutMainLoop();
-	if (psystem) delete psystem;
+	if (psystem) 
+		delete psystem;
 	cudaThreadExit();
 }

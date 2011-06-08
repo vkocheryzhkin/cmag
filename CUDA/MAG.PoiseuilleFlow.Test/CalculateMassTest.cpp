@@ -19,8 +19,7 @@
 //	int boundaryOffset = 3;	
 //	float soundspeed = powf(10.0f, -4.0f);		
 //	float3 gravity = make_float3(0.0f, 0.0f, 0.0f); 
-//	float radius = 1.0f / (2 * (64 - 2 * boundaryOffset) * 1000);
-//	//float radius = 1.0f / 300;
+//	float radius = 1.0f / (2 * (64 - 2 * boundaryOffset) * 1000);	
 //	uint3 gridSize = make_uint3(8, 8, 4);   			
 //	uint3 fluidParticlesSize = make_uint3(8, 8 -  2 * boundaryOffset, 1);
 //	float delaTime = powf(10.0f, -4.0f);
@@ -37,7 +36,7 @@
 //
 //	uint numParticles = psystem->getNumParticles();		
 //	psystem->reset();				
-//	psystem->update();							
+//	psystem->Update();							
 //
 //	host_vector<float4> hPositions(numParticles);
 //	host_vector<float4> hResult(numParticles);
@@ -62,30 +61,7 @@
 //			<< hResult[i].x << " "			
 //			<< hPositions[hIndex[i]].w << " "
 //			<< endl;
-//	}
-//
-//	//cout << sum;
-//
-//	//double sum = 0.0f;
-//	//int cx = 0;
-//	//for(uint i = 0; i < psystem->getNumParticles(); i++) 
-//	//{	
-//	//	//cout << cx++ <<" "<< hPos[4*hIndex[i]+3]	 << endl;
-//	//	if(hPos[4 * hIndex[i] + 3] == 0.0f){		
-//	//		sum += htemp[4 * i + 0];
-//	//		printf("%d id=%d (%d %2d) %f %f %f w=%f\n", 
-//	//				cx++,
-//	//				i,
-//	//				hHash[i],
-//	//				hIndex[i],						
-//	//				htemp[4*i+0],
-//	//				htemp[4*i+1],
-//	//				htemp[4*i+2],
-//	//				hPos[4 * hIndex[i] + 3]					
-//	//			);		
-//	//	}
-//	//}	
-//	//printf("%d %d %f ---------------------\n",psystem->getNumParticles(), cx, sum / cx);		
+//	}		
 //	
 //	delete psystem;
 //}

@@ -39,41 +39,39 @@ PoiseuilleFlowSystem::PoiseuilleFlowSystem(
 			2 * gridSize.x * boundaryOffset;
 		numGridCells = gridSize.x * gridSize.y * gridSize.z;
 		gridSortBits = 18;	
-		params.fluidParticlesSize = fluidParticlesSize;
-		params.gridSize = gridSize;	
-		params.boundaryOffset = boundaryOffset;
-		params.amplitude = amplitude;
-		params.frequency = frequency;
-		params.sigma = sigma;		
-		params.IsBoundaryMotion = false;		
-		params.particleRadius = particleRadius;				
-		params.smoothingRadius = 3.0f * params.particleRadius;	
-		params.restDensity = 1000.0f;				
-		//params.particleMass = 1000.0f / 3381298464.827586f;									
-		//params.particleMass = 0.0442170704422149f;
-		params.particleMass = 0.0f;
-		params.cellcount = 3;			    			
-		params.worldOrigin = make_float3(-getHalfWorldXSize(), -getHalfWorldYSize(), -getHalfWorldZSize());
-		float cellSize = params.particleRadius * 2.0f;  
-		params.cellSize = make_float3(cellSize, cellSize, cellSize);	    		
+		cfg.fluidParticlesSize = fluidParticlesSize;
+		cfg.gridSize = gridSize;	
+		cfg.boundaryOffset = boundaryOffset;
+		cfg.amplitude = amplitude;
+		cfg.frequency = frequency;
+		cfg.sigma = sigma;		
+		cfg.IsBoundaryMotion = false;		
+		cfg.particleRadius = particleRadius;				
+		cfg.smoothingRadius = 3.0f * cfg.particleRadius;	
+		cfg.restDensity = 1000.0f;						
+		cfg.particleMass = 0.0f;
+		cfg.cellcount = 3;			    			
+		cfg.worldOrigin = make_float3(-getHalfWorldXSize(), -getHalfWorldYSize(), -getHalfWorldZSize());
+		float cellSize = cfg.particleRadius * 2.0f;  
+		cfg.cellSize = make_float3(cellSize, cellSize, cellSize);	    		
 
-		params.worldSize = make_float3(
-			params.gridSize.x * 2.0f * params.particleRadius,
-			params.gridSize.y * 2.0f * params.particleRadius,
-			params.gridSize.z * 2.0f * params.particleRadius);	    
+		cfg.worldSize = make_float3(
+			cfg.gridSize.x * 2.0f * cfg.particleRadius,
+			cfg.gridSize.y * 2.0f * cfg.particleRadius,
+			cfg.gridSize.z * 2.0f * cfg.particleRadius);	    
 
-		params.boundaryDamping = -1.0f;
-		params.gravity = gravity;
-		params.soundspeed = soundspeed;
-		params.mu = powf(10.0f, -3.0f);	
-		params.deltaTime = deltaTime;	
+		cfg.boundaryDamping = -1.0f;
+		cfg.gravity = gravity;
+		cfg.soundspeed = soundspeed;
+		cfg.mu = powf(10.0f, -3.0f);	
+		cfg.deltaTime = deltaTime;	
 
 	/*	params.gamma = 7.0f;
 		params.B = 200 * params.restDensity * abs(params.gravity.y) *		
 			(2 * params.particleRadius * fluidParticlesSize.y ) / params.gamma;	
 		params.soundspeed = sqrt(params.B * params.gamma / params.restDensity);*/
 
-		IsSetWaveBoundary = false;
+		IsBoundaryConfiguration = false;
 		currentWaveHeight = 0.0f;
 		epsDensity = 0.01f;
 		_initialize(numParticles);
@@ -138,12 +136,12 @@ void PoiseuilleFlowSystem::_initialize(uint numParticles){
 		glBindBufferARB(GL_ARRAY_BUFFER, colorVBO);
 		float *data = (float *) glMapBufferARB(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
 		float *ptr = data;
-		uint fluidParticles = params.fluidParticlesSize.x * params.fluidParticlesSize.y * params.fluidParticlesSize.z;
+		uint fluidParticles = cfg.fluidParticlesSize.x * cfg.fluidParticlesSize.y * cfg.fluidParticlesSize.z;
 		for(uint i=0; i < numParticles; i++) {
 			float t = 0.5f;  
 			if(i < fluidParticles)
 				t = 0.7f;  
-			if(((i % params.gridSize.x) == 0) && i < fluidParticles)
+			if(((i % cfg.gridSize.x) == 0) && i < fluidParticles)
 				t = 0.1f;    			
 			colorRamp(t, ptr);
 			ptr+=3;
@@ -169,7 +167,7 @@ void PoiseuilleFlowSystem::_initialize(uint numParticles){
 	allocateArray((void**)&dCellStart, numGridCells*sizeof(uint));
 	allocateArray((void**)&dCellEnd, numGridCells*sizeof(uint));		
 
-	setParameters(&params);
+	setParameters(&cfg);
 	IsInitialized = true;
 }
 
@@ -252,9 +250,9 @@ inline float frand(){
 void PoiseuilleFlowSystem::reset(){
 	elapsedTime = 0.0f;	
 	currentWaveHeight = 0.0f;
-	IsSetWaveBoundary = false;
-	float jitter = params.particleRadius * 0.01f;			            
-	float spacing = params.particleRadius * 2.0f;
+	IsBoundaryConfiguration = false;
+	float jitter = cfg.particleRadius * 0.01f;			            
+	float spacing = cfg.particleRadius * 2.0f;
 	initFluid(spacing, jitter, numParticles);
 	initBoundaryParticles(spacing);
 	memset(hMeasures, 0, numParticles*4*sizeof(float));	
@@ -266,8 +264,8 @@ void PoiseuilleFlowSystem::reset(){
 	setArray(VELOCITYLEAPFROG, hMeasures, 0, numParticles);
 	setArray(PREDICTEDPOSITION, hMeasures, 0, numParticles);
 
-	params.particleMass = params.restDensity / CalculateMass(hPos, params.gridSize);
-	setParameters(&params);
+	cfg.particleMass = cfg.restDensity / CalculateMass(hPos, cfg.gridSize);
+	setParameters(&cfg);
 }
 
 float PoiseuilleFlowSystem::CalculateMass(float* positions, uint3 gridSize){
@@ -279,8 +277,8 @@ float PoiseuilleFlowSystem::CalculateMass(float* positions, uint3 gridSize){
 		float2 tempPoint = make_float2(positions[4 * i + 0], positions[4 * i + 1]);
 		float2 r = make_float2(testPoint.x - tempPoint.x, testPoint.y - tempPoint.y);
 		float dist = sqrt(r.x * r.x + r.y * r.y);
-		float q = dist / params.smoothingRadius;	
-		float coeff = 7.0f / 4 / CUDART_PI_F / powf(params.smoothingRadius, 2);
+		float q = dist / cfg.smoothingRadius;	
+		float coeff = 7.0f / 4 / CUDART_PI_F / powf(cfg.smoothingRadius, 2);
 		if(q < 2)
 			sum +=coeff *(powf(1 - 0.5f * q, 4) * (2 * q + 1));
 	}
@@ -289,19 +287,19 @@ float PoiseuilleFlowSystem::CalculateMass(float* positions, uint3 gridSize){
 
 void PoiseuilleFlowSystem::initFluid( float spacing, float jitter, uint numParticles){
 	srand(1973);			
-	int xsize = params.fluidParticlesSize.x;
-	int ysize = params.fluidParticlesSize.y;
-	int zsize = params.fluidParticlesSize.z;
+	int xsize = cfg.fluidParticlesSize.x;
+	int ysize = cfg.fluidParticlesSize.y;
+	int zsize = cfg.fluidParticlesSize.z;
 	
 	for(int z = 0; z < zsize; z++) {
 		for(int y = 0; y < ysize; y++) {
 			for(int x = 0; x < xsize; x++) {				
 				uint i = (z * ysize * xsize) + y * xsize + x;
 				if (i < numParticles) {
-					hPos[i*4] = (spacing * x) + params.particleRadius - getHalfWorldXSize();
-					hPos[i*4+1] = (spacing * y) + params.particleRadius - getHalfWorldYSize()
-						+ params.boundaryOffset * 2 * params.particleRadius + params.amplitude;						
-					hPos[i*4+2] = (spacing * z) + params.particleRadius - getHalfWorldZSize();		
+					hPos[i*4] = (spacing * x) + cfg.particleRadius - getHalfWorldXSize();
+					hPos[i*4+1] = (spacing * y) + cfg.particleRadius - getHalfWorldYSize()
+						+ cfg.boundaryOffset * 2 * cfg.particleRadius + cfg.amplitude;						
+					hPos[i*4+2] = (spacing * z) + cfg.particleRadius - getHalfWorldZSize();		
 					hPos[i*4+3] = 0.0f; //fluid					
 				}
 			}
@@ -312,26 +310,24 @@ void PoiseuilleFlowSystem::initBoundaryParticles(float spacing)
 {	
 	uint size[3];	
 	int numAllocatedParticles = 
-		params.fluidParticlesSize.x *
-		params.fluidParticlesSize.y * 
-		params.fluidParticlesSize.z;
+		cfg.fluidParticlesSize.x *
+		cfg.fluidParticlesSize.y * 
+		cfg.fluidParticlesSize.z;
 
-	float sigma = 1.0f / (params.fluidParticlesSize.x * 2 * params.particleRadius);
-	////bottom
-	size[0] = params.fluidParticlesSize.x;
-	size[1] = params.boundaryOffset;
+	float sigma = 1.0f / (cfg.fluidParticlesSize.x * 2 * cfg.particleRadius);
+	//bottom
+	size[0] = cfg.fluidParticlesSize.x;
+	size[1] = cfg.boundaryOffset;
 	size[2] = 1;	 
 	for(uint z=0; z < size[2]; z++) {
 		for(uint y=0; y < size[1]; y++) {
 			for(uint x=0; x < size[0]; x++) {
 				uint i = numAllocatedParticles + (z * size[1] * size[0]) + (y * size[0]) + x;								
-				float j = params.particleRadius * (2 * x + 1);
-				hPos[i * 4] = j + params.worldOrigin.x;					 
-				/*hPos[i * 4 + 1] = params.amplitude + params.amplitude * sinf(params.sigma * j) +
-					(spacing * y) + params.particleRadius + params.worldOrigin.y;		*/		
-				hPos[i * 4 + 1] = params.amplitude + (spacing * y) + params.particleRadius + params.worldOrigin.y;
-
-				hPos[i*4+2] = (spacing * z) + params.particleRadius + params.worldOrigin.z;					
+				float j = cfg.particleRadius * (2 * x + 1);
+				hPos[i * 4] = j + cfg.worldOrigin.x;					 					
+				hPos[i * 4 + 1] = cfg.amplitude + (spacing * y) 
+					+ cfg.particleRadius + cfg.worldOrigin.y;
+				hPos[i*4+2] = (spacing * z) + cfg.particleRadius + cfg.worldOrigin.z;					
 				hPos[i*4+3] = 2.0f * (1.0f + y);//boundary: 2,4,6				
 			}
 		}
@@ -342,33 +338,39 @@ void PoiseuilleFlowSystem::initBoundaryParticles(float spacing)
 		for(uint y=0; y < size[1]; y++) {
 			for(uint x=0; x < size[0]; x++) {
 				uint i = numAllocatedParticles + (z * size[1] * size[0]) + (y * size[0]) + x;				
-				float j = params.particleRadius * (2 * x + 1);
-				hPos[i * 4] = j + params.worldOrigin.x;
-			/*	hPos[i*4+1] = params.amplitude - params.amplitude * sinf(params.sigma * j) 
-					+ spacing * y + params.particleRadius + params.worldOrigin.y
-					+ params.boundaryOffset * 2 * params.particleRadius
-					+ params.fluidParticlesSize.y * 2.0f * params.particleRadius;*/
+				float j = cfg.particleRadius * (2 * x + 1);
+				hPos[i * 4] = j + cfg.worldOrigin.x;			
+				hPos[i*4+1] = (spacing * y) + cfg.worldOrigin.y
+					+ cfg.boundaryOffset * 2 * cfg.particleRadius
+					+ cfg.fluidParticlesSize.y * 2.0f * cfg.particleRadius
+					+ cfg.amplitude + cfg.particleRadius;	
 
-				hPos[i*4+1] = (spacing * y) + params.worldOrigin.y
-					+ params.boundaryOffset * 2 * params.particleRadius
-					+ params.fluidParticlesSize.y * 2.0f * params.particleRadius
-					+ params.amplitude + params.particleRadius;	
-
-				hPos[i*4+2] = (spacing * z) + params.particleRadius + params.worldOrigin.z;					
+				hPos[i*4+2] = (spacing * z) + cfg.particleRadius + cfg.worldOrigin.z;					
 				hPos[i*4+3] = -2.0f * (1.0f + y);//boundary				
 			}
 		}
 	}
 }
 
-void PoiseuilleFlowSystem::setBoundaryWave()
+void PoiseuilleFlowSystem::SwitchBoundarySetup()
 { 
-	IsSetWaveBoundary = !IsSetWaveBoundary;
+	IsBoundaryConfiguration = !IsBoundaryConfiguration;
 	elapsedTime = 0.0f;
 }
 
+void PoiseuilleFlowSystem::SetupBoundary(float* dPos)
+{			
+	if(currentWaveHeight < cfg.amplitude){			
+		ExtConfigureBoundary(dPos, currentWaveHeight, numParticles);
+		currentWaveHeight += cfg.deltaTime * cfg.soundspeed;
+	}
+	else{
+		IsBoundaryConfiguration = !IsBoundaryConfiguration;
+		elapsedTime = 0.0f;
+	}	
+}
 
-void PoiseuilleFlowSystem::update(){
+void PoiseuilleFlowSystem::Update(){
 	assert(IsInitialized);
 
 	float *dPos;
@@ -378,16 +380,8 @@ void PoiseuilleFlowSystem::update(){
 	else 
 		dPos = (float *) cudaPosVBO;   
 
-	/*if((IsSetWaveBoundary) && (currentWaveHeight < params.amplitude)){		
-		if(currentWaveHeight < params.amplitude){			
-			ExtSetBoundaryWave(dPos, currentWaveHeight, numParticles);
-			currentWaveHeight += params.deltaTime * params.soundspeed;
-		}
-		else{
-			IsSetWaveBoundary = !IsSetWaveBoundary;
-			elapsedTime = 0.0f;
-		}
-	}*/
+	if((IsBoundaryConfiguration) && (currentWaveHeight < cfg.amplitude))
+		SetupBoundary(dPos);
 
 	calculatePoiseuilleHash(dHash, dIndex, dPos, numParticles);
 	
@@ -424,7 +418,7 @@ void PoiseuilleFlowSystem::update(){
 		dCellStart,
 		dCellEnd,
 		numParticles,
-		elapsedTime,
+		IsBoundaryConfiguration? 0: elapsedTime,
 		numGridCells);    
 
 	computePressureForce(
@@ -435,7 +429,7 @@ void PoiseuilleFlowSystem::update(){
 		dCellStart,
 		dCellEnd,
 		numParticles,
-		elapsedTime,
+		IsBoundaryConfiguration? 0: elapsedTime,
 		numGridCells);
 
 	computeCoordinates(
@@ -449,5 +443,7 @@ void PoiseuilleFlowSystem::update(){
 	if (IsOpenGL) {
 		unmapGLBufferObject(cuda_posvbo_resource);
 	}
-	elapsedTime+= params.deltaTime;
+	elapsedTime+= cfg.deltaTime;
 }
+
+

@@ -5,7 +5,7 @@ extern "C"
 {		
 	void setParameters(PoiseuilleParams *hostParams);	
 
-	void ExtSetBoundaryWave(
+	void ExtConfigureBoundary(
 		float* pos,
 		float currentWaveHeight,
 		uint nemParticles);

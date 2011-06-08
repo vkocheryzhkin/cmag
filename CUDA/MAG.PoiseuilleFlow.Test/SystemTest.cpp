@@ -37,9 +37,10 @@ void mytest(float recordTime)
 	PoiseuilleFlowSystem *psystem = new PoiseuilleFlowSystem(
 			delaTime,
 			fluidParticlesSize,			
-			amplitude,
+			0,0,0,
+			/*amplitude,
 			sigma,
-			frequency,
+			frequency,*/
 			soundspeed,
 			gravity,
 			boundaryOffset, 
@@ -57,7 +58,7 @@ void mytest(float recordTime)
 	uint* hIndex = new uint[psystem->getNumParticles()];		
 
 	while(psystem->getElapsedTime() < recordTime)
-		psystem->update();	
+		psystem->Update();	
 				
 	copyArrayFromDevice(hPos,psystem->getCudaPosVBO(),0, sizeof(float)*4*psystem->getNumParticles());	
 	copyArrayFromDevice(htemp,psystem->getLeapFrogVelocity(),0, sizeof(float)*4*psystem->getNumParticles());		
@@ -105,6 +106,8 @@ BOOST_AUTO_TEST_CASE(DumpVelocityProfile)
 	mytest(0.1125f);
 	mytest(0.225f);
 	mytest(1.0f);
+	/*mytest(2.0f);
+	mytest(4.0f);*/
 }
 
 BOOST_AUTO_TEST_SUITE_END()
