@@ -44,8 +44,7 @@ PoiseuilleFlowSystem::PoiseuilleFlowSystem(
 		cfg.boundaryOffset = boundaryOffset;
 		cfg.amplitude = amplitude;
 		cfg.frequency = frequency;
-		cfg.sigma = sigma;		
-		cfg.IsBoundaryMotion = false;		
+		cfg.sigma = sigma;					
 		cfg.particleRadius = particleRadius;				
 		cfg.smoothingRadius = 3.0f * cfg.particleRadius;	
 		cfg.restDensity = 1000.0f;						
@@ -71,7 +70,7 @@ PoiseuilleFlowSystem::PoiseuilleFlowSystem(
 			(2 * params.particleRadius * fluidParticlesSize.y ) / params.gamma;	
 		params.soundspeed = sqrt(params.B * params.gamma / params.restDensity);*/
 
-		IsBoundaryConfiguration = false;
+		cfg.IsBoundaryConfiguration = true;
 		currentWaveHeight = 0.0f;
 		epsDensity = 0.01f;
 		_initialize(numParticles);
@@ -250,7 +249,7 @@ inline float frand(){
 void PoiseuilleFlowSystem::reset(){
 	elapsedTime = 0.0f;	
 	currentWaveHeight = 0.0f;
-	IsBoundaryConfiguration = false;
+	cfg.IsBoundaryConfiguration = true;
 	float jitter = cfg.particleRadius * 0.01f;			            
 	float spacing = cfg.particleRadius * 2.0f;
 	initFluid(spacing, jitter, numParticles);
@@ -352,23 +351,23 @@ void PoiseuilleFlowSystem::initBoundaryParticles(float spacing)
 	}
 }
 
-void PoiseuilleFlowSystem::SwitchBoundarySetup()
-{ 
-	IsBoundaryConfiguration = !IsBoundaryConfiguration;
-	elapsedTime = 0.0f;
-}
+//void PoiseuilleFlowSystem::SwitchBoundarySetup()
+//{ 
+//	cfg.IsBoundaryConfiguration = !cfg.IsBoundaryConfiguration;
+//	elapsedTime = 0.0f;
+//}
 
-void PoiseuilleFlowSystem::SetupBoundary(float* dPos)
-{			
-	if(currentWaveHeight < cfg.amplitude){			
-		ExtConfigureBoundary(dPos, currentWaveHeight, numParticles);
-		currentWaveHeight += cfg.deltaTime * cfg.soundspeed;
-	}
-	else{
-		IsBoundaryConfiguration = !IsBoundaryConfiguration;
-		elapsedTime = 0.0f;
-	}	
-}
+//void PoiseuilleFlowSystem::SetupBoundary(float* dPos)
+//{			
+//	if(currentWaveHeight < cfg.amplitude){			
+//		ExtConfigureBoundary(dPos, currentWaveHeight, numParticles);
+//		currentWaveHeight += cfg.deltaTime * cfg.soundspeed;
+//	}
+//	else{
+//		IsBoundaryConfiguration = !IsBoundaryConfiguration;
+//		elapsedTime = 0.0f;
+//	}	
+//}
 
 void PoiseuilleFlowSystem::Update(){
 	assert(IsInitialized);
@@ -380,8 +379,17 @@ void PoiseuilleFlowSystem::Update(){
 	else 
 		dPos = (float *) cudaPosVBO;   
 
-	if((IsBoundaryConfiguration) && (currentWaveHeight < cfg.amplitude))
-		SetupBoundary(dPos);
+	if(cfg.IsBoundaryConfiguration){
+		if (currentWaveHeight < cfg.amplitude){
+			ExtConfigureBoundary(dPos, currentWaveHeight, numParticles);
+			currentWaveHeight += cfg.deltaTime * cfg.soundspeed;		
+		}
+		else{
+			cfg.IsBoundaryConfiguration = !cfg.IsBoundaryConfiguration;
+			setParameters(&cfg);
+			elapsedTime = 0.0f;
+		}
+	}			
 
 	calculatePoiseuilleHash(dHash, dIndex, dPos, numParticles);
 	
@@ -409,36 +417,37 @@ void PoiseuilleFlowSystem::Update(){
 		numParticles,
 		numGridCells);
 
-	computeViscousForce(
-		viscousForce,//not sorted			
-		dMeasures, //input
-		dSortedPos,			
-		dSortedVel,
-		dIndex,
-		dCellStart,
-		dCellEnd,
-		numParticles,
-		IsBoundaryConfiguration? 0: elapsedTime,
-		numGridCells);    
+	//computeViscousForce(
+	//	viscousForce,//not sorted			
+	//	dMeasures, //input
+	//	dSortedPos,			
+	//	dSortedVel,
+	//	dIndex,
+	//	dCellStart,
+	//	dCellEnd,
+	//	numParticles,
+	//	cfg.IsBoundaryConfiguration? 0: elapsedTime,
+	//	numGridCells);    
 
-	computePressureForce(
-		pressureForce,//not sorted		
-		dMeasures, //input
-		dSortedPos, 
-		dIndex,
-		dCellStart,
-		dCellEnd,
-		numParticles,
-		IsBoundaryConfiguration? 0: elapsedTime,
-		numGridCells);
+	//computePressureForce(
+	//	pressureForce,//not sorted		
+	//	dMeasures, //input
+	//	dSortedPos, 
+	//	dIndex,
+	//	dCellStart,
+	//	dCellEnd,
+	//	numParticles,
+	//	cfg.IsBoundaryConfiguration? 0: elapsedTime,
+	//	numGridCells);
 
-	computeCoordinates(
-		dPos,
-		dVel,	
-		dVelLeapFrog,
-		viscousForce,
-		pressureForce,
-		numParticles);
+	//computeCoordinates(
+	//	dPos,
+	//	dVel,	
+	//	dVelLeapFrog,
+	//	viscousForce,
+	//	pressureForce,
+	//	cfg.IsBoundaryConfiguration? 0: elapsedTime,
+	//	numParticles);
 
 	if (IsOpenGL) {
 		unmapGLBufferObject(cuda_posvbo_resource);

@@ -253,6 +253,7 @@ extern "C"
 		float* velLeapFrog,
 		float* viscousForce,
 		float* pressureForce,
+		float elapsedTime,
 		uint numParticles){
 			uint numThreads, numBlocks;
 			computeGridSize(numParticles, 256, numBlocks, numThreads);
@@ -263,6 +264,7 @@ extern "C"
 				(float4*)velLeapFrog,
 				(float4*)viscousForce,
 				(float4*)pressureForce,
+				elapsedTime,
 				numParticles);
 		    
 			cutilCheckMsg("computeCoordinates kernel execution failed");

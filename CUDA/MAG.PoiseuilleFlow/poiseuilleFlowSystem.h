@@ -81,8 +81,7 @@ protected:
 protected:
 	bool IsInitialized, IsOpenGL;
 	uint numParticles;
-	float currentWaveHeight;
-	bool IsBoundaryConfiguration;
+	float currentWaveHeight;	
 	float elapsedTime;
 	float epsDensity;
 

@@ -201,10 +201,10 @@ void key(unsigned char key, int , int)
 	case '1':
 		psystem->reset();
 		break;
-	case '2':
-		//psystem->startBoundaryMotion();
-		psystem->SwitchBoundarySetup();
-		break;
+	//case '2':
+	//	//psystem->startBoundaryMotion();
+	//	psystem->SwitchBoundarySetup();
+	//	break;
 	/*case '3':
 		psystem->setBoundaryWave();
 		break;*/
@@ -240,7 +240,7 @@ void SystemInit()
 	float amplitude = 6 * radius;
 	//float sigma = (64 / 32) * CUDART_PI_F / ((fluidParticlesSize.x - 1) * 2 * radius);		
 	float sigma = (64 / 32) * CUDART_PI_F / ((fluidParticlesSize.x - 0) * 2 * radius);//!!!!!
-	float frequency = soundspeed * sigma;
+	float frequency = 100 * soundspeed * sigma;
 
 	float delaTime = powf(10.0f, -4.0f);
 	psystem = new PoiseuilleFlowSystem(

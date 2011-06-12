@@ -1,10 +1,10 @@
 #ifndef __MAGUTIL_CUH__
 #define __MAGUTIL_CUH__
-typedef unsigned int uint;
+
 #ifndef CUDART_PI_F
 #define CUDART_PI_F         3.141592654f
 #endif
-
+typedef unsigned int uint;
 
 extern "C"
 {	

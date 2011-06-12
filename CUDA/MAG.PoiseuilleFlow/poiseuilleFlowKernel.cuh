@@ -36,7 +36,7 @@ struct PoiseuilleParams {
 	float amplitude;
 	float frequency;
 	float sigma;
-	bool IsBoundaryMotion;	
+	bool IsBoundaryConfiguration;	
 
 
 	float B;

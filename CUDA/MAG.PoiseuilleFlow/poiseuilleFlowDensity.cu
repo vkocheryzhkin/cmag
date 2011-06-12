@@ -69,7 +69,8 @@ __global__ void computeDensityVariationD(
 		float dens = sum * params.particleMass;		
 		measures[index] = make_float4(
 			dens,				
-			10 * params.soundspeed * dens,
+			50 * params.soundspeed * dens,
 			//powf(params.soundspeed,2) * dens,
-			0,0);
+			0,
+			pos.w);
 }

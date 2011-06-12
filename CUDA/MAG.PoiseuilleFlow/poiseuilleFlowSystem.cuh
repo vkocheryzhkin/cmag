@@ -81,6 +81,7 @@ extern "C"
 		float* velLeapFrog,
 		float* viscousForce,
 		float* pressureForce,
+		float elapsedTime,
 		uint numParticles);
 }//extern "C"
 #endif

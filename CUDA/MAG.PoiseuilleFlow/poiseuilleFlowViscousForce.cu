@@ -1,26 +1,49 @@
 #include "cutil_math.h"
 #include "poiseulleFlowUtil.cu"
 
-__device__ struct Funcd {	
+__device__ struct BottomF {	
 	float x0, y0, t;
+	float A, B, Wx, Wy;
 
-	__device__ float operator() (const float x) {
-		float A = params.amplitude;
-		float B = params.boundaryOffset * 2 * params.particleRadius;
-		float Wx = params.worldOrigin.x;
-		float Wy = params.worldOrigin.y;
+	__device__ BottomF(){
+		A = params.amplitude;
+		B = params.BoundaryHeight();
+		Wx = params.worldOrigin.x;
+		Wy = params.worldOrigin.y;
+	}
 
+	__device__ float operator() (const float x) {	
 		return x0 - x + (y0 - Wy - B - A + A * sinf(-params.sigma * (x - Wx) + params.frequency * t)) *
 			A * cosf(-params.sigma * (x - Wx) + params.frequency * t) * params.sigma;						
 	}
-	__device__ float df(const float x) {
-		float A = params.amplitude;
-		float B = params.boundaryOffset * 2 * params.particleRadius;
-		float Wx = params.worldOrigin.x;
-		float Wy = params.worldOrigin.y;
 
+	__device__ float df(const float x) {		
 		return -1 - powf(A * cosf(-params.sigma * (x - Wx) + params.frequency * t) * params.sigma,2) +
 			(y0 - Wy - B - A + A * sinf(-params.sigma * (x - Wx) + params.frequency * t)) *
+			A * sinf(-params.sigma * (x - Wx) + params.sigma * t) * powf(params.sigma, 2);
+	}
+};
+
+__device__ struct TopF {	
+	float x0, y0, t;
+	float A, B, Wx, Wy, F;
+
+	__device__ TopF(){
+		A = params.amplitude;
+		B = params.BoundaryHeight();
+		Wx = params.worldOrigin.x;
+		Wy = params.worldOrigin.y;
+		F = params.FluidHeight();
+	}
+
+	__device__ float operator() (const float x) {	
+		return x0 - x + (y0 - Wy - B - A - F - A * sinf(-params.sigma * (x - Wx) + params.frequency * t)) *
+			A * cosf(-params.sigma * (x - Wx) + params.frequency * t) * params.sigma;						
+	}
+
+	__device__ float df(const float x) {		
+		return -1 - powf(A * cosf(-params.sigma * (x - Wx) + params.frequency * t) * params.sigma,2) -
+			(y0 - Wy - B - A - F - A * sinf(-params.sigma * (x - Wx) + params.frequency * t)) *
 			A * sinf(-params.sigma * (x - Wx) + params.sigma * t) * powf(params.sigma, 2);
 	}
 };
@@ -68,34 +91,35 @@ __device__ float4 getVelocityDiff(
 	}*/
 
 	float A = params.amplitude;
-	float B = params.boundaryOffset * 2 * params.particleRadius;
+	float B = params.BoundaryHeight();
 	float Wx = params.worldOrigin.x;
 	float Wy = params.worldOrigin.y;
+	float F = params.FluidHeight();
 
-	//if(jPosition.w < 0.0f)//top
-	//{
-	//	Funcd fx;
-	//	fx.x0 = iPosition.x;
-	//	fx.y0 = iPosition.y;
-	//	fx.t = elapsedTime;
-	//	float xA = rtnewt(fx, params.worldOrigin.x, -params.worldOrigin.x, params.particleRadius / 100);		
-	//	float yA = W + B + A - A * sinf(-params.sigma * (xA - W) + params.frequency * elapsedTime);
-	//	float distA = sqrtf(powf(iPosition.x - xA,2) + powf(iPosition.y - yA,2));	
-	//	float k = A * cosf(-params.sigma * (xA - W) + params.frequency * elapsedTime) * params.sigma;
+	if(jPosition.w < 0.0f)//top
+	{
+		TopF fx;
+		fx.x0 = iPosition.x;
+		fx.y0 = iPosition.y;
+		fx.t = elapsedTime;
+		float xA = rtnewt(fx, params.worldOrigin.x, -params.worldOrigin.x, params.particleRadius / 100);		
+		float yA = Wy + B + A + F + A * sinf(-params.sigma * (xA - Wx) + params.frequency * elapsedTime);
+		float distA = sqrtf(powf(iPosition.x - xA,2) + powf(iPosition.y - yA,2));	
+		float k = -A * cosf(-params.sigma * (xA - Wx) + params.frequency * elapsedTime) * params.sigma;
 
-	//	float AA = -k;
-	//	float BB = 1;
-	//	float CC = k * xA - yA;
-	//	float distB = abs(AA* jPosition.x + BB * jPosition.y + CC) / sqrt(AA * AA + 1);
+		float AA = -k;
+		float BB = 1;
+		float CC = k * xA - yA;
+		float distB = abs(AA* jPosition.x + BB * jPosition.y + CC) / sqrt(AA * AA + 1);
 
-	//	float beta = fmin(1000.0f, 1 + distB / distA);
-	//	return beta * (iVelocity); 
-	//}
+		float beta = fmin(1.5f, 1 + distB / distA);
+		return beta * (iVelocity); 
+	}
 	
 	
 	if(jPosition.w > 0.0f)//bottom
 	{
-		Funcd fx;
+		BottomF fx;
 		fx.x0 = iPosition.x;
 		fx.y0 = iPosition.y;
 		fx.t = elapsedTime;

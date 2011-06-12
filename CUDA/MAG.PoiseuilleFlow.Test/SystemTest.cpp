@@ -101,13 +101,11 @@ void mytest(float recordTime)
 
 BOOST_AUTO_TEST_CASE(DumpVelocityProfile)
 {
-	mytest(0.0225f);
+	/*mytest(0.0225f);
 	mytest(0.045f);
 	mytest(0.1125f);
 	mytest(0.225f);
-	mytest(1.0f);
-	/*mytest(2.0f);
-	mytest(4.0f);*/
+	mytest(1.0f);*/	
 }
 
 BOOST_AUTO_TEST_SUITE_END()

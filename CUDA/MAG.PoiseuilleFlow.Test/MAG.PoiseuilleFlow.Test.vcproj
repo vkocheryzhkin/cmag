@@ -163,6 +163,10 @@
 	</References>
 	<Files>
 		<File
+			RelativePath=".\AvgDensityTest.cpp"
+			>
+		</File>
+		<File
 			RelativePath=".\CalculateHashTest.cpp"
 			>
 		</File>
