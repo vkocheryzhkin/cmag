@@ -370,8 +370,8 @@ void PoiseuilleFlowSystem::Update(){
 			time_shift +=cfg.deltaTime;
 		}
 		else{
-			/*cfg.IsBoundaryConfiguration = !cfg.IsBoundaryConfiguration;
-			setParameters(&cfg);			*/
+			cfg.IsBoundaryConfiguration = !cfg.IsBoundaryConfiguration;
+			setParameters(&cfg);
 		}
 	}			
 

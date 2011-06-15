@@ -11,21 +11,19 @@ using namespace thrust;
 
 void density_avg(){	
 	int boundary_offset = 3;		
-	uint3 gridSize = make_uint3(64, 64, 4);   
+	uint3 gridSize = make_uint3(64, 128, 4);   
 	uint3 fluid_size = make_uint3(64, 64 -  2 * boundary_offset, 1);
-	/*uint3 gridSize = make_uint3(8, 16, 4);   			
-	uint3 fluid_size = make_uint3(8, 8 -  2 * boundary_offset, 1);*/
 	float soundspeed = powf(10.0f, -4.0f);															
 	float radius = 1.0f / (2 * (64 - 6) * 1000);							
 	float3 gravity = make_float3(0,0,0);
-	float amplitude = 6 * radius;
-	float sigma = (64 / 32) * CUDART_PI_F / ((fluid_size.x) * 2 * radius);		
+	float amplitude = 6 * radius;	
+	float sigma = (64 / 32) * CUDART_PI_F / (fluid_size.x * 2 * radius);//!!!!!
 	float frequency = 100 * soundspeed * sigma;
-
-	float delaTime = powf(10.0f, -4.0f);
+	float delaTime = powf(10.0f, -4.0f);	
 	PoiseuilleFlowSystem* psystem = new PoiseuilleFlowSystem(
 		delaTime,
 		fluid_size,					
+		//0,0,0,
 		amplitude,
 		sigma,
 		frequency,
@@ -52,7 +50,7 @@ void density_avg(){
 	backup(name);
 	fp1.open(name.c_str());
 		
-	while(psystem->GetElapsedTime() < 2.5f){
+	while(psystem->GetElapsedTime() < 1.0f){
 		psystem->Update();	
 														
 		thrust::copy(position, position + numParticles, h_position.begin());	

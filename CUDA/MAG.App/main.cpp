@@ -232,20 +232,18 @@ void SystemInit()
 {		
 	int boundary_offset = 3;		
 	uint3 gridSize = make_uint3(64, 128, 4);   
-	uint3 fluidParticlesSize = make_uint3(64, 64 -  2 * boundary_offset, 1);
+	uint3 fluid_size = make_uint3(64, 64 -  2 * boundary_offset, 1);
 	float soundspeed = powf(10.0f, -4.0f);															
 	float radius = 1.0f / (2 * (64 - 6) * 1000);						
 	//float3 gravity = make_float3(1000 * powf(10.0, -4),0,0);								
 	float3 gravity = make_float3(0,0,0);
-	float amplitude = 6 * radius;
-	//float sigma = (64 / 32) * CUDART_PI_F / ((fluidParticlesSize.x - 1) * 2 * radius);		
-	float sigma = (64 / 32) * CUDART_PI_F / ((fluidParticlesSize.x - 0) * 2 * radius);//!!!!!
+	float amplitude = 6 * radius;	
+	float sigma = (64 / 32) * CUDART_PI_F / ((fluid_size.x - 0) * 2 * radius);//!!!!!
 	float frequency = 100 * soundspeed * sigma;
-
 	float delaTime = powf(10.0f, -4.0f);
 	psystem = new PoiseuilleFlowSystem(
 			delaTime,
-			fluidParticlesSize,			
+			fluid_size,			
 			//0,0,0,
 			amplitude,
 			sigma,

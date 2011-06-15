@@ -90,52 +90,52 @@ __device__ float4 getVelocityDiff(
 		return beta * iVelocity;
 	}*/
 
-	float A = params.amplitude;
+	/*float A = params.amplitude;
 	float B = params.BoundaryHeight();
 	float Wx = params.worldOrigin.x;
 	float Wy = params.worldOrigin.y;
-	float F = params.FluidHeight();
+	float F = params.FluidHeight();*/
 
-	if(jPosition.w < 0.0f)//top
-	{
-		TopF fx;
-		fx.x0 = iPosition.x;
-		fx.y0 = iPosition.y;
-		fx.t = elapsedTime;
-		float xA = rtnewt(fx, params.worldOrigin.x, -params.worldOrigin.x, params.particleRadius / 100);		
-		float yA = Wy + B + A + F + A * sinf(-params.sigma * (xA - Wx) + params.frequency * elapsedTime);
-		float distA = sqrtf(powf(iPosition.x - xA,2) + powf(iPosition.y - yA,2));	
-		float k = -A * cosf(-params.sigma * (xA - Wx) + params.frequency * elapsedTime) * params.sigma;
+	//if(jPosition.w < 0.0f)//top
+	//{
+	//	TopF fx;
+	//	fx.x0 = iPosition.x;
+	//	fx.y0 = iPosition.y;
+	//	fx.t = elapsedTime;
+	//	float xA = rtnewt(fx, params.worldOrigin.x, -params.worldOrigin.x, params.particleRadius / 100);		
+	//	float yA = Wy + B + A + F + A * sinf(-params.sigma * (xA - Wx) + params.frequency * elapsedTime);
+	//	float distA = sqrtf(powf(iPosition.x - xA,2) + powf(iPosition.y - yA,2));	
+	//	float k = -A * cosf(-params.sigma * (xA - Wx) + params.frequency * elapsedTime) * params.sigma;
 
-		float AA = -k;
-		float BB = 1;
-		float CC = k * xA - yA;
-		float distB = abs(AA* jPosition.x + BB * jPosition.y + CC) / sqrt(AA * AA + 1);
+	//	float AA = -k;
+	//	float BB = 1;
+	//	float CC = k * xA - yA;
+	//	float distB = abs(AA* jPosition.x + BB * jPosition.y + CC) / sqrt(AA * AA + 1);
 
-		float beta = fmin(1.5f, 1 + distB / distA);
-		return beta * (iVelocity); 
-	}
-	
-	
-	if(jPosition.w > 0.0f)//bottom
-	{
-		BottomF fx;
-		fx.x0 = iPosition.x;
-		fx.y0 = iPosition.y;
-		fx.t = elapsedTime;
-		float xA = rtnewt(fx, params.worldOrigin.x, -params.worldOrigin.x, params.particleRadius / 100);		
-		float yA = Wy + B + A - A * sinf(-params.sigma * (xA - Wx) + params.frequency * elapsedTime);
-		float distA = sqrtf(powf(iPosition.x - xA,2) + powf(iPosition.y - yA,2));	
-		float k = A * cosf(-params.sigma * (xA - Wx) + params.frequency * elapsedTime) * params.sigma;
+	//	float beta = fmin(1.5f, 1 + distB / distA);
+	//	return beta * (iVelocity); 
+	//}
+	//
+	//
+	//if(jPosition.w > 0.0f)//bottom
+	//{
+	//	BottomF fx;
+	//	fx.x0 = iPosition.x;
+	//	fx.y0 = iPosition.y;
+	//	fx.t = elapsedTime;
+	//	float xA = rtnewt(fx, params.worldOrigin.x, -params.worldOrigin.x, params.particleRadius / 100);		
+	//	float yA = Wy + B + A - A * sinf(-params.sigma * (xA - Wx) + params.frequency * elapsedTime);
+	//	float distA = sqrtf(powf(iPosition.x - xA,2) + powf(iPosition.y - yA,2));	
+	//	float k = A * cosf(-params.sigma * (xA - Wx) + params.frequency * elapsedTime) * params.sigma;
 
-		float AA = -k;
-		float BB = 1;
-		float CC = k * xA - yA;
-		float distB = abs(AA* jPosition.x + BB * jPosition.y + CC) / sqrt(AA * AA + 1);
+	//	float AA = -k;
+	//	float BB = 1;
+	//	float CC = k * xA - yA;
+	//	float distB = abs(AA* jPosition.x + BB * jPosition.y + CC) / sqrt(AA * AA + 1);
 
-		float beta = fmin(1.5f, 1 + distB / distA);
-		return beta * (iVelocity); 
-	}
+	//	float beta = fmin(1.5f, 1 + distB / distA);
+	//	return beta * (iVelocity); 
+	//}
 	
 	return iVelocity - jVelocity;	
 }
