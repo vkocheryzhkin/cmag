@@ -35,12 +35,12 @@ public:
 
 	void SetupBoundary( float * dPos );
 
-	void reset();
+	void Reset();
 
 	void   setArray(ParticleArray array, const float* data, int start, int count);
 
 	int getNumParticles() const { return numParticles; }
-	float getElapsedTime() const { return elapsedTime; }
+	float GetElapsedTime() const { return elapsedTime; }
 	float getHalfWorldXSize() {return cfg.gridSize.x * cfg.particleRadius;}
 	float getHalfWorldYSize() {return cfg.gridSize.y * cfg.particleRadius;}
 	float getHalfWorldZSize() {return cfg.gridSize.z * cfg.particleRadius;}
@@ -83,7 +83,9 @@ protected:
 	uint numParticles;
 	float currentWaveHeight;	
 	float elapsedTime;
+	float time_shift;
 	float epsDensity;
+	
 
 	// CPU data
 	float* hPos;              

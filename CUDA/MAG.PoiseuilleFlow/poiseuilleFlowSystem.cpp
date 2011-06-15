@@ -246,8 +246,9 @@ inline float frand(){
 	return rand() / (float) RAND_MAX;
 }
 
-void PoiseuilleFlowSystem::reset(){
+void PoiseuilleFlowSystem::Reset(){
 	elapsedTime = 0.0f;	
+	time_shift = 0.0f;
 	currentWaveHeight = 0.0f;
 	cfg.IsBoundaryConfiguration = true;
 	float jitter = cfg.particleRadius * 0.01f;			            
@@ -351,23 +352,6 @@ void PoiseuilleFlowSystem::initBoundaryParticles(float spacing)
 	}
 }
 
-//void PoiseuilleFlowSystem::SwitchBoundarySetup()
-//{ 
-//	cfg.IsBoundaryConfiguration = !cfg.IsBoundaryConfiguration;
-//	elapsedTime = 0.0f;
-//}
-
-//void PoiseuilleFlowSystem::SetupBoundary(float* dPos)
-//{			
-//	if(currentWaveHeight < cfg.amplitude){			
-//		ExtConfigureBoundary(dPos, currentWaveHeight, numParticles);
-//		currentWaveHeight += cfg.deltaTime * cfg.soundspeed;
-//	}
-//	else{
-//		IsBoundaryConfiguration = !IsBoundaryConfiguration;
-//		elapsedTime = 0.0f;
-//	}	
-//}
 
 void PoiseuilleFlowSystem::Update(){
 	assert(IsInitialized);
@@ -382,12 +366,12 @@ void PoiseuilleFlowSystem::Update(){
 	if(cfg.IsBoundaryConfiguration){
 		if (currentWaveHeight < cfg.amplitude){
 			ExtConfigureBoundary(dPos, currentWaveHeight, numParticles);
-			currentWaveHeight += cfg.deltaTime * cfg.soundspeed;		
+			currentWaveHeight += cfg.deltaTime * cfg.soundspeed;	
+			time_shift +=cfg.deltaTime;
 		}
 		else{
-			cfg.IsBoundaryConfiguration = !cfg.IsBoundaryConfiguration;
-			setParameters(&cfg);
-			elapsedTime = 0.0f;
+			/*cfg.IsBoundaryConfiguration = !cfg.IsBoundaryConfiguration;
+			setParameters(&cfg);			*/
 		}
 	}			
 
@@ -417,37 +401,37 @@ void PoiseuilleFlowSystem::Update(){
 		numParticles,
 		numGridCells);
 
-	//computeViscousForce(
-	//	viscousForce,//not sorted			
-	//	dMeasures, //input
-	//	dSortedPos,			
-	//	dSortedVel,
-	//	dIndex,
-	//	dCellStart,
-	//	dCellEnd,
-	//	numParticles,
-	//	cfg.IsBoundaryConfiguration? 0: elapsedTime,
-	//	numGridCells);    
+	computeViscousForce(
+		viscousForce,//not sorted			
+		dMeasures, //input
+		dSortedPos,			
+		dSortedVel,
+		dIndex,
+		dCellStart,
+		dCellEnd,
+		numParticles,
+		cfg.IsBoundaryConfiguration? 0: elapsedTime - time_shift,
+		numGridCells);    
 
-	//computePressureForce(
-	//	pressureForce,//not sorted		
-	//	dMeasures, //input
-	//	dSortedPos, 
-	//	dIndex,
-	//	dCellStart,
-	//	dCellEnd,
-	//	numParticles,
-	//	cfg.IsBoundaryConfiguration? 0: elapsedTime,
-	//	numGridCells);
+	computePressureForce(
+		pressureForce,//not sorted		
+		dMeasures, //input
+		dSortedPos, 
+		dIndex,
+		dCellStart,
+		dCellEnd,
+		numParticles,
+		cfg.IsBoundaryConfiguration? 0: elapsedTime - time_shift,
+		numGridCells);
 
-	//computeCoordinates(
-	//	dPos,
-	//	dVel,	
-	//	dVelLeapFrog,
-	//	viscousForce,
-	//	pressureForce,
-	//	cfg.IsBoundaryConfiguration? 0: elapsedTime,
-	//	numParticles);
+	computeCoordinates(
+		dPos,
+		dVel,	
+		dVelLeapFrog,
+		viscousForce,
+		pressureForce,
+		cfg.IsBoundaryConfiguration? 0: elapsedTime - time_shift,
+		numParticles);
 
 	if (IsOpenGL) {
 		unmapGLBufferObject(cuda_posvbo_resource);

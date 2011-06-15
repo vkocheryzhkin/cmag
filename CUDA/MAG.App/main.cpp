@@ -77,7 +77,7 @@ void computeFPS()
 		char fps[256];
 		float ifps = 1.f / (cutGetAverageTimerValue(timer) / 1000.f);
 		sprintf(fps, "Poiseuille (%d particles): %3.1f fps; Elapsed time: %1.4f",
-			psystem->getNumParticles(), ifps, psystem->getElapsedTime()); 
+			psystem->getNumParticles(), ifps, psystem->GetElapsedTime()); 
 		glutSetWindowTitle(fps);
 		fpsCount = 0;         
 
@@ -199,7 +199,7 @@ void key(unsigned char key, int , int)
 			renderer->setVertexBuffer(psystem->getCurrentReadBuffer(), psystem->getNumParticles());
 		break;
 	case '1':
-		psystem->reset();
+		psystem->Reset();
 		break;
 	//case '2':
 	//	//psystem->startBoundaryMotion();
@@ -257,7 +257,7 @@ void SystemInit()
 			radius,
 			true);					
 		
-	psystem->reset();		
+	psystem->Reset();		
 	
 	renderer = new ParticleRenderer;
 	renderer->setParticleRadius(psystem->getParticleRadius());

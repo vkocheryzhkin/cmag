@@ -40,7 +40,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(CUDA_PATH)/include&quot;;&quot;$(BOOST_ROOT)&quot;;&quot;$(NVSDKCOMPUTE_ROOT)\C\common\inc&quot;;..\MAG.Util;..\MAG.PoiseuilleFlow"
+				AdditionalIncludeDirectories="&quot;$(CUDA_PATH)/include&quot;;&quot;$(NVSDKCOMPUTE_ROOT)\C\common\inc&quot;;..\MAG.PoiseuilleFlow"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -61,7 +61,7 @@
 				AdditionalDependencies="cudart.lib cutil32D.lib glew32.lib"
 				OutputFile="../../../C/bin/win32/$(ConfigurationName)/$(ProjectName).exe"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="&quot;$(BOOST_ROOT)/lib&quot;;&quot;$(CUDA_PATH)/lib/$(PlatformName)&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/C/common/lib/$(PlatformName)&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/shared/lib/$(PlatformName)&quot;"
+				AdditionalLibraryDirectories="&quot;$(CUDA_PATH)/lib/$(PlatformName)&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/C/common/lib/$(PlatformName)&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/shared/lib/$(PlatformName)&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				TargetMachine="1"
@@ -163,10 +163,6 @@
 	</References>
 	<Files>
 		<File
-			RelativePath=".\AvgDensityTest.cpp"
-			>
-		</File>
-		<File
 			RelativePath=".\CalculateHashTest.cpp"
 			>
 		</File>
@@ -175,11 +171,23 @@
 			>
 		</File>
 		<File
-			RelativePath=".\ForcesTest.cc"
+			RelativePath=".\density.h"
 			>
 		</File>
 		<File
-			RelativePath=".\SystemTest.cpp"
+			RelativePath=".\forces.h"
+			>
+		</File>
+		<File
+			RelativePath=".\main.cc"
+			>
+		</File>
+		<File
+			RelativePath=".\poiseuille_velocity_profile.h"
+			>
+		</File>
+		<File
+			RelativePath=".\util.h"
 			>
 		</File>
 		<File

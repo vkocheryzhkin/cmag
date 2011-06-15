@@ -1,8 +1,13 @@
 #ifndef __POISEUILLEFLOW_KERNEL_CUH__
 #define __POISEUILLEFLOW_KERNEL_CUH__
 #include "vector_types.h"
+
 #ifndef __DEVICE_EMULATION__
 #define USE_TEX 1
+#endif
+
+#ifndef CUDART_PI_F
+#define CUDART_PI_F         3.141592654f
 #endif
 
 #if USE_TEX
