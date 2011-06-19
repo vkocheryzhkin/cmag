@@ -24,21 +24,21 @@ __device__ float3 sumPressure(
 					float density2 = measure.x;
 					float pressure2 = measure.y;				
 
-					int3 shift = make_int3(EvaluateShift(gridPos.x, params.gridSize.x),
-											EvaluateShift(gridPos.y, params.gridSize.y),
-											EvaluateShift(gridPos.z, params.gridSize.z));					
+					int3 shift = make_int3(EvaluateShift(gridPos.x, cfg.gridSize.x),
+											EvaluateShift(gridPos.y, cfg.gridSize.y),
+											EvaluateShift(gridPos.z, cfg.gridSize.z));					
 
-					float3 relPos = make_float3(pos.x - (pos2.x + shift.x * params.worldSize.x),
-												 pos.y - (pos2.y + shift.y * params.worldSize.y),
-												 pos.z - (pos2.z + shift.z * params.worldSize.z));  
+					float3 relPos = make_float3(pos.x - (pos2.x + shift.x * cfg.worldSize.x),
+												 pos.y - (pos2.y + shift.y * cfg.worldSize.y),
+												 pos.z - (pos2.z + shift.z * cfg.worldSize.z));  
 										
 					float dist = length(relPos);
-					float q = dist / params.smoothingRadius;									
+					float q = dist / cfg.smoothingRadius;									
 
-					float coeff = 7.0f / (2 * CUDART_PI_F * pow(params.smoothingRadius, 3));
+					float coeff = 7.0f / (2 * CUDART_PI_F * pow(cfg.smoothingRadius, 3));
 					if(q < 2){
 						float temp = coeff * (-pow(1 - 0.5f * q,3) * (2 * q + 1) + pow(1 - 0.5f * q, 4));
-						force += -1.0f * params.particleMass * temp *
+						force += -1.0f * cfg.particleMass * temp *
 							(pressure / powf(density,2) + pressure2 / powf(density2,2)) * 
 							normalize(relPos);						
 					}
@@ -68,9 +68,9 @@ __global__ void computePressureForceD(
 		int3 gridPos = calcGridPos(make_float3(pos));
 
 		float3 force = make_float3(0.0f);		
-		for(int z=-params.cellcount; z<=params.cellcount; z++) {
-			for(int y=-params.cellcount; y<=params.cellcount; y++) {
-				for(int x=-params.cellcount; x<=params.cellcount; x++) {
+		for(int z=-cfg.cellcount; z<=cfg.cellcount; z++) {
+			for(int y=-cfg.cellcount; y<=cfg.cellcount; y++) {
+				for(int x=-cfg.cellcount; x<=cfg.cellcount; x++) {
 					int3 neighbourPos = gridPos + make_int3(x, y, z);
 					force += sumPressure(
 						neighbourPos, 

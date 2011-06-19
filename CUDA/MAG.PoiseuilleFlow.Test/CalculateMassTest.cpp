@@ -21,11 +21,11 @@
 //	float3 gravity = make_float3(0.0f, 0.0f, 0.0f); 
 //	float radius = 1.0f / (2 * (64 - 2 * boundaryOffset) * 1000);	
 //	uint3 gridSize = make_uint3(8, 8, 4);   			
-//	uint3 fluidParticlesSize = make_uint3(8, 8 -  2 * boundaryOffset, 1);
+//	uint3 fluid_size = make_uint3(8, 8 -  2 * boundaryOffset, 1);
 //	float delaTime = powf(10.0f, -4.0f);
 //	PoiseuilleFlowSystem *psystem = new PoiseuilleFlowSystem(
 //			delaTime,
-//			fluidParticlesSize,
+//			fluid_size,
 //			0,0,0,
 //			soundspeed,
 //			gravity,

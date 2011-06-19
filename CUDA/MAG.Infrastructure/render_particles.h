@@ -17,7 +17,7 @@ public:
     void displayGrid();
 
     void setPointSize(float size)  { pointSize = size; }
-    void setParticleRadius(float r) { particleRadius = r; }
+    void setradius(float r) { radius = r; }
     void setFOV(float _fov) { fov = _fov; }
     void setWindowSize(int w, int h) { window_w = w; window_h = h; }
 
@@ -31,7 +31,7 @@ protected: // data
     int numParticles;
 
     float pointSize;
-    float particleRadius;
+    float radius;
     float fov;
     int window_w, window_h;
 

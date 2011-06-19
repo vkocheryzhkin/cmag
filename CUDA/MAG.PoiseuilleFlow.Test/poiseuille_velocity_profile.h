@@ -23,7 +23,7 @@ void poiseuille_velocity_profile()
 	PoiseuilleFlowSystem *psystem = new PoiseuilleFlowSystem(
 			delaTime,
 			fluid_size,			
-			0,0,0,			
+			0,0,			
 			soundspeed,
 			gravity,
 			boundaryOffset, 
@@ -73,9 +73,9 @@ void poiseuille_velocity_profile()
 			float posx = positions[index[i]].x;		
 			float posy = positions[index[i]].y;	
 			float bottom = psystem->getWorldOrigin().y +
-				2 * psystem -> getParticleRadius() * boundaryOffset;
+				2 * psystem -> getradius() * boundaryOffset;
 			if((posx > 0) 
-				&& (posx <  2 * psystem -> getParticleRadius())
+				&& (posx <  2 * psystem -> getradius())
 				&& (posy > bottom)
 				&& (posy < bottom + fluid_size.y * 2.0f * radius)
 				)
@@ -83,7 +83,7 @@ void poiseuille_velocity_profile()
 				fp1 << velocity[index[i]].x << " "
 					<< positions[index[i]].y
 					- psystem->getWorldOrigin().y
-					- boundaryOffset * 2 *psystem -> getParticleRadius()
+					- boundaryOffset * 2 *psystem -> getradius()
 					<< endl;
 				tt++;
 			}

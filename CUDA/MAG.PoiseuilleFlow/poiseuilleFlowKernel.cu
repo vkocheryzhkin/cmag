@@ -13,21 +13,21 @@ texture<uint, 1, cudaReadModeElementType> gridParticleHashTex;
 texture<uint, 1, cudaReadModeElementType> cellStartTex;
 texture<uint, 1, cudaReadModeElementType> cellEndTex;
 #endif
-__constant__ PoiseuilleParams params;
+__constant__ Poiseuillecfg cfg;
 
 __device__ int3 calcGridPos(float3 p){
 	int3 gridPos;
-	gridPos.x = floor((p.x - params.worldOrigin.x) * 0.5f / params.particleRadius);
-	gridPos.y = floor((p.y - params.worldOrigin.y) * 0.5f / params.particleRadius);
-	gridPos.z = floor((p.z - params.worldOrigin.z) * 0.5f / params.particleRadius);
+	gridPos.x = floor((p.x - cfg.worldOrigin.x) * 0.5f / cfg.radius);
+	gridPos.y = floor((p.y - cfg.worldOrigin.y) * 0.5f / cfg.radius);
+	gridPos.z = floor((p.z - cfg.worldOrigin.z) * 0.5f / cfg.radius);
 	return gridPos;
 }
 
 __device__ uint calcGridHash(int3 gridPos){
-	gridPos.x = gridPos.x & (params.gridSize.x-1);  
-	gridPos.y = gridPos.y & (params.gridSize.y-1);
-	gridPos.z = gridPos.z & (params.gridSize.z-1);        
-	return __umul24(__umul24(gridPos.z, params.gridSize.y), params.gridSize.x) + __umul24(gridPos.y, params.gridSize.x) + gridPos.x;
+	gridPos.x = gridPos.x & (cfg.gridSize.x-1);  
+	gridPos.y = gridPos.y & (cfg.gridSize.y-1);
+	gridPos.z = gridPos.z & (cfg.gridSize.z-1);        
+	return __umul24(__umul24(gridPos.z, cfg.gridSize.y), cfg.gridSize.x) + __umul24(gridPos.y, cfg.gridSize.x) + gridPos.x;
 }
 
 __global__ void calculatePoiseuilleHashD(
@@ -123,10 +123,10 @@ __global__ void predictCoordinatesD(
 			return;	
 		}
 
-		float3 nextVel = vel + (params.gravity + (vis + pres) ) * params.deltaTime;		
+		float3 nextVel = vel + (cfg.gravity + (vis + pres) ) * cfg.deltaTime;		
 		
-		pos += nextVel * params.deltaTime;   
-		float halfWorldXSize = params.gridSize.x * params.particleRadius;			
+		pos += nextVel * cfg.deltaTime;   
+		float halfWorldXSize = cfg.gridSize.x * cfg.radius;			
 
 		if(pos.x > halfWorldXSize){
 			pos.x -= 2 * halfWorldXSize;
@@ -139,10 +139,6 @@ __global__ void predictCoordinatesD(
 		predictedVelocity[index] = make_float4(0.0f);
 }
 
-__device__ float getBoundaryCurve(float x, float t){
-	float temp = sinf(params.sigma * (x - params.worldOrigin.x) - params.frequency * t);  		
-		return temp;
-}
 
 
 __global__ void configureBoundaryD(	
@@ -157,21 +153,18 @@ __global__ void configureBoundaryD(
 		if(posData.w > 0.0f){//bottom						
 			posArray[index] = make_float4(
 				posData.x,
-				params.amplitude + params.BoundaryHeight() +
-				currentWaveHeight * getBoundaryCurve(posData.x, 0) 			
-				+ params.worldOrigin.y - params.particleRadius *
-				(posData.w - 1.0f),
+				-1.0f * cfg.fluid_size.y * cfg.radius +
+				currentWaveHeight * cfg.GetWave(posData.x, 0) 			
+				- cfg.radius * (posData.w - 1.0f),
 				posData.z,
 				posData.w);									
 		}
 		if(posData.w < 0.0f){
 			posArray[index] = make_float4(
 				posData.x,
-				params.BoundaryHeight() + params.FluidHeight() +
-				params.amplitude - 
-				currentWaveHeight * getBoundaryCurve(posData.x, 0)				  
-				+ params.worldOrigin.y + params.particleRadius *
-				(-posData.w - 1.0f),
+				cfg.fluid_size.y * cfg.radius - 
+				currentWaveHeight * cfg.GetWave(posData.x, 0)+				  
+				cfg.radius * (-posData.w - 1.0f),
 				posData.z,
 				posData.w);
 		}

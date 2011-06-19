@@ -176,7 +176,7 @@
 				>
 				<Tool
 					Name="Cudart Build Rule"
-					AddedDependencies="poiseuilleFlowKernel.cu; poiseuilleFlowDensity.cu; poiseuilleFlowPressureForce.cu; poiseulleFlowUtil.cu; poiseuilleFlowSystem.cuh; poiseuilleFlowViscousForce.cu;poiseuilleFlowIntegrate.cu;"
+					AddedDependencies="poiseuilleFlowKernel.cu; poiseuilleFlowKernel.cuh; poiseuilleFlowDensity.cu; poiseuilleFlowPressureForce.cu; poiseulleFlowUtil.cu; poiseuilleFlowSystem.cuh; poiseuilleFlowViscousForce.cu;poiseuilleFlowIntegrate.cu;"
 					Optimization="0"
 					Runtime="1"
 				/>

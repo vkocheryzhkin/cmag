@@ -12,22 +12,20 @@ using namespace thrust;
 
 void forces_avg(){	
 	int boundary_offset = 3;		
-	uint3 gridSize = make_uint3(64, 128, 4);   
-	uint3 fluid_size = make_uint3(64, 64 -  2 * boundary_offset, 1);
-	float soundspeed = powf(10.0f, -4.0f);															
+	uint3 gridSize = make_uint3(256, 128, 4);   
+	uint3 fluid_size = make_uint3(256, 64 -  2 * boundary_offset, 1);	
+	float soundspeed = powf(10.0f, -4.0f);
 	float radius = 1.0f / (2 * (64 - 6) * 1000);							
 	float3 gravity = make_float3(0,0,0);
-	float amplitude = 6 * radius;	
-	float sigma = (64 / 32) * CUDART_PI_F / (fluid_size.x * 2 * radius);
-	float frequency = 100 * soundspeed * sigma;
-	float delaTime = powf(10.0f, -4.0f);	
+	float amplitude = 0.6 * 35 * radius;		
+	float wave_speed = 100 * soundspeed;
+	float delaTime = powf(10.0f, -4.0f);
 	uint numFluid = fluid_size.x * fluid_size.y;
 	PoiseuilleFlowSystem* psystem = new PoiseuilleFlowSystem(
 		delaTime,
 		fluid_size,					
-		amplitude,
-		sigma,
-		frequency,
+		amplitude,		
+		wave_speed,
 		soundspeed,
 		gravity,
 		boundary_offset, 

@@ -10,15 +10,14 @@ __global__ void computeCoordinatesD(
 		if (index >= numParticles) return;     		
 
 		volatile float4 posData = posArray[index]; 	
-		if(posData.w != 0.0f && params.IsBoundaryConfiguration) return;//skip boundary particle
+		if(posData.w != 0.0f && cfg.IsBoundaryConfiguration) return;//skip boundary particle
 		if(posData.w > 0.0f)//bottom
 		{
 			posArray[index] = make_float4(
 				posData.x,
-				params.amplitude + params.BoundaryHeight() +
-				params.amplitude * getBoundaryCurve(posData.x, elapsedTime) 
-				+ params.worldOrigin.y - params.particleRadius * 
-				(posData.w - 1.0f),
+				-1.0f * cfg.fluid_size.y * cfg.radius +
+				cfg.amplitude * cfg.GetWave(posData.x, elapsedTime)
+				- cfg.radius * (posData.w - 1.0f),
 				posData.z,
 				posData.w);									
 			return;
@@ -26,11 +25,9 @@ __global__ void computeCoordinatesD(
 		if(posData.w < 0.0f)//top
 		{
 			posArray[index] = make_float4(posData.x,
-				params.BoundaryHeight() +
-				params.FluidHeight() +
-				params.amplitude - 
-				params.amplitude * getBoundaryCurve(posData.x, elapsedTime) 
-				+ params.worldOrigin.y + params.particleRadius * (-posData.w - 1.0f),
+				cfg.fluid_size.y * cfg.radius - 
+				cfg.amplitude * cfg.GetWave(posData.x, elapsedTime) + 
+				cfg.radius * (-posData.w - 1.0f),
 				posData.z,
 				posData.w);		
 			return;
@@ -46,16 +43,17 @@ __global__ void computeCoordinatesD(
 		float3 vis = make_float3(viscouseData.x, viscouseData.y, viscouseData.z);
 		float3 pres = make_float3(pressureData.x, pressureData.y, pressureData.z);											
 
-		float3 nextVel = vel + (params.gravity + vis + pres) * params.deltaTime;		
-		//float3 nextVel = vel + (params.gravity + pres) * params.deltaTime;		
+		float3 nextVel = vel + (cfg.gravity + vis + pres) * cfg.deltaTime;		
+		//float3 nextVel = vel + (cfg.gravity + pres) * cfg.deltaTime;		
+		//float3 nextVel = vel + pres * cfg.deltaTime;		
 
 		float3 velLeapFrog = vel + nextVel;
 		velLeapFrog *= 0.5f;
 
 		vel = nextVel;   	
-		pos += vel * params.deltaTime;   
+		pos += vel * cfg.deltaTime;   
 
-		float halfWorldXSize = params.gridSize.x * params.particleRadius;			
+		float halfWorldXSize = cfg.gridSize.x * cfg.radius;			
 		if(pos.x > halfWorldXSize)
 			pos.x -= 2 * halfWorldXSize;		
 		if(pos.x < -halfWorldXSize)

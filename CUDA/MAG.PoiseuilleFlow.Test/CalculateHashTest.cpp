@@ -15,7 +15,7 @@
 //	const int numParticles = 1;
 //	PoiseuilleParams params;
 //	params.worldOrigin = make_float3(-1.0f, -1.0f, -1.0f);
-//	params.particleRadius = 1.0f / 64;
+//	params.radius = 1.0f / 64;
 //	params.gridSize = make_uint3(64, 64, 64);
 //	setParameters(&params); 
 //
@@ -24,8 +24,8 @@
 //
 //	hPosition = new float[numParticles * 4];
 //	hHash = new uint[numParticles];	
-//	hPosition[1] = hPosition[2] = params.worldOrigin.x + params.particleRadius;	
-//	hPosition[0] = params.worldOrigin.x + 2.0f * params.particleRadius;
+//	hPosition[1] = hPosition[2] = params.worldOrigin.x + params.radius;	
+//	hPosition[0] = params.worldOrigin.x + 2.0f * params.radius;
 //
 //	uint memSize = 4 * numParticles * sizeof(float);
 //	allocateArray((void**)&dHash,  numParticles * sizeof(uint));
@@ -51,7 +51,7 @@
 //	const int numParticles = 1;
 //	PoiseuilleParams params;
 //	params.worldOrigin = make_float3(-1.0f, -1.0f, -1.0f);
-//	params.particleRadius = 1.0f / 64;
+//	params.radius = 1.0f / 64;
 //	params.gridSize = make_uint3(64, 64, 64);
 //	setParameters(&params); 
 //
@@ -60,9 +60,9 @@
 //
 //	hPosition = new float[numParticles * 4];
 //	hHash = new uint[numParticles];	
-//	hPosition[1] = hPosition[2] = params.worldOrigin.x + params.particleRadius;	
-//	hPosition[0] = params.worldOrigin.x - params.particleRadius;
-//	//hPosition[0] = 1.0f + params.particleRadius;
+//	hPosition[1] = hPosition[2] = params.worldOrigin.x + params.radius;	
+//	hPosition[0] = params.worldOrigin.x - params.radius;
+//	//hPosition[0] = 1.0f + params.radius;
 //
 //	uint memSize = 4 * numParticles * sizeof(float);
 //	allocateArray((void**)&dHash,  numParticles * sizeof(uint));

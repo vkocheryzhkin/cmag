@@ -18,8 +18,8 @@
 #include "magUtil.cuh"
 extern "C"
 {	
-	void setParameters(PoiseuilleParams *hostParams){
-		cutilSafeCall( cudaMemcpyToSymbol(params, hostParams, sizeof(PoiseuilleParams)) );
+	void setParameters(Poiseuillecfg *hostParams){
+		cutilSafeCall( cudaMemcpyToSymbol(cfg, hostParams, sizeof(Poiseuillecfg)) );
 	}	
 
 	void ExtConfigureBoundary(

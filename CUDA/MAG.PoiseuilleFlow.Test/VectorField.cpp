@@ -18,15 +18,15 @@
 //	float3 gravity = make_float3(0.0f, 0.0f, 0.0f); 
 //	float radius = 1.0f / (2 * (64 - 2 * boundaryOffset) * 1000);
 //	uint3 gridSize = make_uint3(64, 64, 4);   
-//	uint3 fluidParticlesSize = make_uint3(gridSize.x, gridSize.y -  2 * boundaryOffset, 1);
+//	uint3 fluid_size = make_uint3(gridSize.x, gridSize.y -  2 * boundaryOffset, 1);
 //	float amplitude = 10 * radius;
-//	float sigma = 2 * CUDART_PI_F / (fluidParticlesSize.x * 2 * radius);		
+//	float sigma = 2 * CUDART_PI_F / (fluid_size.x * 2 * radius);		
 //	float omega = soundspeed * sigma / 50;	
 //	float delaTime = powf(10.0f, -4.0f);
 //
 //	PoiseuilleFlowSystem *psystem = new PoiseuilleFlowSystem(
 //		delaTime,
-//		fluidParticlesSize,
+//		fluid_size,
 //		amplitude,
 //		sigma,
 //		omega,

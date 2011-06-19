@@ -3,7 +3,7 @@
 #include "poiseuilleFlowKernel.cuh"
 extern "C"
 {		
-	void setParameters(PoiseuilleParams *hostParams);	
+	void setParameters(Poiseuillecfg *hostcfg);	
 
 	void ExtConfigureBoundary(
 		float* pos,

@@ -1,6 +1,7 @@
 #ifndef __POISEUILLEFLOW_KERNEL_CUH__
 #define __POISEUILLEFLOW_KERNEL_CUH__
 #include "vector_types.h"
+#include <math.h>
 
 #ifndef __DEVICE_EMULATION__
 #define USE_TEX 1
@@ -18,16 +19,16 @@
 
 typedef unsigned int uint;
 
-struct PoiseuilleParams {     
+struct Poiseuillecfg {     
 	uint3 gridSize;
 	float3 worldOrigin;
 	float3 cellSize;
 	float3 worldSize;
-	uint3 fluidParticlesSize;
+	uint3 fluid_size;
 	int cellcount; //how many neigbours cells to look at
 
 	float3 gravity;    
-	float particleRadius;        		        
+	float radius;        		        
 	float smoothingRadius;
 	float particleMass;
 	float restDensity;
@@ -39,8 +40,7 @@ struct PoiseuilleParams {
 
 	int boundaryOffset;
 	float amplitude;
-	float frequency;
-	float sigma;
+	float wave_speed;	
 	bool IsBoundaryConfiguration;	
 
 
@@ -48,12 +48,17 @@ struct PoiseuilleParams {
 	float gamma;
 
 	__host__ __device__
-	float PoiseuilleParams::BoundaryHeight()	{		
-		return boundaryOffset * 2.0f * particleRadius;
+	float Poiseuillecfg::BoundaryHeight()	{		
+		return boundaryOffset * 2.0f * radius;
 	}
 	__host__ __device__
-	float PoiseuilleParams::FluidHeight()	{		
-		return fluidParticlesSize.y * 2.0f * particleRadius;
+	float Poiseuillecfg::FluidHeight()	{		
+		return fluid_size.y * 2.0f * radius;
+	}
+
+	__device__ float GetWave(float x, float t){
+		return sinf(CUDART_PI_F / (fluid_size.x * radius)
+			*((x - worldOrigin.x) - wave_speed * t));
 	}
 };
 #endif//__POISEUILLEFLOW_KERNEL_CUH__

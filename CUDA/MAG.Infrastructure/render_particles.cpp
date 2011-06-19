@@ -16,7 +16,7 @@ ParticleRenderer::ParticleRenderer()
 : pos(0),
   numParticles(0),
   pointSize(1.0f),
-  particleRadius(0.125f * 0.5f),
+  radius(0.125f * 0.5f),
   program(0),
   vbo(0),
   colorVBO(0)
@@ -86,7 +86,7 @@ void ParticleRenderer::display()
 
     glUseProgram(program);
     glUniform1f( glGetUniformLocation(program, "pointScale"), window_h / tanf(fov*0.5f*(float)M_PI/180.0f) );
-    glUniform1f( glGetUniformLocation(program, "pointRadius"), particleRadius );
+    glUniform1f( glGetUniformLocation(program, "pointRadius"), radius );
 
     glColor3f(1, 1, 1);
     _drawPoints();

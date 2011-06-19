@@ -1,68 +1,68 @@
 #include "cutil_math.h"
 #include "poiseulleFlowUtil.cu"
 
-__device__ struct BottomF {	
-	float x0, y0, t;
-	float A, B, Wx, Wy;
-
-	__device__ BottomF(){
-		A = params.amplitude;
-		B = params.BoundaryHeight();
-		Wx = params.worldOrigin.x;
-		Wy = params.worldOrigin.y;
-	}
-
-	__device__ float operator() (const float x) {	
-		return x0 - x + (y0 - Wy - B - A + A * sinf(-params.sigma * (x - Wx) + params.frequency * t)) *
-			A * cosf(-params.sigma * (x - Wx) + params.frequency * t) * params.sigma;						
-	}
-
-	__device__ float df(const float x) {		
-		return -1 - powf(A * cosf(-params.sigma * (x - Wx) + params.frequency * t) * params.sigma,2) +
-			(y0 - Wy - B - A + A * sinf(-params.sigma * (x - Wx) + params.frequency * t)) *
-			A * sinf(-params.sigma * (x - Wx) + params.sigma * t) * powf(params.sigma, 2);
-	}
-};
-
-__device__ struct TopF {	
-	float x0, y0, t;
-	float A, B, Wx, Wy, F;
-
-	__device__ TopF(){
-		A = params.amplitude;
-		B = params.BoundaryHeight();
-		Wx = params.worldOrigin.x;
-		Wy = params.worldOrigin.y;
-		F = params.FluidHeight();
-	}
-
-	__device__ float operator() (const float x) {	
-		return x0 - x + (y0 - Wy - B - A - F - A * sinf(-params.sigma * (x - Wx) + params.frequency * t)) *
-			A * cosf(-params.sigma * (x - Wx) + params.frequency * t) * params.sigma;						
-	}
-
-	__device__ float df(const float x) {		
-		return -1 - powf(A * cosf(-params.sigma * (x - Wx) + params.frequency * t) * params.sigma,2) -
-			(y0 - Wy - B - A - F - A * sinf(-params.sigma * (x - Wx) + params.frequency * t)) *
-			A * sinf(-params.sigma * (x - Wx) + params.sigma * t) * powf(params.sigma, 2);
-	}
-};
-
-template <class T>
-__device__ float rtnewt(T &funcd, const float x1, const float x2, const float xacc) {
-	const int JMAX=20;
-	float rtn=0.5*(x1+x2);
-	for (int j=0;j<JMAX;j++) {
-		float f=funcd(rtn);
-		float df=funcd.df(rtn);
-		float dx=f/df;
-		rtn -= dx;
-		if ((x1-rtn)*(rtn-x2) < 0.0)
-			return 0;//-1;
-		if (abs(dx) < xacc) return rtn;
-	}
-	return 0;//-1;
-}
+//__device__ struct BottomF {	
+//	float x0, y0, t;
+//	float A, B, Wx, Wy;
+//
+//	__device__ BottomF(){
+//		A = cfg.amplitude;
+//		B = cfg.BoundaryHeight();
+//		Wx = cfg.worldOrigin.x;
+//		Wy = cfg.worldOrigin.y;
+//	}
+//
+//	__device__ float operator() (const float x) {	
+//		return x0 - x + (y0 - Wy - B - A + A * sinf(-cfg.sigma * (x - Wx) + cfg.wave_speed * t)) *
+//			A * cosf(-cfg.sigma * (x - Wx) + cfg.wave_speed * t) * cfg.sigma;						
+//	}
+//
+//	__device__ float df(const float x) {		
+//		return -1 - powf(A * cosf(-cfg.sigma * (x - Wx) + cfg.wave_speed * t) * cfg.sigma,2) +
+//			(y0 - Wy - B - A + A * sinf(-cfg.sigma * (x - Wx) + cfg.wave_speed * t)) *
+//			A * sinf(-cfg.sigma * (x - Wx) + cfg.sigma * t) * powf(cfg.sigma, 2);
+//	}
+//};
+//
+//__device__ struct TopF {	
+//	float x0, y0, t;
+//	float A, B, Wx, Wy, F;
+//
+//	__device__ TopF(){
+//		A = cfg.amplitude;
+//		B = cfg.BoundaryHeight();
+//		Wx = cfg.worldOrigin.x;
+//		Wy = cfg.worldOrigin.y;
+//		F = cfg.FluidHeight();
+//	}
+//
+//	__device__ float operator() (const float x) {	
+//		return x0 - x + (y0 - Wy - B - A - F - A * sinf(-cfg.sigma * (x - Wx) + cfg.wave_speed * t)) *
+//			A * cosf(-cfg.sigma * (x - Wx) + cfg.wave_speed * t) * cfg.sigma;						
+//	}
+//
+//	__device__ float df(const float x) {		
+//		return -1 - powf(A * cosf(-cfg.sigma * (x - Wx) + cfg.wave_speed * t) * cfg.sigma,2) -
+//			(y0 - Wy - B - A - F - A * sinf(-cfg.sigma * (x - Wx) + cfg.wave_speed * t)) *
+//			A * sinf(-cfg.sigma * (x - Wx) + cfg.sigma * t) * powf(cfg.sigma, 2);
+//	}
+//};
+//
+//template <class T>
+//__device__ float rtnewt(T &funcd, const float x1, const float x2, const float xacc) {
+//	const int JMAX=20;
+//	float rtn=0.5*(x1+x2);
+//	for (int j=0;j<JMAX;j++) {
+//		float f=funcd(rtn);
+//		float df=funcd.df(rtn);
+//		float dx=f/df;
+//		rtn -= dx;
+//		if ((x1-rtn)*(rtn-x2) < 0.0)
+//			return 0;//-1;
+//		if (abs(dx) < xacc) return rtn;
+//	}
+//	return 0;//-1;
+//}
 
 
 __device__ float4 getVelocityDiff(
@@ -72,8 +72,8 @@ __device__ float4 getVelocityDiff(
 	float4 jPosition,
 	float elapsedTime)
 {		
-	/*float bottomBoundary = params.worldOrigin.y + params.BoundaryHeight() + params.amplitude;	
-	float topBoundary = bottomBoundary + params.fluidParticlesSize.y * 2.0f * params.particleRadius;		
+	/*float bottomBoundary = cfg.worldOrigin.y + cfg.BoundaryHeight() + cfg.amplitude;	
+	float topBoundary = bottomBoundary + cfg.fluidParticlesSize.y * 2.0f * cfg.radius;		
 	if(jPosition.w < 0.0f)
 	{
 		float distanceA = topBoundary - iPosition.y;
@@ -90,11 +90,11 @@ __device__ float4 getVelocityDiff(
 		return beta * iVelocity;
 	}*/
 
-	/*float A = params.amplitude;
-	float B = params.BoundaryHeight();
-	float Wx = params.worldOrigin.x;
-	float Wy = params.worldOrigin.y;
-	float F = params.FluidHeight();*/
+	/*float A = cfg.amplitude;
+	float B = cfg.BoundaryHeight();
+	float Wx = cfg.worldOrigin.x;
+	float Wy = cfg.worldOrigin.y;
+	float F = cfg.FluidHeight();*/
 
 	//if(jPosition.w < 0.0f)//top
 	//{
@@ -102,10 +102,10 @@ __device__ float4 getVelocityDiff(
 	//	fx.x0 = iPosition.x;
 	//	fx.y0 = iPosition.y;
 	//	fx.t = elapsedTime;
-	//	float xA = rtnewt(fx, params.worldOrigin.x, -params.worldOrigin.x, params.particleRadius / 100);		
-	//	float yA = Wy + B + A + F + A * sinf(-params.sigma * (xA - Wx) + params.frequency * elapsedTime);
+	//	float xA = rtnewt(fx, cfg.worldOrigin.x, -cfg.worldOrigin.x, cfg.radius / 100);		
+	//	float yA = Wy + B + A + F + A * sinf(-cfg.sigma * (xA - Wx) + cfg.wave_speed * elapsedTime);
 	//	float distA = sqrtf(powf(iPosition.x - xA,2) + powf(iPosition.y - yA,2));	
-	//	float k = -A * cosf(-params.sigma * (xA - Wx) + params.frequency * elapsedTime) * params.sigma;
+	//	float k = -A * cosf(-cfg.sigma * (xA - Wx) + cfg.wave_speed * elapsedTime) * cfg.sigma;
 
 	//	float AA = -k;
 	//	float BB = 1;
@@ -123,10 +123,10 @@ __device__ float4 getVelocityDiff(
 	//	fx.x0 = iPosition.x;
 	//	fx.y0 = iPosition.y;
 	//	fx.t = elapsedTime;
-	//	float xA = rtnewt(fx, params.worldOrigin.x, -params.worldOrigin.x, params.particleRadius / 100);		
-	//	float yA = Wy + B + A - A * sinf(-params.sigma * (xA - Wx) + params.frequency * elapsedTime);
+	//	float xA = rtnewt(fx, cfg.worldOrigin.x, -cfg.worldOrigin.x, cfg.radius / 100);		
+	//	float yA = Wy + B + A - A * sinf(-cfg.sigma * (xA - Wx) + cfg.wave_speed * elapsedTime);
 	//	float distA = sqrtf(powf(iPosition.x - xA,2) + powf(iPosition.y - yA,2));	
-	//	float k = A * cosf(-params.sigma * (xA - Wx) + params.frequency * elapsedTime) * params.sigma;
+	//	float k = A * cosf(-cfg.sigma * (xA - Wx) + cfg.wave_speed * elapsedTime) * cfg.sigma;
 
 	//	float AA = -k;
 	//	float BB = 1;
@@ -154,9 +154,9 @@ __device__ float3 sumViscosity(
 	uint*   cellEnd,
 	float elapsedTime){
 		uint gridHash = calcGridHash(gridPos);
-		int3 shift = make_int3(EvaluateShift(gridPos.x, params.gridSize.x),
-			EvaluateShift(gridPos.y, params.gridSize.y),
-			EvaluateShift(gridPos.z, params.gridSize.z));							
+		int3 shift = make_int3(EvaluateShift(gridPos.x, cfg.gridSize.x),
+			EvaluateShift(gridPos.y, cfg.gridSize.y),
+			EvaluateShift(gridPos.z, cfg.gridSize.z));							
 
 		uint startIndex = FETCH(cellStart, gridHash);	    
 		float3 force = make_float3(0.0f);
@@ -170,23 +170,23 @@ __device__ float3 sumViscosity(
 					float density2 = measure.x;
 					float pressure2 = measure.y;
 
-					float3 relPos = make_float3(pos.x - (pos2.x + shift.x * params.worldSize.x),
-						pos.y - (pos2.y + shift.y * params.worldSize.y),
-						pos.z - (pos2.z + shift.z * params.worldSize.z));
+					float3 relPos = make_float3(pos.x - (pos2.x + shift.x * cfg.worldSize.x),
+						pos.y - (pos2.y + shift.y * cfg.worldSize.y),
+						pos.z - (pos2.z + shift.z * cfg.worldSize.z));
 					  										
 					float dist = length(relPos);
-					float q = dist / params.smoothingRadius;									
+					float q = dist / cfg.smoothingRadius;									
 
-					float coeff = 7.0f / (2 * CUDART_PI_F * powf(params.smoothingRadius, 3));
+					float coeff = 7.0f / (2 * CUDART_PI_F * powf(cfg.smoothingRadius, 3));
 					float4 Vab = getVelocityDiff(vel, pos, vel2, pos2, elapsedTime);
 					if(q < 2){
 
 						float temp = coeff * (-pow(1 - 0.5f * q,3) * (2 * q + 1) + pow(1 - 0.5f * q, 4));
-					/*	force += params.particleMass * temp * (-1.0f *
+					/*	force += cfg.particleMass * temp * (-1.0f *
 							(pressure / powf(density,2) + pressure2 / powf(density2,2)) * 
-							normalize(relPos) + (params.mu + params.mu) * 
+							normalize(relPos) + (cfg.mu + cfg.mu) * 
 							make_float3(Vab) / (density * density2 * dist));	*/
-						force += params.particleMass * temp * (params.mu + params.mu) * 
+						force += cfg.particleMass * temp * (cfg.mu + cfg.mu) * 
 							make_float3(Vab) / (density * density2 * dist);
 					}
 				}
@@ -217,9 +217,9 @@ __global__ void computeViscousForceD(
 		int3 gridPos = calcGridPos(make_float3(pos));
 
 		float3 force = make_float3(0.0f);		
-		for(int z=-params.cellcount; z<=params.cellcount; z++) {
-			for(int y=-params.cellcount; y<=params.cellcount; y++) {
-				for(int x=-params.cellcount; x<=params.cellcount; x++) {
+		for(int z=-cfg.cellcount; z<=cfg.cellcount; z++) {
+			for(int y=-cfg.cellcount; y<=cfg.cellcount; y++) {
+				for(int x=-cfg.cellcount; x<=cfg.cellcount; x++) {
 					int3 neighbourPos = gridPos + make_int3(x, y, z);
 					force += sumViscosity(
 						neighbourPos, 

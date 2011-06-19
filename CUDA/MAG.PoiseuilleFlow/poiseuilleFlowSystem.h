@@ -8,15 +8,14 @@ class PoiseuilleFlowSystem
 public:
 	PoiseuilleFlowSystem(
 		float deltaTime,
-		uint3 fluidParticlesSize,
-		float amplitude,
-		float sigma,
-		float frequency,
+		uint3 fluid_size,
+		float amplitude,		
+		float wave_speed,
 		float soundspeed,
 		float3 gravity,
 		int boundaryOffset,
 		uint3 gridSize,
-		float particleRadius,
+		float radius,
 		bool bUseOpenGL);
 	~PoiseuilleFlowSystem();
 
@@ -41,9 +40,9 @@ public:
 
 	int getNumParticles() const { return numParticles; }
 	float GetElapsedTime() const { return elapsedTime; }
-	float getHalfWorldXSize() {return cfg.gridSize.x * cfg.particleRadius;}
-	float getHalfWorldYSize() {return cfg.gridSize.y * cfg.particleRadius;}
-	float getHalfWorldZSize() {return cfg.gridSize.z * cfg.particleRadius;}
+	float getHalfWorldXSize() {return cfg.gridSize.x * cfg.radius;}
+	float getHalfWorldYSize() {return cfg.gridSize.y * cfg.radius;}
+	float getHalfWorldZSize() {return cfg.gridSize.z * cfg.radius;}
 
 	unsigned int getCurrentReadBuffer() const { return posVbo; }
 	unsigned int getColorBuffer()       const { return colorVBO; }
@@ -63,7 +62,7 @@ public:
 	void * getPredictedPos()        const {return (void *)predictedPosition;}	
 	void * getLeapFrogVelocity() const {return (void*) dVelLeapFrog;}	
 
-	float getParticleRadius() { return cfg.particleRadius; }
+	float getradius() { return cfg.radius; }
 	uint3 getGridSize() { return cfg.gridSize; }
 	float3 getWorldOrigin() { return cfg.worldOrigin; }
 	float3 getCellSize() { return cfg.cellSize; }
@@ -84,6 +83,7 @@ protected:
 	float currentWaveHeight;	
 	float elapsedTime;
 	float time_shift;
+	float time_relax;
 	float epsDensity;
 	
 
@@ -122,7 +122,7 @@ protected:
 	struct cudaGraphicsResource *cuda_posvbo_resource; // handles OpenGL-CUDA exchange
 	struct cudaGraphicsResource *cuda_colorvbo_resource; // handles OpenGL-CUDA exchange	
 	
-	PoiseuilleParams cfg;	
+	Poiseuillecfg cfg;	
 	uint numGridCells;    
 };
 #endif //__POISEUILLE_FLOW_SYSTEM_H__
