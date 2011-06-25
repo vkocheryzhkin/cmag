@@ -124,11 +124,6 @@ void display()
 	computeFPS();
 }
 
-inline float frand()
-{
-	return rand() / (float) RAND_MAX;
-}
-
 void reshape(int w, int h)
 {
 	glMatrixMode(GL_PROJECTION);
@@ -201,10 +196,9 @@ void key(unsigned char key, int , int)
 	case '1':
 		psystem->Reset();
 		break;
-	//case '2':
-	//	//psystem->startBoundaryMotion();
-	//	psystem->SwitchBoundarySetup();
-	//	break;
+	case '2':		
+		psystem->Coloring();
+		break;
 	/*case '3':
 		psystem->setBoundaryWave();
 		break;*/

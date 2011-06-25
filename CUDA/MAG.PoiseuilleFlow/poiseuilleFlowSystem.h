@@ -66,11 +66,16 @@ public:
 	uint3 getGridSize() { return cfg.gridSize; }
 	float3 getWorldOrigin() { return cfg.worldOrigin; }
 	float3 getCellSize() { return cfg.cellSize; }
+
+	void Coloring();
 protected:
 	PoiseuilleFlowSystem() {}
 	uint createVBO(uint size);
 
 	void _initialize(uint numParticles);
+
+	
+
 	void _finalize();
 
 	void initFluid(float spacing, float jitter, uint numParticles);
@@ -123,6 +128,8 @@ protected:
 	struct cudaGraphicsResource *cuda_colorvbo_resource; // handles OpenGL-CUDA exchange	
 	
 	Poiseuillecfg cfg;	
-	uint numGridCells;    
+	uint numGridCells;  
+
+	
 };
 #endif //__POISEUILLE_FLOW_SYSTEM_H__

@@ -10,6 +10,10 @@
 #include <algorithm>
 #include <GL/glew.h>
 #include <stdio.h>
+#include <thrust/device_ptr.h>
+#include <thrust/device_vector.h>
+
+using namespace thrust;
 
 PoiseuilleFlowSystem::PoiseuilleFlowSystem(
 	float deltaTime,
@@ -90,29 +94,6 @@ uint PoiseuilleFlowSystem::createVBO(uint size){
 	return vbo;
 }
 
-inline float lerp(float a, float b, float t){
-	return a + t*(b-a);
-}
-
-void colorRamp(float t, float *r){
-	const int ncolors = 7;
-	float c[ncolors][3] = {
-		{ 1.0, 0.0, 0.0, },
-		{ 1.0, 0.5, 0.0, },
-		{ 1.0, 1.0, 0.0, },
-		{ 0.0, 1.0, 0.0, },
-		{ 0.0, 1.0, 1.0, },
-		{ 0.0, 0.0, 1.0, },
-		{ 1.0, 0.0, 1.0, },
-	};
-	t = t * (ncolors-1);
-	int i = (int) t;
-	float u = t - floor(t);
-	r[0] = lerp(c[i][0], c[i+1][0], u);
-	r[1] = lerp(c[i][1], c[i+1][1], u);
-	r[2] = lerp(c[i][2], c[i+1][2], u);
-}
-
 void PoiseuilleFlowSystem::_initialize(uint numParticles){
 	assert(!IsInitialized);
 
@@ -132,22 +113,8 @@ void PoiseuilleFlowSystem::_initialize(uint numParticles){
 		colorVBO = createVBO(numParticles*4*sizeof(float));
 		registerGLBufferObject(colorVBO, &cuda_colorvbo_resource);
 		
-		glBindBufferARB(GL_ARRAY_BUFFER, colorVBO);
-		float *data = (float *) glMapBufferARB(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-		float *ptr = data;
-		uint fluidParticles = cfg.fluid_size.x * cfg.fluid_size.y * cfg.fluid_size.z;
-		for(uint i=0; i < numParticles; i++) {
-			float t = 0.5f;  
-			if(i < fluidParticles)
-				t = 0.7f;  
-			if((((i % cfg.gridSize.x) == 0) && i < fluidParticles)
-				|| (((i % cfg.gridSize.x - 1) == 0) && i < fluidParticles))
-				t = 0.1f;    			
-			colorRamp(t, ptr);
-			ptr+=3;
-			*ptr++ = 1.0f;
-		}
-		glUnmapBufferARB(GL_ARRAY_BUFFER);
+		//SetColorBuffer(numParticles);
+
 	} else {
 		cutilSafeCall( cudaMalloc( (void **)&cudaPosVBO, memSize ));
 		cutilSafeCall( cudaMalloc( (void **)&cudaColorVBO, sizeof(float)*numParticles*4) );
@@ -168,6 +135,7 @@ void PoiseuilleFlowSystem::_initialize(uint numParticles){
 	allocateArray((void**)&dCellEnd, numGridCells*sizeof(uint));		
 
 	setParameters(&cfg);
+	
 	IsInitialized = true;
 }
 
@@ -243,10 +211,6 @@ void PoiseuilleFlowSystem::setArray(ParticleArray array, const float* data, int 
 	}       
 }
 
-inline float frand(){
-	return rand() / (float) RAND_MAX;
-}
-
 void PoiseuilleFlowSystem::Reset(){
 	elapsedTime = 0.0f;	
 	time_shift = 0.0f;
@@ -256,7 +220,7 @@ void PoiseuilleFlowSystem::Reset(){
 	float jitter = cfg.radius * 0.01f;			            
 	float spacing = cfg.radius * 2.0f;
 	initFluid(spacing, jitter, numParticles);
-	initBoundaryParticles(spacing);
+	initBoundaryParticles(spacing);		
 	memset(hMeasures, 0, numParticles*4*sizeof(float));	
 	setArray(POSITION, hPos, 0, numParticles);	
 	setArray(VELOCITY, hVel, 0, numParticles);	
@@ -267,7 +231,9 @@ void PoiseuilleFlowSystem::Reset(){
 	setArray(PREDICTEDPOSITION, hMeasures, 0, numParticles);
 
 	cfg.particleMass = cfg.restDensity / CalculateMass(hPos, cfg.gridSize);
-	setParameters(&cfg);
+	setParameters(&cfg);	
+	if (IsOpenGL)
+		Coloring();
 }
 
 float PoiseuilleFlowSystem::CalculateMass(float* positions, uint3 gridSize){
@@ -439,6 +405,41 @@ void PoiseuilleFlowSystem::Update(){
 		unmapGLBufferObject(cuda_posvbo_resource);
 	}
 	elapsedTime+= cfg.deltaTime;
+}
+
+void PoiseuilleFlowSystem::Coloring()
+{
+	uint numParticles = getNumParticles();
+	host_vector<float4> h_position(numParticles);		
+	host_vector<uint> h_index(numParticles);
+	device_ptr<uint> index((uint*)getCudaIndex());	
+	device_ptr<float4> position((float4*)mapGLBufferObject(&cuda_posvbo_resource));			
+
+	thrust::copy(position, position + numParticles, h_position.begin());	
+	thrust::copy(index, index + numParticles, h_index.begin());	
+	
+	unmapGLBufferObject(cuda_posvbo_resource);
+
+	glBindBufferARB(GL_ARRAY_BUFFER, colorVBO);
+	float *data = (float *) glMapBufferARB(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+	float *ptr = data;
+
+	for(int i = 0; i < numParticles; i++){
+		float type = h_position[i].w;		
+		if(type != 0){			
+			*ptr++=0; *ptr++=0; *ptr++=0;}
+		else
+			if (h_position[i].x < (cfg.worldOrigin.x + 4 * cfg.radius)){
+				*ptr++=255; *ptr++=0; *ptr++=0;		
+				//*ptr++=0; *ptr++=255; *ptr++=255;			
+			}
+			else{
+				*ptr++=255; *ptr++=255; *ptr++=255;			
+				//*ptr++=0; *ptr++=255; *ptr++=255;		
+			}					
+		*ptr++ = 1.0f;
+	}		
+	glUnmapBufferARB(GL_ARRAY_BUFFER);
 }
 
 
