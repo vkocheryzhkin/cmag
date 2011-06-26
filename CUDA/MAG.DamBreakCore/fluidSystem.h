@@ -3,7 +3,6 @@
 
 #include "fluid_kernel.cuh"
 #include "vector_functions.h"
-#include "cudpp/cudpp.h"
 class DamBreakSystem
 {
 public:
@@ -107,9 +106,7 @@ protected: // data
 	float *cudaColorVBO;      // these are the CUDA deviceMem Color
 
 	struct cudaGraphicsResource *cuda_posvbo_resource; // handles OpenGL-CUDA exchange
-	struct cudaGraphicsResource *cuda_colorvbo_resource; // handles OpenGL-CUDA exchange
-
-	CUDPPHandle sortHandle;
+	struct cudaGraphicsResource *cuda_colorvbo_resource; // handles OpenGL-CUDA exchange	
 
 	// params
 	SimParams params;	

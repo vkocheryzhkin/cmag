@@ -1,19 +1,19 @@
-#define BOOST_TEST_MODULE ModuleStart
-#include <boost/test/unit_test.hpp>
-#include <boost/format.hpp>
-#include <vector_types.h>
-#include <thrust/device_ptr.h>
-#include <thrust/device_vector.h>
-#include <thrust/sort.h>
-#include <iostream>
- #include<stack>
-
-typedef unsigned int uint;
-#include "fluidSystem.cuh"
-#include "fluidSystem.h"
-#include "magUtil.cuh"
-
-using namespace std;
+//#define BOOST_TEST_MODULE ModuleStart
+//#include <boost/test/unit_test.hpp>
+//#include <boost/format.hpp>
+//#include <vector_types.h>
+//#include <thrust/device_ptr.h>
+//#include <thrust/device_vector.h>
+//#include <thrust/sort.h>
+//#include <iostream>
+// #include<stack>
+//
+//typedef unsigned int uint;
+//#include "fluidSystem.cuh"
+//#include "fluidSystem.h"
+//#include "magUtil.cuh"
+//
+//using namespace std;
 
 //BOOST_AUTO_TEST_CASE(XFrontOutput)
 //{				

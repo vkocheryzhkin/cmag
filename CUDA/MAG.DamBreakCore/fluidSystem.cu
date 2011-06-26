@@ -2,12 +2,16 @@
 #include <cstdlib>
 #include <cstdio>
 #include <string.h>
-#include <GL/glut.h>
+#include <GL/freeglut.h>
 #include <cuda_gl_interop.h>
+#include "thrust/device_ptr.h"
+#include "thrust/for_each.h"
+#include "thrust/iterator/zip_iterator.h"
+#include "thrust/sort.h"
 #include "fluid_kernel.cu"
 #include "magUtil.cuh"
 extern "C"
-{	
+{		
 	void setParameters(SimParams *hostParams){
 		cutilSafeCall( cudaMemcpyToSymbol(params, hostParams, sizeof(SimParams)) );
 	}	
@@ -24,6 +28,14 @@ extern "C"
 		    
 			cutilCheckMsg("removeRightBoundary kernel execution failed");
 	}
+
+	void sortParticles(uint *dHash, uint *dIndex, uint numParticles)
+	{
+		thrust::sort_by_key(thrust::device_ptr<uint>(dHash),
+							thrust::device_ptr<uint>(dHash + numParticles),
+							thrust::device_ptr<uint>(dIndex));
+	}
+
 	void ExtRemoveRightBoundary(
 		float * position,
 		uint numParticles){
@@ -111,72 +123,7 @@ extern "C"
 				cutilSafeCall(cudaUnbindTexture(oldPosTex));
 				cutilSafeCall(cudaUnbindTexture(oldVelTex));
 			#endif
-	}
-
-	void calculateDensityVariation(			
-		float* sortedVariations,
-		float* sortedMeasures,
-		float* sortedPos,			
-		float* sortedVel,		
-		uint* gridParticleIndex,
-		uint* cellStart,
-		uint* cellEnd,
-		uint numParticles,
-		uint numGridCells){
-			#if USE_TEX
-			cutilSafeCall(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(float4)));
-			cutilSafeCall(cudaBindTexture(0, oldMeasuresTex, sortedMeasures, numParticles*sizeof(float4)));
-			cutilSafeCall(cudaBindTexture(0, oldVelTex, sortedVel, numParticles*sizeof(float4)));
-			cutilSafeCall(cudaBindTexture(0, cellStartTex, cellStart, numGridCells*sizeof(uint)));
-			cutilSafeCall(cudaBindTexture(0, cellEndTex, cellEnd, numGridCells*sizeof(uint)));    
-			#endif
-
-			uint numThreads, numBlocks;
-			computeGridSize(numParticles, 64, numBlocks, numThreads);
-
-			calculateDensityVariationD<<< numBlocks, numThreads >>>(										  
-				(float4*)sortedVariations,
-				(float4*)sortedMeasures,
-				(float4*)sortedPos,                                          
-				(float4*)sortedVel, 
-				gridParticleIndex,
-				cellStart,
-				cellEnd,
-				numParticles);
-
-			cutilCheckMsg("Kernel execution failed");
-
-			#if USE_TEX
-			cutilSafeCall(cudaUnbindTexture(oldPosTex));
-			cutilSafeCall(cudaUnbindTexture(oldMeasuresTex));
-			cutilSafeCall(cudaUnbindTexture(oldVelTex));
-			cutilSafeCall(cudaUnbindTexture(cellStartTex));
-			cutilSafeCall(cudaUnbindTexture(cellEndTex));			
-			#endif
-	}
-
-	void calculateDensity(			
-		float* sortedMeasures,		
-		float* sortedVariations,	
-		uint numParticles,
-		uint numGridCells){
-			#if USE_TEX
-			cutilSafeCall(cudaBindTexture(0, oldVariationsTex, sortedVariations, numParticles*sizeof(float4)));
-			#endif
-			uint numThreads, numBlocks;
-			computeGridSize(numParticles, 64, numBlocks, numThreads);
-
-			calculateDensityD<<< numBlocks, numThreads >>>(										  
-				(float4*)sortedMeasures,
-				(float4*)sortedVariations,	
-				numParticles);
-
-			cutilCheckMsg("Kernel execution failed");
-
-			#if USE_TEX
-			cutilSafeCall(cudaUnbindTexture(oldVariationsTex));
-			#endif
-	}
+	}	
 
 	void calculateDamBreakDensity(			
 		float* sortedMeasuresOutput,

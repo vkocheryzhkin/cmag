@@ -18,6 +18,11 @@ extern "C"
 		float* pos, 
 		int    numParticles);
 
+	void sortParticles(
+		uint *dHash,
+		uint *dIndex,
+		uint numParticles);
+
 	void reorderPoiseuilleData(
 		uint*  cellStart,
 		uint*  cellEnd,

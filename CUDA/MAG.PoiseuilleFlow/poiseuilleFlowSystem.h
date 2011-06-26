@@ -3,7 +3,6 @@
 
 #include "poiseuilleFlowKernel.cuh"
 #include "vector_functions.h"
-#include "cudpp/cudpp.h"
 class PoiseuilleFlowSystem
 {
 public:
@@ -106,8 +105,6 @@ protected: // data
 
 	struct cudaGraphicsResource *cuda_posvbo_resource; // handles OpenGL-CUDA exchange
 	struct cudaGraphicsResource *cuda_colorvbo_resource; // handles OpenGL-CUDA exchange
-
-	CUDPPHandle sortHandle;
 
 	// params
 	PoiseuilleParams params;

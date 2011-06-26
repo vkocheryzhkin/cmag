@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="windows-1251"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9,00"
+	Version="9.00"
 	Name="MAG.DamBreakCore"
 	ProjectGUID="{F6A3E97B-56F7-4A9D-9887-D70B5403D80D}"
 	RootNamespace="MAGCUDAFluidCore"
@@ -35,6 +35,8 @@
 				Name="Cudart Build Rule"
 				Include="$(NVSDKCOMPUTE_ROOT)\C\common\inc;..\MAG.Util"
 				Arch2="0"
+				Optimization="0"
+				Runtime="1"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"

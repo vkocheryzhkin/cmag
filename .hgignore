@@ -8,3 +8,4 @@ glob:Win32
 glob:ipch/*
 glob:*.sdf
 glob:Release
+glob:*.dat

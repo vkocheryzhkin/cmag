@@ -164,14 +164,7 @@ void PoiseuilleFlowSystem::_initialize(int numParticles){
 		glUnmapBufferARB(GL_ARRAY_BUFFER);
 	} else {
 		cutilSafeCall( cudaMalloc( (void **)&cudaColorVBO, sizeof(float)*numParticles*4) );
-	}
-
-	CUDPPConfiguration sortConfig;
-	sortConfig.algorithm = CUDPP_SORT_RADIX;
-	sortConfig.datatype = CUDPP_UINT;
-	sortConfig.op = CUDPP_ADD;
-	sortConfig.options = CUDPP_OPTION_KEY_VALUE_PAIRS;
-	cudppPlan(&sortHandle, sortConfig, numParticles, 1, 0);    
+	}	   
 
 	setParameters(&params);
 
@@ -206,9 +199,7 @@ void PoiseuilleFlowSystem::_finalize(){
 	} else {
 		cutilSafeCall( cudaFree(cudaPosVBO) );
 		cutilSafeCall( cudaFree(cudaColorVBO) );
-	}
-
-	cudppDestroyPlan(sortHandle);
+	}	
 }
 void PoiseuilleFlowSystem::changeGravity(){ 
 	params.gravity.y *= -1.0f; 
@@ -227,7 +218,7 @@ void PoiseuilleFlowSystem::update(){
 	
 	calculatePoiseuilleHash(dHash, dIndex, dPos, numParticles);
 
-	cudppSort(sortHandle, dHash, dIndex, gridSortBits, numParticles);
+	sortParticles(dHash, dIndex, numParticles);
 
 	reorderPoiseuilleData(
 		dCellStart,

@@ -15,7 +15,7 @@ typedef unsigned int uint;
 
 enum BoundaryTypes
 {
-	RightFirstType,//Virtual type1, Monaghan's like particle 
+	RightFirstType,//Virtual type1, Monaghan's like particle //0
 	FirstType,// <2
 	RightSecondType,
 	SecondType,

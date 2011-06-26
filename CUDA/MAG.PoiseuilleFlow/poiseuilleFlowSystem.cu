@@ -2,8 +2,12 @@
 #include <cstdlib>
 #include <cstdio>
 #include <string.h>
-#include <GL/glut.h>
+#include <GL/freeglut.h>
 #include <cuda_gl_interop.h>
+#include "thrust/device_ptr.h"
+#include "thrust/for_each.h"
+#include "thrust/iterator/zip_iterator.h"
+#include "thrust/sort.h"
 #include "poiseuilleFlowKernel.cu"
 #include "magUtil.cuh"
 extern "C"
@@ -29,6 +33,13 @@ extern "C"
 				numParticles);
 		    
 			cutilCheckMsg("integrate kernel execution failed");
+	}
+
+	void sortParticles(uint *dHash, uint *dIndex, uint numParticles)
+	{
+		thrust::sort_by_key(thrust::device_ptr<uint>(dHash),
+							thrust::device_ptr<uint>(dHash + numParticles),
+							thrust::device_ptr<uint>(dIndex));
 	}
 
 	void calculatePoiseuilleHash(

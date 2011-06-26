@@ -183,14 +183,7 @@ void DamBreakSystem::_initialize(int numParticles){
 		glUnmapBufferARB(GL_ARRAY_BUFFER);
 	} else {
 		cutilSafeCall( cudaMalloc( (void **)&cudaColorVBO, sizeof(float)*numParticles*4) );
-	}
-
-	CUDPPConfiguration sortConfig;
-	sortConfig.algorithm = CUDPP_SORT_RADIX;
-	sortConfig.datatype = CUDPP_UINT;
-	sortConfig.op = CUDPP_ADD;
-	sortConfig.options = CUDPP_OPTION_KEY_VALUE_PAIRS;
-	cudppPlan(&sortHandle, sortConfig, numParticles, 1, 0);    
+	}	   
 
 	setParameters(&params);
 
@@ -226,9 +219,7 @@ void DamBreakSystem::_finalize(){
 	} else {
 		cutilSafeCall( cudaFree(cudaPosVBO) );
 		cutilSafeCall( cudaFree(cudaColorVBO) );
-	}
-
-	cudppDestroyPlan(sortHandle);
+	}	
 }
 void DamBreakSystem::removeRightBoundary(){
 	params.rightBoundary = 0xffffffff;
@@ -244,7 +235,7 @@ void DamBreakSystem::removeRightBoundary(){
 	if (IsOpenGL) {
 		unmapGLBufferObject(cuda_posvbo_resource);
 	}
-	elapsedTime = 0.0f;
+	//elapsedTime = 0.0f;
 }
 
 void DamBreakSystem::changeRightBoundary(){ 
@@ -262,7 +253,7 @@ void DamBreakSystem::changeRightBoundary(){
 	if (IsOpenGL) {
 		unmapGLBufferObject(cuda_posvbo_resource);
 	}
-	elapsedTime = 0.0f;
+	//elapsedTime = 0.0f;
 }
 
 void DamBreakSystem::update(){
@@ -279,8 +270,8 @@ void DamBreakSystem::update(){
 	setParameters(&params); 
 	
 	calcHash(dHash, dIndex, dPos, numParticles);
-
-	cudppSort(sortHandle, dHash, dIndex, gridSortBits, numParticles);
+	
+	sortParticles(dHash, dIndex, numParticles);
 
 	reorderDataAndFindCellStart(
 		dCellStart,
@@ -292,25 +283,7 @@ void DamBreakSystem::update(){
 		dPos,		
 		dVelLeapFrog,
 		numParticles,
-		numGridCells);
-	
-	//calculateDensityVariation(		
-	//	dVariations, //output
-	//	dMeasures,//input
-	//	dSortedPos,			
-	//	dSortedVel,
-	//	dIndex,
-	//	dCellStart,
-	//	dCellEnd,
-	//	numParticles,
-	//	numGridCells);
-
-	//calculateDensity(		
-	//	dMeasures, //output
-	//	dVariations, //input
-	//	numParticles,
-	//	numGridCells);
-
+		numGridCells);		
 
 	calculateDamBreakDensity(		
 		dMeasures, //output

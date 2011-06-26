@@ -3,7 +3,7 @@
 #include <GL/wglew.h>
 #endif
 
-#include <GL/glut.h>
+#include <GL/freeglut.h>
 #include <cutil_inline.h>
 #include <cutil_gl_inline.h>
 #include <cuda_gl_interop.h>

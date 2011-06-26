@@ -20,6 +20,11 @@ extern "C"
 
 	void ExtChangeRightBoundary(float* position, int numParticles);
 	void ExtRemoveRightBoundary(float* position, int numParticles);
+
+	void sortParticles(
+		uint *dHash,
+		uint *dIndex,
+		uint numParticles);
 	
 	void reorderDataAndFindCellStart(
 		uint*  cellStart,
@@ -31,24 +36,7 @@ extern "C"
 		float* oldPos,
 		float* oldVel,
 		uint   numParticles,
-		uint   numCells);
-
-	void calculateDensityVariation(			
-		float* measures,
-		float* measuresInput,
-		float* sortedPos,			
-		float* sortedVel,
-		uint* gridParticleIndex,
-		uint* cellStart,
-		uint* cellEnd,
-		uint numParticles,
-		uint numGridCells);
-
-	void calculateDensity(			
-		float* measures,
-		float* measuresInput,
-		uint numParticles,
-		uint numGridCells);
+		uint   numCells);	
 
 	void calculateDamBreakDensity(			
 		float* measures,

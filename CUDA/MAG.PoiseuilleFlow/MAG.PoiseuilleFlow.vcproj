@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="windows-1251"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9,00"
+	Version="9.00"
 	Name="MAG.PoiseuilleFlow"
 	ProjectGUID="{57F702A9-2CE8-4FA4-B46D-33EC9843005D}"
 	RootNamespace="MAGPoiseuilleFlow"
@@ -33,7 +33,10 @@
 			/>
 			<Tool
 				Name="Cudart Build Rule"
-				Include="$(NVSDKCOMPUTE_ROOT)\C\common\inc;..\MAG.Util"
+				Include="$(NVSDKCOMPUTE_ROOT)\C\common\inc;$(NVSDKCOMPUTE_ROOT)\shared\inc;..\MAG.Util"
+				Arch2="0"
+				Optimization="0"
+				Runtime="1"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"

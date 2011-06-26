@@ -1,10 +1,19 @@
 #include <cutil_inline.h>
-#include <GL/glut.h>
+#include <GL/freeglut.h>
 #include <cuda_gl_interop.h>
 typedef unsigned int uint;
 
 extern "C"
 {
+	uint iDivUp(uint a, uint b){
+		return (a % b != 0) ? (a / b + 1) : (a / b);
+	}
+
+	void computeGridSize(uint n, uint blockSize, uint &numBlocks, uint &numThreads){
+		numThreads = min(blockSize, n);
+		numBlocks = iDivUp(n, numThreads);
+	}
+
 	void cudaInit(int argc, char **argv)
 	{   		
 		if( cutCheckCmdLineFlag(argc, (const char**)argv, "device") ) {
@@ -76,14 +85,5 @@ extern "C"
 		cutilSafeCall(cudaMemcpy((char *) device + offset, host, size, cudaMemcpyHostToDevice));
 	}
 
-	uint iDivUp(uint a, uint b)
-	{
-		return (a % b != 0) ? (a / b + 1) : (a / b);
-	}
-
-	void computeGridSize(uint n, uint blockSize, uint &numBlocks, uint &numThreads)
-	{
-		numThreads = min(blockSize, n);
-		numBlocks = iDivUp(n, numThreads);
-	}
+	
 }
