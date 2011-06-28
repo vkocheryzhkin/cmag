@@ -4,7 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <stack>
+#include <queue>
 #include "fluidSystem.h"
 #include "fluidSystem.cuh"
 
@@ -22,10 +22,10 @@ void dump()
 		false); 
 
 	psystem->reset();
-	//while(psystem->getElapsedTime() < 1.5f)
-	//	psystem->update();//relax
-	//psystem->changeRightBoundary();
-	//psystem->changeRightBoundary();
+	while(psystem->getElapsedTime() < 1.0f)
+		psystem->update();//relax
+	psystem->changeRightBoundary();
+	psystem->changeRightBoundary();
 
 	uint numParticles = psystem->getNumParticles();		
 
@@ -36,18 +36,20 @@ void dump()
 	device_ptr<float4> d_position((float4*)psystem->getCudaPosVBO());	
 	device_ptr<uint> d_index((uint*)psystem->getCudaIndex());
 	device_ptr<float4> d_density((float4*)psystem->getCudaMeasures());
-
-	std::stack<float> timeFrames;				
-	/*timeFrames.push(2.0);
-	timeFrames.push(1.7);
-	timeFrames.push(1.6);*/
-
+	
+	std::queue<float>  timeFrames;		
+	//timeFrames.push(0.0001);
 	timeFrames.push(1.0);
-	timeFrames.push(0.5);
-	timeFrames.push(0.2);
-
+	timeFrames.push(1.2);
+	timeFrames.push(1.4);
+	timeFrames.push(1.6);
+	timeFrames.push(1.8);
+	timeFrames.push(2.0);
+	timeFrames.push(2.2);
+	timeFrames.push(2.4);
+	
 	while (!(timeFrames.empty())){
-		float timeSlice = timeFrames.top();
+		float timeSlice = timeFrames.front();
 		timeFrames.pop();
 
 		while(psystem->getElapsedTime() < timeSlice)
@@ -63,11 +65,15 @@ void dump()
 		ofstream fp1;	
 		fp1.open(str.c_str());
 		fp1 << "x " << "y " << "z " << "w " << "density " << "pressure " << endl;
-		for(int i = 0; i < numParticles; i++){		
-			fp1 << position[index[i]].x << " " << position[index[i]].y << " "
-				<< position[index[i]].z << " " << position[index[i]].w << " "
-				<< scalar_field[i].x << " " << scalar_field[i].y << " "
-				<< endl;
+		for(int i = 0; i < numParticles; i++){
+			//if(position[index[i]].x <= 1.02f)
+			if(position[index[i]].w == Fluid){				
+				fp1 << position[index[i]].x << " " << position[index[i]].y << " "
+					<< position[index[i]].z << " " << position[index[i]].w << " "
+					<< scalar_field[i].x << " " << scalar_field[i].y << " "
+					//<< 0 << " " << 0 << " "
+					<< endl;
+			}
 		}			
 		fp1.close();
 	}	

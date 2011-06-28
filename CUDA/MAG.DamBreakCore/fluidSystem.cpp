@@ -305,7 +305,7 @@ void DamBreakSystem::update(){
 		dCellStart,
 		dCellEnd,
 		numParticles,
-		numGridCells);    
+		numGridCells);  
 
 	integrateSystem(
 		dPos,

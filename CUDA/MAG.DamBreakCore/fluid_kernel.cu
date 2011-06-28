@@ -111,8 +111,8 @@ __device__ float sumDensity(
 			uint endIndex = FETCH(cellEnd, gridHash);
 			for(uint j=startIndex; j<endIndex; j++) {	
 					float4 post = FETCH(oldPos, j);
-					if(post.w < RightSecondType) // RightFirstType + FirstType
-						continue;
+					//if(post.w < RightSecondType) // RightFirstType + FirstType
+					//	continue;
 
 					float3 pos2 = make_float3(post);						
 					float3 relPos = pos - pos2;
@@ -140,8 +140,8 @@ __global__ void calculateDamBreakDensityD(
 		if (index >= numParticles) return;    
 
 		float4 pos1 = FETCH(oldPos, index);
-		if(pos1.w < RightSecondType) 
-			return;
+		/*if(pos1.w < RightSecondType) 
+			return;*/
 		float3 pos = make_float3(pos1);
 
 		//float3 pos = make_float3(FETCH(oldPos, index));	
@@ -194,15 +194,16 @@ __device__ float3 sumNavierStokesForces(
 
 					float4 post = FETCH(oldPos, j);
 					float3 pos2 = make_float3(post);
-					if(post.w  < RightSecondType) 
+					//if(post.w  < RightSecondType) 
+
+					if(post.w != Fluid) 
 					{
 						float3 relPos = pos - pos2;
 						float dist = length(relPos);
-						if(params.a / dist <= 1.0f)
-						{							
-							tmpForce += params.D * (powf(params.a / dist, 12)
-								- powf(params.a / dist, 6)) * relPos / powf(dist, 2);
-						}
+						
+						tmpForce += params.D * (powf(params.a / dist, 12)
+							- powf(params.a / dist, 6)) * relPos / powf(dist, 2);						
+						
 						continue;
 					}					
 
@@ -254,7 +255,7 @@ __global__ void calcAndApplyAccelerationD(
 		if (index >= numParticles) return;    
 
 		float4 pos1 = FETCH(oldPos, index);
-		if(pos1.w  < RightSecondType) 
+		if(pos1.w != Fluid) 
 			return;
 		float3 pos = make_float3(pos1);
 
