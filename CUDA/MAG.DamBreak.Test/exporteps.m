@@ -11,7 +11,7 @@ outpath = strcat('C:\\Work\\vladimir\\Poster\\images\\dump', input_args);
  [x y z w density pressure] = textread(inname,'%f %f %f %f %f %f','headerlines',1);
  scatter(x,y,5,density,'filled')
  
- saveas(gcf, 'outpath', 'eps')
+ saveas(gcf, outpath, 'eps')
  clf
 
 end

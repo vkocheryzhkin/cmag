@@ -21,7 +21,7 @@ void dump()
 		1.0f / (2 * num),				
 		false); 
 
-	psystem->reset();
+	psystem->reset();	
 	while(psystem->getElapsedTime() < 1.0f)
 		psystem->update();//relax
 	psystem->changeRightBoundary();
@@ -32,21 +32,24 @@ void dump()
 	host_vector<float4> position(numParticles);	
 	host_vector<uint> index(numParticles);
 	host_vector<float4> scalar_field(numParticles);
+	host_vector<float4> velocity(numParticles);
 
 	device_ptr<float4> d_position((float4*)psystem->getCudaPosVBO());	
 	device_ptr<uint> d_index((uint*)psystem->getCudaIndex());
 	device_ptr<float4> d_density((float4*)psystem->getCudaMeasures());
+	device_ptr<float4> d_velocity((float4*)psystem->getCudaVelVBO());
 	
 	std::queue<float>  timeFrames;		
 	//timeFrames.push(0.0001);
 	timeFrames.push(1.0);
-	timeFrames.push(1.2);
-	timeFrames.push(1.4);
-	timeFrames.push(1.6);
-	timeFrames.push(1.8);
-	timeFrames.push(2.0);
-	timeFrames.push(2.2);
-	timeFrames.push(2.4);
+	timeFrames.push(1.3);
+	timeFrames.push(1.7);
+	timeFrames.push(2.3);
+
+	timeFrames.push(2.5);
+	timeFrames.push(2.7);
+	timeFrames.push(3.2);
+	timeFrames.push(3.7);
 	
 	while (!(timeFrames.empty())){
 		float timeSlice = timeFrames.front();
@@ -58,6 +61,7 @@ void dump()
 		thrust::copy(d_position, d_position + numParticles, position.begin());	
 		thrust::copy(d_index, d_index + numParticles, index.begin());	
 		thrust::copy(d_density, d_density + numParticles, scalar_field.begin());	
+		thrust::copy(d_velocity, d_velocity + numParticles, velocity.begin());	
 
 		ostringstream buffer;	
 		buffer << timeSlice;
@@ -70,7 +74,8 @@ void dump()
 			if(position[index[i]].w == Fluid){				
 				fp1 << position[index[i]].x << " " << position[index[i]].y << " "
 					<< position[index[i]].z << " " << position[index[i]].w << " "
-					<< scalar_field[i].x << " " << scalar_field[i].y << " "
+					//<< scalar_field[i].x << " " << scalar_field[i].y << " "
+					<< velocity[index[i]].x << " " << velocity[index[i]].y << " "
 					//<< 0 << " " << 0 << " "
 					<< endl;
 			}
