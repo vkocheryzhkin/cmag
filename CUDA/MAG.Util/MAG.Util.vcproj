@@ -34,6 +34,7 @@
 			<Tool
 				Name="Cudart Build Rule"
 				Include="$(NVSDKCOMPUTE_ROOT)\C\common\inc;$(NVSDKCOMPUTE_ROOT)\shared\inc"
+				Arch1="20"
 				Arch2="0"
 				Optimization="0"
 				Runtime="1"

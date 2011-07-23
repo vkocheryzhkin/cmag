@@ -1,6 +1,11 @@
 #ifndef __MAGUTIL_CUH__
 #define __MAGUTIL_CUH__
+
+#ifndef CUDART_PI_F
+#define CUDART_PI_F         3.141592654f
+#endif
 typedef unsigned int uint;
+
 extern "C"
 {	
 	void cudaInit(int argc, char **argv);

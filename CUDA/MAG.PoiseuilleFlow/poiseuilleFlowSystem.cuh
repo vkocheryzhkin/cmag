@@ -3,15 +3,13 @@
 #include "poiseuilleFlowKernel.cuh"
 extern "C"
 {		
-	void setParameters(PoiseuilleParams *hostParams);	
+	void setParameters(Poiseuillecfg *hostcfg);	
 
-	void integratePoiseuilleSystem(
+	void ExtConfigureBoundary(
 		float* pos,
-		float* vel,  
-		float* velLeapFrog,
-		float* acc,
-		uint numParticles);
-
+		float currentWaveHeight,
+		uint nemParticles);
+	
 	void calculatePoiseuilleHash(
 		uint*  gridParticleHash,
 		uint*  gridParticleIndex,
@@ -33,20 +31,20 @@ extern "C"
 		float* oldPos,
 		float* oldVel,
 		uint   numParticles,
-		uint   numCells);
+		uint   numGridCells);
 
-	void calculatePoiseuilleDensity(			
+	void computeDensityVariation(			
 		float* measures,
-		float* sortedPos,
-		float* sortedVel,
+		float* measuresInput,
+		float* sortedPos,		
 		uint* gridParticleIndex,
 		uint* cellStart,
 		uint* cellEnd,
 		uint numParticles,
 		uint numGridCells);
 
-	void calculatePoiseuilleAcceleration(	
-		float* acceleration,			
+	void computeViscousForce(	
+		float* viscousForce,					
 		float* measures,
 		float* sortedPos,			
 		float* sortedVel,
@@ -54,6 +52,36 @@ extern "C"
 		uint* cellStart,
 		uint* cellEnd,
 		uint numParticles,
-		uint numGridCells);
+		float elapsedTime,
+		uint numGridCells);	
+
+	void computePressureForce(	
+		float* pressureForce,					
+		float* measures,
+		float* sortedPos,					
+		uint* gridParticleIndex,
+		uint* cellStart,
+		uint* cellEnd,
+		uint numParticles,
+		float elapsedTime,
+		uint numGridCells);	
+
+	void predictCoordinates(
+		float* predictedPosition,
+		float* predictedVelocity,
+		float* pos,
+		float* vel,  
+		float* viscousForce,
+		float* pressureForce,
+		uint numParticles);
+
+	void computeCoordinates(
+		float* pos,
+		float* vel,  
+		float* velLeapFrog,
+		float* viscousForce,
+		float* pressureForce,
+		float elapsedTime,
+		uint numParticles);
 }//extern "C"
 #endif

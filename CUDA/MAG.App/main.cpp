@@ -7,27 +7,21 @@
 #include <cutil_inline.h>
 #include <cutil_gl_inline.h>
 #include <cuda_gl_interop.h>
-#include "fluidSystem.h"
 #include "poiseuilleFlowSystem.h"
 #include "render_particles.h"
 #include "magUtil.cuh"
 
 #define MAX(a,b) ((a > b) ? a : b)
-#define DamBreak
-//#define PoiseuilleFlow
 
-#if defined(DamBreak)
-    float camera_trans[] = {0.5, 0.0, -2.5};
-	DamBreakSystem *psystem = 0; 	
-#elif defined(PoiseuilleFlow)
-    float camera_trans[] = {0.0, 0.0, -0.0012};
-	PoiseuilleFlowSystem *psystem = 0;
-#endif
+//float camera_trans[] = {0.0, 0.0, -6.0};
+float camera_trans[] = {0.0f, 0.0f, -0.0034f};
+PoiseuilleFlowSystem *psystem = 0;
+
 
 float camera_rot[]   = {0, 0, 0};
 float camera_trans_lag[] = {0, 0, 0};
 float camera_rot_lag[] = {0, 0, 0};
-const float inertia = 0.1;
+const float inertia = 0.1f;
 
 const int width = 1280, height = 1024;
 int ox, oy;
@@ -82,8 +76,8 @@ void computeFPS()
 	if (fpsCount == fpsLimit) {
 		char fps[256];
 		float ifps = 1.f / (cutGetAverageTimerValue(timer) / 1000.f);
-		sprintf(fps, "Dam Break (%d particles): %3.1f fps; elapsed Time: %f",
-			psystem->getNumParticles(), ifps, psystem->getElapsedTime()); 
+		sprintf(fps, "Poiseuille (%d particles): %3.1f fps; Elapsed time: %1.4f",
+			psystem->getNumParticles(), ifps, psystem->GetElapsedTime()); 
 		glutSetWindowTitle(fps);
 		fpsCount = 0;         
 
@@ -97,12 +91,12 @@ void display()
 	cutilCheckError(cutStartTimer(timer));  
 	if(IsFirstTime){
 		IsFirstTime = false;
-		psystem->update(); 
+		psystem->Update(); 
 		if (renderer) 
 			renderer->setVertexBuffer(psystem->getCurrentReadBuffer(), psystem->getNumParticles());
 	}
 	if (!bPause){
-		psystem->update(); 
+		psystem->Update(); 
 		if (renderer) 
 			renderer->setVertexBuffer(psystem->getCurrentReadBuffer(), psystem->getNumParticles());
 	}
@@ -128,11 +122,6 @@ void display()
 	glutSwapBuffers();
 	glutReportErrors();
 	computeFPS();
-}
-
-inline float frand()
-{
-	return rand() / (float) RAND_MAX;
 }
 
 void reshape(int w, int h)
@@ -174,18 +163,18 @@ void mouse(int button, int state, int x, int y)
 void motion(int x, int y)
 {
 	float dx, dy;
-	dx = x - ox;
-	dy = y - oy;
+	dx = (float)x - ox;
+	dy = (float)y - oy;
 	if (buttonState == 3) {
-		camera_trans[2] += (dy / 100.0) * 0.5 * fabs(camera_trans[2]);
+		camera_trans[2] += (dy / 100.0f) * 0.5f * fabs(camera_trans[2]);
 	} 
 	else if (buttonState & 2) {
-		camera_trans[0] += dx / 100.0;
-		camera_trans[1] -= dy / 100.0;
+		camera_trans[0] += dx / 100.0f;
+		camera_trans[1] -= dy / 100.0f;
 	}
 	else if (buttonState & 1) {
-		camera_rot[0] += dy / 5.0;
-		camera_rot[1] += dx / 5.0;
+		camera_rot[0] += dy / 5.0f;
+		camera_rot[1] += dx / 5.0f;
 	}       
 	ox = x; oy = y;
 
@@ -200,21 +189,19 @@ void key(unsigned char key, int , int)
 		bPause = !bPause;
 		break;
 	case 13:
-		psystem->update(); 
+		psystem->Update(); 
 		if (renderer)
 			renderer->setVertexBuffer(psystem->getCurrentReadBuffer(), psystem->getNumParticles());
 		break;
 	case '1':
-		psystem->reset();
+		psystem->Reset();
 		break;
-	#if defined(DamBreak)
-	case '2':
-		psystem->changeRightBoundary();
+	case '2':		
+		psystem->Coloring();
 		break;
-	case '3':
-		psystem->removeRightBoundary();
-		break;
-	#endif	
+	/*case '3':
+		psystem->setBoundaryWave();
+		break;*/
 	case '\033':
 	case 'q':
 		exit(0);
@@ -235,41 +222,44 @@ void mainMenu(int i)
 	key((unsigned char) i, 0, 0);
 }
 
-
-void ConditionalInit()
-{
-		#if defined(DamBreak)
-			float num = 128;
-			psystem = new DamBreakSystem(
-				make_uint3(num, num, 1),
-				1,
-				make_uint3(4 * num, 2 * num, 4),				
-				1.0f / (2 * num),				
-				true); 	
-		#elif defined(PoiseuilleFlow)
-			psystem = new PoiseuilleFlowSystem(
-					make_uint3(16, 64 -  2 * 3, 1),
-					3,
-					make_uint3(16, 64, 4), 1.0f / (2 * (64 - 6) * 1000),
-					true);
-		#endif					
-			
-		psystem->reset();
+void SystemInit()
+{		
+	int boundary_offset = 3;		
+	uint3 gridSize = make_uint3(256, 128, 4);   
+	uint3 fluid_size = make_uint3(256, 64 -  2 * boundary_offset, 1);	
+	float soundspeed = powf(10.0f, -4.0f);
+	float radius = 1.0f / (2 * (64 - 6) * 1000);							
+	float3 gravity = make_float3(0,0,0);
+	float amplitude = 0.6 * 35 * radius;		
+	float wave_speed = 100 * soundspeed;
+	float delaTime = powf(10.0f, -4.0f);
+	psystem = new PoiseuilleFlowSystem(
+			delaTime,
+			fluid_size,			
+			//0,0,0,
+			amplitude,			
+			wave_speed,
+			soundspeed,
+			gravity,
+			boundary_offset, 
+			gridSize,								
+			radius,
+			true);					
 		
-		renderer = new ParticleRenderer;
-		renderer->setParticleRadius(psystem->getParticleRadius());
-		renderer->setColorBuffer(psystem->getColorBuffer());		
+	psystem->Reset();		
+	
+	renderer = new ParticleRenderer;
+	renderer->setradius(psystem->getradius());
+	renderer->setColorBuffer(psystem->getColorBuffer());		
 
-		cutilCheckError(cutCreateTimer(&timer));
+	cutilCheckError(cutCreateTimer(&timer));
 }
 
 int main(int argc, char** argv) 
 {
 	initGL(argc, argv);
 	cudaGLInit(argc, argv);
-
-	ConditionalInit();
-
+	SystemInit();
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
 	glutMouseFunc(mouse);
@@ -278,6 +268,7 @@ int main(int argc, char** argv)
 	glutIdleFunc(idle);
 	atexit(cleanup);
 	glutMainLoop();
-	if (psystem) delete psystem;
+	if (psystem) 
+		delete psystem;
 	cudaThreadExit();
 }

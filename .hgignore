@@ -9,3 +9,4 @@ glob:ipch/*
 glob:*.sdf
 glob:Release
 glob:*.dat
+glob:*.bak

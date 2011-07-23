@@ -7,36 +7,47 @@ class PoiseuilleFlowSystem
 {
 public:
 	PoiseuilleFlowSystem(
-		uint3 fluidParticlesSize,
+		float deltaTime,
+		uint3 fluid_size,
+		float amplitude,		
+		float wave_speed,
+		float soundspeed,
+		float3 gravity,
 		int boundaryOffset,
 		uint3 gridSize,
-		float particleRadius,
+		float radius,
 		bool bUseOpenGL);
 	~PoiseuilleFlowSystem();
 
 	enum ParticleArray
 	{
 		POSITION,
+		PREDICTEDPOSITION,
 		VELOCITY,		
 		MEASURES,
-		ACCELERATION,
+		VISCOUSFORCE,
+		PRESSUREFORCE,
 		VELOCITYLEAPFROG,
 	};
 
-	void update();
-	void reset();
+	void Update();	
 
-	float* getArray(ParticleArray array);
+	void SetupBoundary( float * dPos );
+
+	void Reset();
+
 	void   setArray(ParticleArray array, const float* data, int start, int count);
 
 	int getNumParticles() const { return numParticles; }
-	float getElapsedTime() const { return elapsedTime; }
-	float getHalfWorldXSize() {return params.gridSize.x * params.particleRadius;}
-	float getHalfWorldYSize() {return params.gridSize.y * params.particleRadius;}
-	float getHalfWorldZSize() {return params.gridSize.z * params.particleRadius;}
+	float GetElapsedTime() const { return elapsedTime; }
+	float getHalfWorldXSize() {return cfg.gridSize.x * cfg.radius;}
+	float getHalfWorldYSize() {return cfg.gridSize.y * cfg.radius;}
+	float getHalfWorldZSize() {return cfg.gridSize.z * cfg.radius;}
 
 	unsigned int getCurrentReadBuffer() const { return posVbo; }
 	unsigned int getColorBuffer()       const { return colorVBO; }
+	void SwitchBoundarySetup();
+	//void startBoundaryMotion();
 
 	void * getCudaPosVBO()              const { return (void *)cudaPosVBO; }
 	void * getCudaVelVBO()              const { return (void *)dVel; }
@@ -44,56 +55,66 @@ public:
 	void * getCudaHash()				const {return (void *)dHash;}
 	void * getCudaIndex()				const {return (void *)dIndex;}	
 	void * getCudaSortedPosition()      const { return (void *)dSortedPos; }
-	void * getCudaMeasures()            const { return (void *)dMeasures; }    
-	void * getCudaAcceleration()        const {return (void *)dAcceleration;}	
-	void * getLeapFrogVelocity() const {return (void*) dVelLeapFrog;}
+	void * getSortedVelocity()      const { return (void *)dSortedVel; }
+	void * getMeasures()            const { return (void *)dMeasures; }    
+	void * viscous_force()        const {return (void *)viscousForce;}	
+	void * pressure_force()        const {return (void *)pressureForce;}		
+	void * getPredictedPos()        const {return (void *)predictedPosition;}	
+	void * getLeapFrogVelocity() const {return (void*) dVelLeapFrog;}	
 
-	void changeGravity();
+	float getradius() { return cfg.radius; }
+	uint3 getGridSize() { return cfg.gridSize; }
+	float3 getWorldOrigin() { return cfg.worldOrigin; }
+	float3 getCellSize() { return cfg.cellSize; }
 
-	float getParticleRadius() { return params.particleRadius; }
-	uint3 getGridSize() { return params.gridSize; }
-	float3 getWorldOrigin() { return params.worldOrigin; }
-	float3 getCellSize() { return params.cellSize; }
-protected: // methods
+	void Coloring();
+protected:
 	PoiseuilleFlowSystem() {}
 	uint createVBO(uint size);
 
-	void _initialize(int numParticles);
+	void _initialize(uint numParticles);
+
+	
+
 	void _finalize();
 
-	void initFluid( float spacing, float jitter, uint numParticles);
+	void initFluid(float spacing, float jitter, uint numParticles);
+	float CalculateMass(float* positions, uint3 gridSize);
 	void initBoundaryParticles(float spacing);
 
-protected: // data
+protected:
 	bool IsInitialized, IsOpenGL;
 	uint numParticles;
-	//uint3 fluidParticlesSize;	
+	float currentWaveHeight;	
 	float elapsedTime;
+	float time_shift;
+	float time_relax;
+	float epsDensity;
+	
 
 	// CPU data
-	float* hPos;              // particle positions
-	float* hVel;              // particle velocities
-	float* hVelLeapFrog;
-	
+	float* hPos;              
+	float* hVel;              
 	float* hMeasures;
-	float* hAcceleration;	        
 
 	// GPU data
 	float* dPos;
+	float* predictedPosition;
+	float* predictedVelocity;
 	float* dVel;
 	float* dVelLeapFrog;
 	
 	float* dMeasures;
-	float* dAcceleration;	
+	float* viscousForce;	
+	float* pressureForce;
 
 	float* dSortedPos;
 	float* dSortedVel;
-
-	// grid data for sorting method
-	uint*  dHash; // grid hash value for each particle
-	uint*  dIndex;// particle index for each particle
-	uint*  dCellStart;        // index of start of each cell in sorted list
-	uint*  dCellEnd;          // index of end of cell
+	
+	uint*  dHash; 
+	uint*  dIndex;
+	uint*  dCellStart;
+	uint*  dCellEnd; 
 
 	uint   gridSortBits;
 
@@ -104,11 +125,11 @@ protected: // data
 	float *cudaColorVBO;      // these are the CUDA deviceMem Color
 
 	struct cudaGraphicsResource *cuda_posvbo_resource; // handles OpenGL-CUDA exchange
-	struct cudaGraphicsResource *cuda_colorvbo_resource; // handles OpenGL-CUDA exchange
+	struct cudaGraphicsResource *cuda_colorvbo_resource; // handles OpenGL-CUDA exchange	
+	
+	Poiseuillecfg cfg;	
+	uint numGridCells;  
 
-	// params
-	PoiseuilleParams params;
-	//uint3 gridSize;
-	uint numGridCells;    
+	
 };
 #endif //__POISEUILLE_FLOW_SYSTEM_H__

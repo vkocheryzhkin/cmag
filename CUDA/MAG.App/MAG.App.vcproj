@@ -62,7 +62,6 @@
 				OutputFile="../../../C/bin/win32/$(ConfigurationName)/$(ProjectName).exe"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(CUDA_PATH)/lib/$(PlatformName)&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/C/common/lib/$(PlatformName)&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/shared/lib/$(PlatformName)&quot;"
-				IgnoreAllDefaultLibraries="false"
 				GenerateDebugInformation="true"
 				TargetMachine="1"
 			/>
