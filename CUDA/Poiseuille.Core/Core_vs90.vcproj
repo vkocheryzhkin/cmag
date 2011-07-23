@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="MAG.DamBreak.Test"
-	ProjectGUID="{754DE6D4-4B5F-48E2-9825-BF15BB6A560F}"
-	RootNamespace="MAGFluidTest"
+	Name="Poiseuille.Core"
+	ProjectGUID="{DB7ED190-F5A2-47C4-83A9-E0673F61597C}"
+	RootNamespace="MAGPoiseuilleFlow"
 	TargetFrameworkVersion="196613"
 	>
 	<Platforms>
@@ -13,13 +13,16 @@
 		/>
 	</Platforms>
 	<ToolFiles>
+		<DefaultToolFile
+			FileName="NvCudaRuntimeApi.rules"
+		/>
 	</ToolFiles>
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
 			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
-			ConfigurationType="1"
+			ConfigurationType="4"
 			CharacterSet="2"
 			>
 			<Tool
@@ -27,6 +30,13 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="Cudart Build Rule"
+				Include="$(NVSDKCOMPUTE_ROOT)\C\common\inc;$(NVSDKCOMPUTE_ROOT)\shared\inc;..\MAG.Util"
+				Arch2="0"
+				Optimization="0"
+				Runtime="1"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -40,7 +50,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(CUDA_PATH)/include&quot;;&quot;$(NVSDKCOMPUTE_ROOT)\C\common\inc&quot;;..\MAG.DamBreakCore"
+				AdditionalIncludeDirectories="&quot;$(CUDA_PATH)/include&quot;;&quot;$(NVSDKCOMPUTE_ROOT)\C\common\inc&quot;;..\MAG.Util"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -57,19 +67,10 @@
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="cudart.lib cutil32D.lib glew32.lib"
-				OutputFile="../../../C/bin/win32/$(ConfigurationName)/$(ProjectName).exe"
-				AdditionalLibraryDirectories="&quot;$(CUDA_PATH)/lib/$(PlatformName)&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/C/common/lib/$(PlatformName)&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/shared/lib/$(PlatformName)&quot;"
-				GenerateDebugInformation="true"
-				SubSystem="1"
-				TargetMachine="1"
+				Name="VCLibrarianTool"
 			/>
 			<Tool
 				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -79,9 +80,6 @@
 			/>
 			<Tool
 				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCAppVerifierTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
@@ -100,6 +98,9 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="Cudart Build Rule"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -162,35 +163,23 @@
 	</References>
 	<Files>
 		<File
-			RelativePath=".\Benchmark.cpp"
+			RelativePath=".\poiseuilleFlowSystem.cpp"
 			>
 		</File>
 		<File
-			RelativePath=".\CheckDensity.cpp"
+			RelativePath=".\poiseuilleFlowSystem.cu"
 			>
+			<FileConfiguration
+				Name="Debug|Win32"
+				>
+				<Tool
+					Name="Cudart Build Rule"
+					AddedDependencies="poiseuilleFlowSystem.cuh; poiseuilleFlowKernel.cu;"
+				/>
+			</FileConfiguration>
 		</File>
 		<File
-			RelativePath=".\DamBreak.mw"
-			>
-		</File>
-		<File
-			RelativePath=".\dump.h"
-			>
-		</File>
-		<File
-			RelativePath=".\dump.m"
-			>
-		</File>
-		<File
-			RelativePath=".\main.cc"
-			>
-		</File>
-		<File
-			RelativePath=".\XFrontTest.cpp"
-			>
-		</File>
-		<File
-			RelativePath=".\YFrontTest.cpp"
+			RelativePath=".\poiseuilleFlowSystem.h"
 			>
 		</File>
 	</Files>

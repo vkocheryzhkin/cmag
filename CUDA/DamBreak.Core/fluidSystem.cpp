@@ -1,4 +1,3 @@
-#include "magUtil.cuh"
 #include "fluidSystem.h"
 #include "fluidSystem.cuh"
 #include "fluid_kernel.cuh"
@@ -318,31 +317,6 @@ void DamBreakSystem::update(){
 		unmapGLBufferObject(cuda_posvbo_resource);
 	}
 	elapsedTime+= params.deltaTime;
-}
-
-float* DamBreakSystem::getArray(ParticleArray array){
-	assert(IsInitialized);
- 
-	float* hdata = 0;
-	float* ddata = 0;
-
-	unsigned int vbo = 0;
-
-	switch (array){
-		default:
-		case POSITION:
-			hdata = hPos;
-			ddata = dPos;
-			vbo = posVbo;
-			break;
-		case VELOCITY:
-			hdata = hVel;
-			ddata = dVel;
-			break;	
-	}
-
-	copyArrayFromDevice(hdata, ddata, vbo, numParticles*4*sizeof(float));
-	return hdata;
 }
 
 void DamBreakSystem::setArray(ParticleArray array, const float* data, int start, int count){

@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="MAG.DamBreakCore"
+	Name="DamBreak.Core"
 	ProjectGUID="{F6A3E97B-56F7-4A9D-9887-D70B5403D80D}"
 	RootNamespace="MAGCUDAFluidCore"
 	TargetFrameworkVersion="196613"

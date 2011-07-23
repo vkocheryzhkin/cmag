@@ -1,18 +1,18 @@
-#ifndef __FLUIDSYSTEM_H__
-#define __FLUIDSYSTEM_H__
+#ifndef __POISEUILLE_FLOW_SYSTEM_H__
+#define __POISEUILLE_FLOW_SYSTEM_H__
 
-#include "fluid_kernel.cuh"
+#include "poiseuilleFlowKernel.cuh"
 #include "vector_functions.h"
-class DamBreakSystem
+class PoiseuilleFlowSystem
 {
 public:
-	DamBreakSystem(
+	PoiseuilleFlowSystem(
 		uint3 fluidParticlesSize,
 		int boundaryOffset,
 		uint3 gridSize,
 		float particleRadius,
 		bool bUseOpenGL);
-	~DamBreakSystem();
+	~PoiseuilleFlowSystem();
 
 	enum ParticleArray
 	{
@@ -25,8 +25,7 @@ public:
 
 	void update();
 	void reset();
-
-	float* getArray(ParticleArray array);
+	
 	void   setArray(ParticleArray array, const float* data, int start, int count);
 
 	int getNumParticles() const { return numParticles; }
@@ -46,29 +45,28 @@ public:
 	void * getCudaSortedPosition()      const { return (void *)dSortedPos; }
 	void * getCudaMeasures()            const { return (void *)dMeasures; }    
 	void * getCudaAcceleration()        const {return (void *)dAcceleration;}	
+	void * getLeapFrogVelocity() const {return (void*) dVelLeapFrog;}
 
-	void changeRightBoundary();
-	void removeRightBoundary();
+	void changeGravity();
 
 	float getParticleRadius() { return params.particleRadius; }
 	uint3 getGridSize() { return params.gridSize; }
 	float3 getWorldOrigin() { return params.worldOrigin; }
 	float3 getCellSize() { return params.cellSize; }
-	float3 getGravity() {return params.gravity;}
 protected: // methods
-	DamBreakSystem() {}
+	PoiseuilleFlowSystem() {}
 	uint createVBO(uint size);
 
 	void _initialize(int numParticles);
 	void _finalize();
 
-	void initFluid(uint *size, float spacing, float jitter, uint numParticles);
-	void initBoundaryParticles(float spacing);	
+	void initFluid( float spacing, float jitter, uint numParticles);
+	void initBoundaryParticles(float spacing);
 
 protected: // data
 	bool IsInitialized, IsOpenGL;
 	uint numParticles;
-	uint3 fluidParticlesSize;	
+	//uint3 fluidParticlesSize;	
 	float elapsedTime;
 
 	// CPU data
@@ -84,7 +82,6 @@ protected: // data
 	float* dVel;
 	float* dVelLeapFrog;
 	
-	float* dVariations;
 	float* dMeasures;
 	float* dAcceleration;	
 
@@ -106,10 +103,11 @@ protected: // data
 	float *cudaColorVBO;      // these are the CUDA deviceMem Color
 
 	struct cudaGraphicsResource *cuda_posvbo_resource; // handles OpenGL-CUDA exchange
-	struct cudaGraphicsResource *cuda_colorvbo_resource; // handles OpenGL-CUDA exchange	
+	struct cudaGraphicsResource *cuda_colorvbo_resource; // handles OpenGL-CUDA exchange
 
 	// params
-	SimParams params;	
+	PoiseuilleParams params;
+	//uint3 gridSize;
 	uint numGridCells;    
 };
-#endif //__FLUIDSYSTEM_H__
+#endif //__POISEUILLE_FLOW_SYSTEM_H__
