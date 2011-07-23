@@ -7,9 +7,8 @@
 //#include <iostream>
 #include <fstream>
 #include <sstream>
-#include "poiseuilleFlowSystem.cuh"
-#include "poiseuilleFlowSystem.h"
-//#include "magUtil.cuh"
+#include "peristalsisSystem.cuh"
+#include "peristalsisSystem.h"
 
 using namespace std;
 using namespace thrust;
@@ -24,7 +23,7 @@ void velocity_filed(){
 	float amplitude = 0.6 * 35 * radius;		
 	float wave_speed = 100 * soundspeed;
 	float delaTime = powf(10.0f, -4.0f);
-	PoiseuilleFlowSystem* psystem = new PoiseuilleFlowSystem(
+	PeristalsisSystem* psystem = new PeristalsisSystem(
 		delaTime,
 		fluid_size,			
 		//0,0,0,

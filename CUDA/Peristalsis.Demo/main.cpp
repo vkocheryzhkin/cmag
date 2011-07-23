@@ -7,15 +7,16 @@
 #include <cutil_inline.h>
 #include <cutil_gl_inline.h>
 #include <cuda_gl_interop.h>
-#include "poiseuilleFlowSystem.h"
+#include "peristalsisSystem.h"
 #include "render_particles.h"
-#include "magUtil.cuh"
+
+extern "C" void cudaGLInit(int argc, char **argv);
 
 #define MAX(a,b) ((a > b) ? a : b)
 
 //float camera_trans[] = {0.0, 0.0, -6.0};
 float camera_trans[] = {0.0f, 0.0f, -0.0034f};
-PoiseuilleFlowSystem *psystem = 0;
+PeristalsisSystem *psystem = 0;
 
 
 float camera_rot[]   = {0, 0, 0};
@@ -76,7 +77,7 @@ void computeFPS()
 	if (fpsCount == fpsLimit) {
 		char fps[256];
 		float ifps = 1.f / (cutGetAverageTimerValue(timer) / 1000.f);
-		sprintf(fps, "Poiseuille (%d particles): %3.1f fps; Elapsed time: %1.4f",
+		sprintf(fps, "Peristalsis (%d particles): %3.1f fps; Elapsed time: %1.4f",
 			psystem->getNumParticles(), ifps, psystem->GetElapsedTime()); 
 		glutSetWindowTitle(fps);
 		fpsCount = 0;         
@@ -198,10 +199,7 @@ void key(unsigned char key, int , int)
 		break;
 	case '2':		
 		psystem->Coloring();
-		break;
-	/*case '3':
-		psystem->setBoundaryWave();
-		break;*/
+		break;	
 	case '\033':
 	case 'q':
 		exit(0);
@@ -233,7 +231,7 @@ void SystemInit()
 	float amplitude = 0.6 * 35 * radius;		
 	float wave_speed = 100 * soundspeed;
 	float delaTime = powf(10.0f, -4.0f);
-	psystem = new PoiseuilleFlowSystem(
+	psystem = new PeristalsisSystem(
 			delaTime,
 			fluid_size,			
 			//0,0,0,

@@ -10,17 +10,76 @@
 #include "thrust/iterator/zip_iterator.h"
 #include "thrust/sort.h"
 
-#include "poiseuilleFlowKernel.cu"
-#include "poiseuilleFlowDensity.cu"
-#include "poiseuilleFlowPressureForce.cu"
-#include "poiseuilleFlowViscousForce.cu"
-#include "poiseuilleFlowIntegrate.cu"
-#include "magUtil.cuh"
+#include "peristalsisKernel.cu"
+#include "peristalsisDensity.cu"
+#include "peristalsisPressureForce.cu"
+#include "peristalsisViscousForce.cu"
+#include "peristalsisIntegrate.cu"
+
 extern "C"
 {	
-	void setParameters(Poiseuillecfg *hostParams){
-		cutilSafeCall( cudaMemcpyToSymbol(cfg, hostParams, sizeof(Poiseuillecfg)) );
-	}	
+	void setParameters(Peristalsiscfg *hostParams){
+		cutilSafeCall( cudaMemcpyToSymbol(cfg, hostParams, sizeof(Peristalsiscfg)) );
+	}
+
+	uint iDivUp(uint a, uint b){
+		return (a % b != 0) ? (a / b + 1) : (a / b);
+	}
+
+	void computeGridSize(uint n, uint blockSize, uint &numBlocks, uint &numThreads){
+		numThreads = min(blockSize, n);
+		numBlocks = iDivUp(n, numThreads);
+	}
+
+	void cudaGLInit(int argc, char **argv)
+	{   
+		if( cutCheckCmdLineFlag(argc, (const char**)argv, "device") ) {
+			cutilDeviceInit(argc, argv);
+		} else {
+			cudaGLSetGLDevice( cutGetMaxGflopsDeviceId() );
+		}
+	}
+
+	void registerGLBufferObject(uint vbo, struct cudaGraphicsResource **cuda_vbo_resource)
+	{
+		cutilSafeCall(cudaGraphicsGLRegisterBuffer(cuda_vbo_resource, vbo, 
+							   cudaGraphicsMapFlagsNone));
+	}
+
+	void unregisterGLBufferObject(struct cudaGraphicsResource *cuda_vbo_resource)
+	{
+		cutilSafeCall(cudaGraphicsUnregisterResource(cuda_vbo_resource));	
+	}
+
+	void *mapGLBufferObject(struct cudaGraphicsResource **cuda_vbo_resource)
+	{
+		void *ptr;
+		cutilSafeCall(cudaGraphicsMapResources(1, cuda_vbo_resource, 0));
+		size_t num_bytes; 
+		cutilSafeCall(cudaGraphicsResourceGetMappedPointer((void **)&ptr, &num_bytes,  
+								   *cuda_vbo_resource));
+		return ptr;
+	}
+
+	void unmapGLBufferObject(struct cudaGraphicsResource *cuda_vbo_resource)
+	{
+	   cutilSafeCall(cudaGraphicsUnmapResources(1, &cuda_vbo_resource, 0));
+	}
+
+	void allocateArray(void **devPtr, size_t size)
+	{
+		cutilSafeCall(cudaMalloc(devPtr, size));
+	}
+
+	void freeArray(void *devPtr)
+	{
+		cutilSafeCall(cudaFree(devPtr));
+	}
+
+	void copyArrayToDevice(void* device, const void* host, int offset, int size)
+	{
+		cutilSafeCall(cudaMemcpy((char *) device + offset, host, size, cudaMemcpyHostToDevice));
+	}
 
 	void ExtConfigureBoundary(
 		float* pos,
@@ -37,7 +96,7 @@ extern "C"
 			cutilCheckMsg("configureBoundary kernel execution failed");
 	}
 
-	void calculatePoiseuilleHash(
+	void calculatePeristalsisHash(
 		uint* gridParticleHash,
 		uint* gridParticleIndex,
 		float* pos, 
@@ -45,15 +104,14 @@ extern "C"
 			uint numThreads, numBlocks;
 			computeGridSize(numParticles, 256, numBlocks, numThreads);
 
-			calculatePoiseuilleHashD<<< numBlocks, numThreads >>>(
+			calculatePeristalsisHashD<<< numBlocks, numThreads >>>(
 				gridParticleHash,
 				gridParticleIndex,
 				(float4 *) pos,
 				numParticles);
 		    
-			cutilCheckMsg("Kernel execution failed: calculatePoiseuilleHashD");
+			cutilCheckMsg("Kernel execution failed: calculatePeristalsisHashD");
 	}
-
 	
 	void sortParticles(uint *dHash, uint *dIndex, uint numParticles)
 	{
@@ -62,7 +120,7 @@ extern "C"
 							thrust::device_ptr<uint>(dIndex));
 	}
 
-	void reorderPoiseuilleData(
+	void reorderPeristalsisData(
 		uint*  cellStart,
 		uint*  cellEnd,
 		float* sortedPos,
@@ -84,7 +142,7 @@ extern "C"
 			#endif
 
 				uint smemSize = sizeof(uint)*(numThreads+1);
-				reorderPoiseuilleDataD<<< numBlocks, numThreads, smemSize>>>(
+				reorderPeristalsisDataD<<< numBlocks, numThreads, smemSize>>>(
 					cellStart,
 					cellEnd,
 					(float4 *) sortedPos,
@@ -94,7 +152,7 @@ extern "C"
 					(float4 *) oldPos,
 					(float4 *) oldVel,
 					numParticles);
-				cutilCheckMsg("Kernel execution failed: reorderPoiseuilleDataD");
+				cutilCheckMsg("Kernel execution failed: reorderPeristalsisDataD");
 
 			#if USE_TEX
 				cutilSafeCall(cudaUnbindTexture(oldPosTex));

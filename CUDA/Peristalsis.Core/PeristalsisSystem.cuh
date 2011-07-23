@@ -1,16 +1,25 @@
-#ifndef __POISEUILLE_FLOW_SYSTEM_CUH__
-#define __POISEUILLE_FLOW_SYSTEM_CUH__
-#include "poiseuilleFlowKernel.cuh"
+#ifndef PERISTALSIS_SYSTEM_CUH_
+#define PERISTALSIS_SYSTEM_CUH_
+#include "peristalsisKernel.cuh"
 extern "C"
 {		
-	void setParameters(Poiseuillecfg *hostcfg);	
+	void registerGLBufferObject(uint vbo, struct cudaGraphicsResource **cuda_vbo_resource);
+	void unregisterGLBufferObject(struct cudaGraphicsResource *cuda_vbo_resource);
+	void *mapGLBufferObject(struct cudaGraphicsResource **cuda_vbo_resource);
+	void unmapGLBufferObject(struct cudaGraphicsResource *cuda_vbo_resource);
+	void allocateArray(void **devPtr, int size);
+	void freeArray(void *devPtr);	
+	void copyArrayToDevice(void* device, const void* host, int offset, int size);
+	void computeGridSize(uint n, uint blockSize, uint &numBlocks, uint &numThreads);
+
+	void setParameters(Peristalsiscfg *hostcfg);	
 
 	void ExtConfigureBoundary(
 		float* pos,
 		float currentWaveHeight,
 		uint nemParticles);
 	
-	void calculatePoiseuilleHash(
+	void calculatePeristalsisHash(
 		uint*  gridParticleHash,
 		uint*  gridParticleIndex,
 		float* pos, 
@@ -21,7 +30,7 @@ extern "C"
 		uint *dIndex,
 		uint numParticles);
 
-	void reorderPoiseuilleData(
+	void reorderPeristalsisData(
 		uint*  cellStart,
 		uint*  cellEnd,
 		float* sortedPos,
@@ -84,4 +93,4 @@ extern "C"
 		float elapsedTime,
 		uint numParticles);
 }//extern "C"
-#endif
+#endif //PERISTALSIS_SYSTEM_CUH_

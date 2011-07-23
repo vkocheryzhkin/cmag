@@ -2,7 +2,7 @@
 #include <math.h>
 #include "cutil_math.h"
 #include "math_constants.h"
-#include "poiseuilleFlowKernel.cuh"
+#include "peristalsisKernel.cuh"
 
 #if USE_TEX
 texture<float4, 1, cudaReadModeElementType> oldPosTex;
@@ -13,7 +13,7 @@ texture<uint, 1, cudaReadModeElementType> gridParticleHashTex;
 texture<uint, 1, cudaReadModeElementType> cellStartTex;
 texture<uint, 1, cudaReadModeElementType> cellEndTex;
 #endif
-__constant__ Poiseuillecfg cfg;
+__constant__ Peristalsiscfg cfg;
 
 __device__ int3 calcGridPos(float3 p){
 	int3 gridPos;
@@ -30,7 +30,7 @@ __device__ uint calcGridHash(int3 gridPos){
 	return __umul24(__umul24(gridPos.z, cfg.gridSize.y), cfg.gridSize.x) + __umul24(gridPos.y, cfg.gridSize.x) + gridPos.x;
 }
 
-__global__ void calculatePoiseuilleHashD(
+__global__ void calculatePeristalsisHashD(
 	uint*   gridParticleHash,  // output
 	uint*   gridParticleIndex, // output
 	float4* pos,               // input
@@ -47,7 +47,7 @@ __global__ void calculatePoiseuilleHashD(
 		gridParticleIndex[index] = index;
 }
 
-__global__ void reorderPoiseuilleDataD(
+__global__ void reorderPeristalsisDataD(
 	uint*   cellStart,        // output
 	uint*   cellEnd,          // output
 	float4* sortedPos,        // output

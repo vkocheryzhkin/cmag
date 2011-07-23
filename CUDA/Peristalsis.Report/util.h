@@ -1,7 +1,6 @@
 #ifndef UTIL_H_
 #define UTIL_H_
 #include <fstream>
-
 #include <string>
 using namespace std;
 

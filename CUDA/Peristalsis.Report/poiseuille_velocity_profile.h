@@ -5,8 +5,8 @@
 #include <fstream>
 #include <sstream>
 #include <stack>
-#include "poiseuilleflowsystem.cuh"
-#include "poiseuilleflowsystem.h"
+#include "peristalsissystem.cuh"
+#include "peristalsissystem.h"
 typedef unsigned int uint;
 using namespace std;
 
@@ -20,7 +20,7 @@ void poiseuille_velocity_profile()
 	uint3 gridSize = make_uint3(sizex, 64, 4);   
 	uint3 fluid_size = make_uint3(gridSize.x, gridSize.y -  2 * boundaryOffset, 1);	
 	float delaTime = powf(10.0f, -4.0f);
-	PoiseuilleFlowSystem *psystem = new PoiseuilleFlowSystem(
+	PeristalsisSystem *psystem = new PeristalsisSystem(
 			delaTime,
 			fluid_size,			
 			0,0,			

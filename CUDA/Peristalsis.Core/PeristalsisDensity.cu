@@ -1,4 +1,4 @@
-#include "poiseulleFlowUtil.cu"
+#include "peristalsisUtil.cu"
 
 __device__ float sumDensity(
 	int3    gridPos,

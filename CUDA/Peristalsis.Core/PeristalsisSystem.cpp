@@ -1,6 +1,5 @@
-#include "magUtil.cuh"
-#include "poiseuilleFlowSystem.h"
-#include "poiseuilleFlowSystem.cuh"
+#include "peristalsisSystem.h"
+#include "peristalsisSystem.cuh"
 #include <cutil_inline.h>
 #include <assert.h>
 #include <math.h>
@@ -15,7 +14,7 @@
 
 using namespace thrust;
 
-PoiseuilleFlowSystem::PoiseuilleFlowSystem(
+PeristalsisSystem::PeristalsisSystem(
 	float deltaTime,
 	uint3 fluid_size,
 	float amplitude,	
@@ -80,12 +79,12 @@ PoiseuilleFlowSystem::PoiseuilleFlowSystem(
 		_initialize(numParticles);
 }
 
-PoiseuilleFlowSystem::~PoiseuilleFlowSystem(){
+PeristalsisSystem::~PeristalsisSystem(){
 	_finalize();
 	numParticles = 0;
 }
 
-uint PoiseuilleFlowSystem::createVBO(uint size){
+uint PeristalsisSystem::createVBO(uint size){
 	GLuint vbo;
 	glGenBuffers(1, &vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -94,7 +93,7 @@ uint PoiseuilleFlowSystem::createVBO(uint size){
 	return vbo;
 }
 
-void PoiseuilleFlowSystem::_initialize(uint numParticles){
+void PeristalsisSystem::_initialize(uint numParticles){
 	assert(!IsInitialized);
 
 	numParticles = numParticles;
@@ -139,7 +138,7 @@ void PoiseuilleFlowSystem::_initialize(uint numParticles){
 	IsInitialized = true;
 }
 
-void PoiseuilleFlowSystem::_finalize(){
+void PeristalsisSystem::_finalize(){
 	assert(IsInitialized);
 
 	delete [] hPos;
@@ -170,7 +169,7 @@ void PoiseuilleFlowSystem::_finalize(){
 	}	
 }
 
-void PoiseuilleFlowSystem::setArray(ParticleArray array, const float* data, int start, int count){
+void PeristalsisSystem::setArray(ParticleArray array, const float* data, int start, int count){
 	assert(IsInitialized);
  
 	switch (array)
@@ -211,7 +210,7 @@ void PoiseuilleFlowSystem::setArray(ParticleArray array, const float* data, int 
 	}       
 }
 
-void PoiseuilleFlowSystem::Reset(){
+void PeristalsisSystem::Reset(){
 	elapsedTime = 0.0f;	
 	time_shift = 0.0f;
 	time_relax = 1000 * cfg.deltaTime;
@@ -236,7 +235,7 @@ void PoiseuilleFlowSystem::Reset(){
 		Coloring();
 }
 
-float PoiseuilleFlowSystem::CalculateMass(float* positions, uint3 gridSize){
+float PeristalsisSystem::CalculateMass(float* positions, uint3 gridSize){
 	float x = positions[(gridSize.x / 2) * 4 + 0];
 	float y = positions[(gridSize.x / 2) * 4 + 1];
 	float2 testPoint  = make_float2(x,y);
@@ -253,7 +252,7 @@ float PoiseuilleFlowSystem::CalculateMass(float* positions, uint3 gridSize){
 	return sum;
 }
 
-void PoiseuilleFlowSystem::initFluid( float spacing, float jitter, uint numParticles){
+void PeristalsisSystem::initFluid( float spacing, float jitter, uint numParticles){
 	srand(1973);			
 	int xsize = cfg.fluid_size.x;
 	int ysize = cfg.fluid_size.y;
@@ -274,7 +273,7 @@ void PoiseuilleFlowSystem::initFluid( float spacing, float jitter, uint numParti
 		}
 	}
 }
-void PoiseuilleFlowSystem::initBoundaryParticles(float spacing)
+void PeristalsisSystem::initBoundaryParticles(float spacing)
 {	
 	uint size[3];	
 	int numAllocatedParticles = 
@@ -318,7 +317,7 @@ void PoiseuilleFlowSystem::initBoundaryParticles(float spacing)
 }
 
 
-void PoiseuilleFlowSystem::Update(){
+void PeristalsisSystem::Update(){
 	assert(IsInitialized);
 
 	float *dPos;
@@ -343,11 +342,11 @@ void PoiseuilleFlowSystem::Update(){
 		}
 	}			
 
-	calculatePoiseuilleHash(dHash, dIndex, dPos, numParticles);
+	calculatePeristalsisHash(dHash, dIndex, dPos, numParticles);
 	
 	sortParticles(dHash, dIndex, numParticles);
 
-	reorderPoiseuilleData(
+	reorderPeristalsisData(
 		dCellStart,
 		dCellEnd,
 		dSortedPos,		
@@ -407,7 +406,7 @@ void PoiseuilleFlowSystem::Update(){
 	elapsedTime+= cfg.deltaTime;
 }
 
-void PoiseuilleFlowSystem::Coloring()
+void PeristalsisSystem::Coloring()
 {
 	uint numParticles = getNumParticles();
 	host_vector<float4> h_position(numParticles);		

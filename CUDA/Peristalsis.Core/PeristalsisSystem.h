@@ -1,12 +1,12 @@
-#ifndef __POISEUILLE_FLOW_SYSTEM_H__
-#define __POISEUILLE_FLOW_SYSTEM_H__
+#ifndef PERISTALSIS_SYSTEM_H_
+#define PERISTALSIS_SYSTEM_H_
 
-#include "poiseuilleFlowKernel.cuh"
+#include "peristalsisKernel.cuh"
 #include "vector_functions.h"
-class PoiseuilleFlowSystem
+class PeristalsisSystem
 {
 public:
-	PoiseuilleFlowSystem(
+	PeristalsisSystem(
 		float deltaTime,
 		uint3 fluid_size,
 		float amplitude,		
@@ -17,7 +17,7 @@ public:
 		uint3 gridSize,
 		float radius,
 		bool bUseOpenGL);
-	~PoiseuilleFlowSystem();
+	~PeristalsisSystem();
 
 	enum ParticleArray
 	{
@@ -69,13 +69,11 @@ public:
 
 	void Coloring();
 protected:
-	PoiseuilleFlowSystem() {}
+	PeristalsisSystem() {}
 	uint createVBO(uint size);
 
 	void _initialize(uint numParticles);
-
 	
-
 	void _finalize();
 
 	void initFluid(float spacing, float jitter, uint numParticles);
@@ -127,9 +125,9 @@ protected:
 	struct cudaGraphicsResource *cuda_posvbo_resource; // handles OpenGL-CUDA exchange
 	struct cudaGraphicsResource *cuda_colorvbo_resource; // handles OpenGL-CUDA exchange	
 	
-	Poiseuillecfg cfg;	
+	Peristalsiscfg cfg;	
 	uint numGridCells;  
 
 	
 };
-#endif //__POISEUILLE_FLOW_SYSTEM_H__
+#endif //PERISTALSIS_SYSTEM_H__

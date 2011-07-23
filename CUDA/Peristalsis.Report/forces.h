@@ -4,8 +4,8 @@
 #include <vector_functions.h>
 #include <fstream>
 #include <math.h>
-#include "poiseuilleFlowSystem.cuh"
-#include "poiseuilleFlowSystem.h"
+#include "peristalsisSystem.cuh"
+#include "peristalsisSystem.h"
 #include "util.h"
 using namespace std;
 using namespace thrust;
@@ -21,7 +21,7 @@ void forces_avg(){
 	float wave_speed = 100 * soundspeed;
 	float delaTime = powf(10.0f, -4.0f);
 	uint numFluid = fluid_size.x * fluid_size.y;
-	PoiseuilleFlowSystem* psystem = new PoiseuilleFlowSystem(
+	PeristalsisSystem* psystem = new PeristalsisSystem(
 		delaTime,
 		fluid_size,					
 		amplitude,		

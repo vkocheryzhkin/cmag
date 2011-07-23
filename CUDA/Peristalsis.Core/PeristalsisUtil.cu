@@ -1,5 +1,5 @@
-#ifndef __POISEUILEEFLOWUTIL_CU__
-#define __POISEUILEEFLOWUTIL_CU__
+#ifndef PERISTALSIS_UTIL_CU__
+#define PERISTALSIS_UTIL_CU__
 
 __device__ int EvaluateShift(int pos, int size)
 {
@@ -10,4 +10,4 @@ __device__ int EvaluateShift(int pos, int size)
     return 0;
 }
 
-#endif//__POISEUILEEFLOWUTIL_CU__
+#endif//PERISTALSIS_UTIL_CU__

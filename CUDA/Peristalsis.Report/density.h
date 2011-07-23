@@ -2,8 +2,8 @@
 #include <thrust/device_vector.h>
 #include <vector_types.h>
 #include <vector_functions.h>
-#include "poiseuilleFlowSystem.cuh"
-#include "poiseuilleFlowSystem.h"
+#include "peristalsisSystem.cuh"
+#include "peristalsisSystem.h"
 #include <fstream>
 #include "util.h"
 using namespace std;
@@ -19,7 +19,7 @@ void density_avg(){
 	float amplitude = 0.6 * 35 * radius;		
 	float wave_speed = 100 * soundspeed;
 	float delaTime = powf(10.0f, -4.0f);
-	PoiseuilleFlowSystem* psystem = new PoiseuilleFlowSystem(
+	PeristalsisSystem* psystem = new PeristalsisSystem(
 		delaTime,
 		fluid_size,					
 		//0,0,0,

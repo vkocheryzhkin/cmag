@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="MAG.Util"
-	ProjectGUID="{645E4439-91F2-4F56-8445-9F8071620200}"
-	RootNamespace="MAGUtil"
+	Name="Peristalsis.Demo"
+	ProjectGUID="{855B3FBF-5094-41ED-83CF-C3BD76771F65}"
+	RootNamespace="MAGApp"
 	TargetFrameworkVersion="196613"
 	>
 	<Platforms>
@@ -13,16 +13,13 @@
 		/>
 	</Platforms>
 	<ToolFiles>
-		<DefaultToolFile
-			FileName="NvCudaRuntimeApi.rules"
-		/>
 	</ToolFiles>
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
 			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
-			ConfigurationType="4"
+			ConfigurationType="1"
 			CharacterSet="2"
 			>
 			<Tool
@@ -30,14 +27,6 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="Cudart Build Rule"
-				Include="$(NVSDKCOMPUTE_ROOT)\C\common\inc;$(NVSDKCOMPUTE_ROOT)\shared\inc"
-				Arch1="20"
-				Arch2="0"
-				Optimization="0"
-				Runtime="1"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -51,11 +40,12 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
+				AdditionalIncludeDirectories="&quot;$(CUDA_PATH)/include&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/C/common/inc&quot;;../Peristalsis.Core"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
-				RuntimeLibrary="3"
+				RuntimeLibrary="1"
 				WarningLevel="3"
-				DebugInformationFormat="4"
+				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -67,10 +57,19 @@
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
-				Name="VCLibrarianTool"
+				Name="VCLinkerTool"
+				AdditionalDependencies="cudart.lib  cutil32D.lib glew32.lib"
+				OutputFile="../../../C/bin/win32/$(ConfigurationName)/$(ProjectName).exe"
+				LinkIncremental="1"
+				AdditionalLibraryDirectories="&quot;$(CUDA_PATH)/lib/$(PlatformName)&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/C/common/lib/$(PlatformName)&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/shared/lib/$(PlatformName)&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/CUDALibraries/common/lib/$(PlatformName)&quot;"
+				GenerateDebugInformation="true"
+				TargetMachine="1"
 			/>
 			<Tool
 				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -80,6 +79,9 @@
 			/>
 			<Tool
 				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
@@ -98,9 +100,6 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="Cudart Build Rule"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -163,29 +162,24 @@
 	</References>
 	<Files>
 		<File
-			RelativePath=".\magUtil.cu"
+			RelativePath=".\main.cpp"
 			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="Cudart Build Rule"
-					Include="$(CUDA_PATH)/include;$(NVSDKCOMPUTE_ROOT)\C\common\inc"
-					AddedDependencies="mag_util.cuh"
-				/>
-			</FileConfiguration>
 		</File>
 		<File
-			RelativePath=".\magUtil.cuh"
+			RelativePath=".\render_particles.cpp"
 			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				ExcludedFromBuild="true"
-				>
-				<Tool
-					Name="VCCustomBuildTool"
-				/>
-			</FileConfiguration>
+		</File>
+		<File
+			RelativePath=".\render_particles.h"
+			>
+		</File>
+		<File
+			RelativePath=".\shaders.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\shaders.h"
+			>
 		</File>
 	</Files>
 	<Globals>

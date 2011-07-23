@@ -1,5 +1,5 @@
-#ifndef __POISEUILLEFLOW_KERNEL_CUH__
-#define __POISEUILLEFLOW_KERNEL_CUH__
+#ifndef PERISTALSIS_KERNEL_CUH_
+#define PERISTALSIS_KERNEL_CUH_
 #include "vector_types.h"
 #include <math.h>
 
@@ -19,7 +19,7 @@
 
 typedef unsigned int uint;
 
-struct Poiseuillecfg {     
+struct Peristalsiscfg {     
 	uint3 gridSize;
 	float3 worldOrigin;
 	float3 cellSize;
@@ -48,11 +48,11 @@ struct Poiseuillecfg {
 	float gamma;
 
 	__host__ __device__
-	float Poiseuillecfg::BoundaryHeight()	{		
+	float Peristalsiscfg::BoundaryHeight()	{		
 		return boundaryOffset * 2.0f * radius;
 	}
 	__host__ __device__
-	float Poiseuillecfg::FluidHeight()	{		
+	float Peristalsiscfg::FluidHeight()	{		
 		return fluid_size.y * 2.0f * radius;
 	}
 
@@ -61,4 +61,4 @@ struct Poiseuillecfg {
 			*((x - worldOrigin.x) - wave_speed * t));
 	}
 };
-#endif//__POISEUILLEFLOW_KERNEL_CUH__
+#endif//PERISTALSIS_KERNEL_CUH_

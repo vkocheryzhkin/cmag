@@ -1,5 +1,5 @@
 #include "cutil_math.h"
-#include "poiseulleFlowUtil.cu"
+#include "peristalsisUtil.cu"
 
 //__device__ struct BottomF {	
 //	float x0, y0, t;
