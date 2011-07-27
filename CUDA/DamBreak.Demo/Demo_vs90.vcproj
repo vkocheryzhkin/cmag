@@ -17,7 +17,7 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)bin\$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="2"
@@ -59,7 +59,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="cudart.lib  cutil32D.lib glew32.lib"
-				OutputFile="../../../C/bin/win32/$(ConfigurationName)/$(ProjectName).exe"
+				OutputFile="$(OutDir)\$(ProjectName).exe"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(CUDA_PATH)/lib/$(PlatformName)&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/C/common/lib/$(PlatformName)&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/shared/lib/$(PlatformName)&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/CUDALibraries/common/lib/$(PlatformName)&quot;"
 				GenerateDebugInformation="true"
@@ -85,6 +85,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				CommandLine="xcopy &quot;$(NVSDKCOMPUTE_ROOT)\C\bin\$(PlatformName)\$(ConfigurationName)\cutil*D.dll&quot; $(OutDir) /i /d /y"
 			/>
 		</Configuration>
 		<Configuration
