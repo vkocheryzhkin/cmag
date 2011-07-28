@@ -85,7 +85,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="xcopy &quot;$(NVSDKCOMPUTE_ROOT)\C\bin\$(PlatformName)\$(ConfigurationName)\cutil*D.dll&quot; $(OutDir) /i /d /y"
+				CommandLine="xcopy &quot;$(NVSDKCOMPUTE_ROOT)\C\bin\$(PlatformName)\$(ConfigurationName)\cutil*D.dll&quot; $(OutDir) /i /d /y&#x0D;&#x0A;xcopy &quot;$(NVSDKCOMPUTE_ROOT)\C\bin\$(PlatformName)\$(ConfigurationName)\freeglut*.dll&quot; $(OutDir) /i /d /y"
 			/>
 		</Configuration>
 		<Configuration
