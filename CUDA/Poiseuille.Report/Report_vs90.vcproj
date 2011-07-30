@@ -164,27 +164,11 @@
 	</References>
 	<Files>
 		<File
-			RelativePath=".\CalculateHashTest.cpp"
-			>
-		</File>
-		<File
-			RelativePath=".\CalculateMassTest.cpp"
-			>
-		</File>
-		<File
 			RelativePath=".\dump.h"
 			>
 		</File>
 		<File
 			RelativePath=".\main.cc"
-			>
-		</File>
-		<File
-			RelativePath=".\PoiseuilleFlow.mw"
-			>
-		</File>
-		<File
-			RelativePath=".\SystemTest.cpp"
 			>
 		</File>
 	</Files>
