@@ -15,14 +15,14 @@ void dump()
 {
 	int boundaryOffset = 3;	
 	uint3 gridSize = make_uint3(16, 64, 4);    	
-	float particleRadius = 1.0f / (2 * (gridSize.y - 2 * boundaryOffset) * 1000);	
+	float radius = 1.0f / (2 * (gridSize.y - 2 * boundaryOffset) * 1000);	
 	uint3 fluidParticlesSize = make_uint3(gridSize.x, gridSize.y -  2 * boundaryOffset, 1);	       
 
 	PoiseuilleFlowSystem *psystem = new PoiseuilleFlowSystem(
 		fluidParticlesSize,
 		boundaryOffset, 
 		gridSize, 
-		particleRadius,
+		radius,
 		false); 	
 	psystem->reset();		
 
@@ -33,7 +33,7 @@ void dump()
 	host_vector<uint> index(numParticles);
 
 	device_ptr<float4> d_position((float4*)psystem->getCudaPosVBO());	
-	device_ptr<float4> d_velocity((float4*)psystem->getLeapFrogVelocity());
+	device_ptr<float4> d_velocity((float4*)psystem->getCudaVelVBO());
 	device_ptr<uint> d_index((uint*)psystem->getCudaIndex());	
 	
 
@@ -57,18 +57,28 @@ void dump()
 
 		ostringstream buffer;	
 		buffer << timeSlice;
-		string str = "dump" + buffer.str().replace(1,1,"x") + ".dat";
+		//string str = "XVelocityYPosition" + buffer.str().replace(1,1,"x");// + ".dat";
+		string str = "XVelocityYPosition" + buffer.str() + ".dat";
 		ofstream fp1;	
 		
 		fp1.open(str.c_str());
-		fp1 << "velocity X " << "position Y" << endl;
-		for(int i = 0; i < numParticles; i++){			
-			if(position[index[i]].w == 0.0f){//fluid
-				fp1 << velocity[i].x 
-					<< position[index[i]].y
-					<< endl;
+		//fp1 << "velocity X " << "position Y" << endl;
+		fp1 << "0.0 " << "0.0" << endl;
+		for(int i = 0; i < position.size(); i++){			
+			if((position[i].x > 0) 
+				&& (position[i].x < 2 * radius)){
+					if(position[i].w == 0.0f){//fluid
+						fp1 << velocity[i].x << " "
+							<< position[i].y 
+							+ abs(psystem->getWorldOrigin().y)
+							- boundaryOffset * 2 * radius
+							<< endl;
+					}else{
+						//cout << "boundary " << i<< endl;
+					}
 			}
-		}			
+		}	
+		fp1 << "0.000000 " << "0.001000" << endl;
 		fp1.close();
 	}	
 	delete psystem;
