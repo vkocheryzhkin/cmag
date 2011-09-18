@@ -234,7 +234,7 @@ void DamBreakSystem::removeRightBoundary(){
 	if (IsOpenGL) {
 		unmapGLBufferObject(cuda_posvbo_resource);
 	}
-	//elapsedTime = 0.0f;
+	elapsedTime = 0.0f;
 }
 
 void DamBreakSystem::changeRightBoundary(){ 

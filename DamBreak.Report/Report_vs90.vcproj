@@ -11,6 +11,9 @@
 		<Platform
 			Name="Win32"
 		/>
+		<Platform
+			Name="x64"
+		/>
 	</Platforms>
 	<ToolFiles>
 	</ToolFiles>
@@ -85,7 +88,81 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="xcopy &quot;$(NVSDKCOMPUTE_ROOT)\C\bin\$(PlatformName)\$(ConfigurationName)\cutil*D.dll&quot; $(OutDir) /i /d /y&#x0D;&#x0A;xcopy &quot;$(NVSDKCOMPUTE_ROOT)\C\bin\$(PlatformName)\$(ConfigurationName)\freeglut*.dll&quot; $(OutDir) /i /d /y"
+				CommandLine="xcopy &quot;$(NVSDKCOMPUTE_ROOT)\C\bin\$(PlatformName)\$(ConfigurationName)\cutil*D.dll&quot; $(OutDir) /i /d /y&#x0D;&#x0A;xcopy &quot;$(NVSDKCOMPUTE_ROOT)\C\bin\$(PlatformName)\$(ConfigurationName)\freeglut*.dll&quot; $(OutDir) /i /d /y&#x0D;&#x0A;"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug|x64"
+			OutputDirectory="$(SolutionDir)bin\$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
+			ConfigurationType="1"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="3"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				AdditionalIncludeDirectories="&quot;$(CUDA_PATH)/include&quot;;&quot;$(NVSDKCOMPUTE_ROOT)\C\common\inc&quot;;..\DamBreak.Core"
+				MinimalRebuild="true"
+				BasicRuntimeChecks="3"
+				RuntimeLibrary="1"
+				WarningLevel="3"
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="cudart.lib cutil64D.lib glew64.lib"
+				OutputFile="$(OutDir)\$(ProjectName).exe"
+				AdditionalLibraryDirectories="&quot;$(CUDA_PATH)/lib/$(PlatformName)&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/C/common/lib/$(PlatformName)&quot;;&quot;$(NVSDKCOMPUTE_ROOT)/shared/lib/$(PlatformName)&quot;"
+				GenerateDebugInformation="true"
+				SubSystem="1"
+				TargetMachine="17"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+				CommandLine="xcopy &quot;$(NVSDKCOMPUTE_ROOT)\C\bin\win64\$(ConfigurationName)\cutil*D.dll&quot; $(OutDir) /i /d /y&#x0D;&#x0A;xcopy &quot;$(NVSDKCOMPUTE_ROOT)\C\bin\win64\$(ConfigurationName)\freeglut*.dll&quot; $(OutDir) /i /d /y&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -158,6 +235,77 @@
 				Name="VCPostBuildEventTool"
 			/>
 		</Configuration>
+		<Configuration
+			Name="Release|x64"
+			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
+			ConfigurationType="1"
+			CharacterSet="2"
+			WholeProgramOptimization="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="3"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="2"
+				EnableIntrinsicFunctions="true"
+				RuntimeLibrary="2"
+				EnableFunctionLevelLinking="true"
+				WarningLevel="3"
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				GenerateDebugInformation="true"
+				OptimizeReferences="2"
+				EnableCOMDATFolding="2"
+				TargetMachine="17"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
 	</Configurations>
 	<References>
 	</References>
@@ -187,11 +335,11 @@
 			>
 		</File>
 		<File
-			RelativePath=".\XFrontTest.cpp"
+			RelativePath=".\XFrontTest.h"
 			>
 		</File>
 		<File
-			RelativePath=".\YFrontTest.cpp"
+			RelativePath=".\YFrontTest.h"
 			>
 		</File>
 	</Files>

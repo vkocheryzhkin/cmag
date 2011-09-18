@@ -1,6 +1,9 @@
+#use cmaple from Maple bin
+#command line: cmaple XVelocityYPosition.m
+
 interface(echo = 2);
-with(plottools); 
-with(plots);
+with(plottools):
+with(plots):
 plotsetup( `ps`,plotoutput=`Poiseuille.eps`,
 plotoptions=`color,noborder,portrait`);
 
@@ -17,27 +20,23 @@ VelData1 := readdata(`XVelocityYPosition1.dat`, float, 2):
 scalex := 100000:
 scaley := 1000:
 
-Vel0x0225 := scale(plot([-Vel(y, 0.0225), y, y = 0 .. l], color = green,legend ="Analytical"), scalex, scaley):
+Vel0x0225 := scale(plot([-Vel(y, 0.0225), y, y = 0 .. l], color = green,legend ="Analytical;"), scalex, scaley):
 Vel0x045 := scale(plot([-Vel(y, 0.045), y, y = 0 .. l], color = green), scalex, scaley):
 Vel0x1125 := scale(plot([-Vel(y, 0.1125), y, y = 0 .. l], color = green), scalex, scaley):
 Vel0x225 := scale(plot([-Vel(y, 0.225), y, y = 0 .. l], color = green), scalex, scaley):
 Vel1 := scale(plot([-Vel(y, 1.0), y, y = 0 .. l], color = green), scalex, scaley):
 
-Vel0x0225Text := textplot([0.25, 0.5, "t=0.0225s"],	align = {above, right},	font = [TIMES, ROMAN, 10]):	
-Vel0x045Text := textplot([0.43, 0.5, "t=0.045s"], align = {above, right},	font = [TIMES, ROMAN, 10]):
-Vel0x1125Text := textplot([0.85, 0.5, "t=0.1125s"], align = {above, right},	font = [TIMES, ROMAN, 10]):
-Vel0x225Text := textplot([1.12, 0.5, "t=0.225s"], align = {above, right},	font = [TIMES, ROMAN, 10]):
-Vel1Text := textplot([1.28, 0.5, typeset("t=",infinity)], align = {above, right},	font = [TIMES, ROMAN, 10]):
-
-
+Vel0x0225Text := textplot([0.05, 0.5, "t=0.0225s"],	align = {above, right},	font = [TIMES, ITALIC, 8]):	
+Vel0x045Text := textplot([0.27, 0.5, "t=0.045s"], align = {above, right},	font = [TIMES, ITALIC, 8]):
+Vel0x1125Text := textplot([0.66, 0.5, "t=0.1125s"], align = {above, right},	font = [TIMES, ITALIC, 8]):
+Vel0x225Text := textplot([0.95, 0.5, "t=0.225s"], align = {above, right},	font = [TIMES, ITALIC, 8]):
+Vel1Text := textplot([1.17, 0.5, typeset("t=",infinity)], align = {above, right},	font = [TIMES, ITALIC, 8]):
 
 VelDiscret0x0225 := scale(plot(VelData0x0225, style = point, symbol = cross, color = red, legend = "WCSPH"), scalex, scaley):
 VelDiscret0x045 := scale(plot(VelData0x045, style = point, symbol = cross, color = red), scalex, scaley):
 VelDiscret0x1125 := scale(plot(VelData0x1125, style = point, symbol = cross, color = red), scalex, scaley):
 VelDiscret0x225 := scale(plot(VelData0x225, style = point, symbol = cross, color = red), scalex, scaley):
 VelDiscret1 := scale(plot(VelData1, style = point, symbol = cross, color = red), scalex, scaley):
-
-
 
 display(
 	Vel0x0225,
