@@ -10,3 +10,4 @@ glob:*.sdf
 glob:Release
 glob:*.dat
 glob:*.bak
+glob:bin/

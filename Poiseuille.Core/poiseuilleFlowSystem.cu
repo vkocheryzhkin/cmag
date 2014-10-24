@@ -1,18 +1,23 @@
-#include <cutil_inline.h>
 #include <cstdlib>
 #include <cstdio>
 #include <string.h>
 #include <GL/freeglut.h>
-#include <cuda_gl_interop.h>
 #include "thrust/device_ptr.h"
 #include "thrust/for_each.h"
 #include "thrust/iterator/zip_iterator.h"
 #include "thrust/sort.h"
+
+#include <cuda_gl_interop.h>
+
+#include "helper_timer.h"
+#include "helper_cuda.h"
+#include "helper_cuda_gl.h"
+
 #include "poiseuilleFlowKernel.cu"
 extern "C"
 {	
 	void setParameters(PoiseuilleParams *hostParams){
-		cutilSafeCall( cudaMemcpyToSymbol(params, hostParams, sizeof(PoiseuilleParams)) );
+		checkCudaErrors( cudaMemcpyToSymbol(params, hostParams, sizeof(PoiseuilleParams)) );
 	}
 
 	uint iDivUp(uint a, uint b){
@@ -26,52 +31,54 @@ extern "C"
 
 	void cudaGLInit(int argc, char **argv)
 	{   
-		if( cutCheckCmdLineFlag(argc, (const char**)argv, "device") ) {
-			cutilDeviceInit(argc, argv);
-		} else {
-			cudaGLSetGLDevice( cutGetMaxGflopsDeviceId() );
-		}
+		gpuGLDeviceInit(argc, (const char **)argv); //todo: init
+		// if( checkCmdLineFlag(argc, (const char**)argv, "device") ) {
+		// 	// cutilDeviceInit(argc, argv);
+		// 	gpuDeviceInit(0);
+		// } else {
+		// 	//cudaGLSetGLDevice( gpuGetMaxGflopsDeviceId() ); //todo: hiden?
+		// }
 	}
 
 	void registerGLBufferObject(uint vbo, struct cudaGraphicsResource **cuda_vbo_resource)
 	{
-		cutilSafeCall(cudaGraphicsGLRegisterBuffer(cuda_vbo_resource, vbo, 
+		checkCudaErrors(cudaGraphicsGLRegisterBuffer(cuda_vbo_resource, vbo, 
 							   cudaGraphicsMapFlagsNone));
 	}
 
 	void unregisterGLBufferObject(struct cudaGraphicsResource *cuda_vbo_resource)
 	{
-		cutilSafeCall(cudaGraphicsUnregisterResource(cuda_vbo_resource));	
+		checkCudaErrors(cudaGraphicsUnregisterResource(cuda_vbo_resource));	
 	}
 
 	void *mapGLBufferObject(struct cudaGraphicsResource **cuda_vbo_resource)
 	{
 		void *ptr;
-		cutilSafeCall(cudaGraphicsMapResources(1, cuda_vbo_resource, 0));
+		checkCudaErrors(cudaGraphicsMapResources(1, cuda_vbo_resource, 0));
 		size_t num_bytes; 
-		cutilSafeCall(cudaGraphicsResourceGetMappedPointer((void **)&ptr, &num_bytes,  
+		checkCudaErrors(cudaGraphicsResourceGetMappedPointer((void **)&ptr, &num_bytes,  
 								   *cuda_vbo_resource));
 		return ptr;
 	}
 
 	void unmapGLBufferObject(struct cudaGraphicsResource *cuda_vbo_resource)
 	{
-	   cutilSafeCall(cudaGraphicsUnmapResources(1, &cuda_vbo_resource, 0));
+	   checkCudaErrors(cudaGraphicsUnmapResources(1, &cuda_vbo_resource, 0));
 	}
 
 	void allocateArray(void **devPtr, size_t size)
 	{
-		cutilSafeCall(cudaMalloc(devPtr, size));
+		checkCudaErrors(cudaMalloc(devPtr, size));
 	}
 
 	void freeArray(void *devPtr)
 	{
-		cutilSafeCall(cudaFree(devPtr));
+		checkCudaErrors(cudaFree(devPtr));
 	}
 
 	void copyArrayToDevice(void* device, const void* host, int offset, int size)
 	{
-		cutilSafeCall(cudaMemcpy((char *) device + offset, host, size, cudaMemcpyHostToDevice));
+		checkCudaErrors(cudaMemcpy((char *) device + offset, host, size, cudaMemcpyHostToDevice));
 	}
 
 	void integratePoiseuilleSystem(
@@ -90,7 +97,7 @@ extern "C"
 				(float4*)acc,
 				numParticles);
 		    
-			cutilCheckMsg("integrate kernel execution failed");
+			//checkCudaErrors("integrate kernel execution failed");
 	}
 
 	void sortParticles(uint *dHash, uint *dIndex, uint numParticles)
@@ -114,7 +121,7 @@ extern "C"
 				(float4 *) pos,
 				numParticles);
 		    
-			cutilCheckMsg("Kernel execution failed: calculatePoiseuilleHashD");
+			//checkCudaErrors("Kernel execution failed: calculatePoiseuilleHashD");
 	}
 
 	void reorderPoiseuilleData(
@@ -131,11 +138,11 @@ extern "C"
 			uint numThreads, numBlocks;
 			computeGridSize(numParticles, 256, numBlocks, numThreads);
 
-			cutilSafeCall(cudaMemset(cellStart, 0xffffffff, numCells*sizeof(uint)));
+			checkCudaErrors(cudaMemset(cellStart, 0xffffffff, numCells*sizeof(uint)));
 
 			#if USE_TEX
-				cutilSafeCall(cudaBindTexture(0, oldPosTex, oldPos, numParticles*sizeof(float4)));
-				cutilSafeCall(cudaBindTexture(0, oldVelTex, oldVel, numParticles*sizeof(float4)));
+				checkCudaErrors(cudaBindTexture(0, oldPosTex, oldPos, numParticles*sizeof(float4)));
+				checkCudaErrors(cudaBindTexture(0, oldVelTex, oldVel, numParticles*sizeof(float4)));
 			#endif
 
 				uint smemSize = sizeof(uint)*(numThreads+1);
@@ -149,11 +156,11 @@ extern "C"
 					(float4 *) oldPos,
 					(float4 *) oldVel,
 					numParticles);
-				cutilCheckMsg("Kernel execution failed: reorderPoiseuilleDataD");
+				//checkCudaErrors("Kernel execution failed: reorderPoiseuilleDataD");
 
 			#if USE_TEX
-				cutilSafeCall(cudaUnbindTexture(oldPosTex));
-				cutilSafeCall(cudaUnbindTexture(oldVelTex));
+				checkCudaErrors(cudaUnbindTexture(oldPosTex));
+				checkCudaErrors(cudaUnbindTexture(oldVelTex));
 			#endif
 	}
 
@@ -167,10 +174,10 @@ extern "C"
 		uint numParticles,
 		uint numGridCells){
 			#if USE_TEX
-			cutilSafeCall(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(float4)));
-			cutilSafeCall(cudaBindTexture(0, oldVelTex, sortedVel, numParticles*sizeof(float4)));
-			cutilSafeCall(cudaBindTexture(0, cellStartTex, cellStart, numGridCells*sizeof(uint)));
-			cutilSafeCall(cudaBindTexture(0, cellEndTex, cellEnd, numGridCells*sizeof(uint)));    
+			checkCudaErrors(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(float4)));
+			checkCudaErrors(cudaBindTexture(0, oldVelTex, sortedVel, numParticles*sizeof(float4)));
+			checkCudaErrors(cudaBindTexture(0, cellStartTex, cellStart, numGridCells*sizeof(uint)));
+			checkCudaErrors(cudaBindTexture(0, cellEndTex, cellEnd, numGridCells*sizeof(uint)));    
 			#endif
 
 			uint numThreads, numBlocks;
@@ -185,13 +192,14 @@ extern "C"
 				cellEnd,
 				numParticles);
 
-			cutilCheckMsg("Kernel execution failed");
+			//cutilCheckMsg("Kernel execution failed");
+			//checkCudaErrors("Kernel execution failed");
 
 			#if USE_TEX
-			cutilSafeCall(cudaUnbindTexture(oldPosTex));
-			cutilSafeCall(cudaUnbindTexture(oldVelTex));
-			cutilSafeCall(cudaUnbindTexture(cellStartTex));
-			cutilSafeCall(cudaUnbindTexture(cellEndTex));
+			checkCudaErrors(cudaUnbindTexture(oldPosTex));
+			checkCudaErrors(cudaUnbindTexture(oldVelTex));
+			checkCudaErrors(cudaUnbindTexture(cellStartTex));
+			checkCudaErrors(cudaUnbindTexture(cellEndTex));
 			#endif
 	}
 
@@ -206,11 +214,11 @@ extern "C"
 		uint numParticles,
 		uint numGridCells){
 			#if USE_TEX
-			cutilSafeCall(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(float4)));
-			cutilSafeCall(cudaBindTexture(0, oldVelTex, sortedVel, numParticles*sizeof(float4)));
-			cutilSafeCall(cudaBindTexture(0, oldMeasuresTex, sortedMeasures, numParticles*sizeof(float4)));
-			cutilSafeCall(cudaBindTexture(0, cellStartTex, cellStart, numGridCells*sizeof(uint)));
-			cutilSafeCall(cudaBindTexture(0, cellEndTex, cellEnd, numGridCells*sizeof(uint)));    
+			checkCudaErrors(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(float4)));
+			checkCudaErrors(cudaBindTexture(0, oldVelTex, sortedVel, numParticles*sizeof(float4)));
+			checkCudaErrors(cudaBindTexture(0, oldMeasuresTex, sortedMeasures, numParticles*sizeof(float4)));
+			checkCudaErrors(cudaBindTexture(0, cellStartTex, cellStart, numGridCells*sizeof(uint)));
+			checkCudaErrors(cudaBindTexture(0, cellEndTex, cellEnd, numGridCells*sizeof(uint)));    
 			#endif
 
 			uint numThreads, numBlocks;
@@ -226,14 +234,15 @@ extern "C"
 				cellEnd,
 				numParticles);
 
-			cutilCheckMsg("Kernel execution failed");
+			//cutilCheckMsg("Kernel execution failed");
+			//checkCudaErrors("Kernel execution failed");
 
 			#if USE_TEX
-			cutilSafeCall(cudaUnbindTexture(oldPosTex));
-			cutilSafeCall(cudaUnbindTexture(oldVelTex));
-			cutilSafeCall(cudaUnbindTexture(oldMeasuresTex));
-			cutilSafeCall(cudaUnbindTexture(cellStartTex));
-			cutilSafeCall(cudaUnbindTexture(cellEndTex));
+			checkCudaErrors(cudaUnbindTexture(oldPosTex));
+			checkCudaErrors(cudaUnbindTexture(oldVelTex));
+			checkCudaErrors(cudaUnbindTexture(oldMeasuresTex));
+			checkCudaErrors(cudaUnbindTexture(cellStartTex));
+			checkCudaErrors(cudaUnbindTexture(cellEndTex));
 			#endif
 	}
 }// extern "C"
