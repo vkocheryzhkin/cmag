@@ -1,6 +1,3 @@
-
-#include <GL/glew.h>
-
 #include <math.h>
 #include <assert.h>
 #include <stdio.h>

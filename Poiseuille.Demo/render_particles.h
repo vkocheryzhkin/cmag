@@ -1,6 +1,8 @@
 #ifndef __RENDER_PARTICLES__
 #define __RENDER_PARTICLES__
 
+#include <GL/glew.h>
+
 class ParticleRenderer
 {
 public:

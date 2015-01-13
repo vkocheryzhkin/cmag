@@ -4,11 +4,13 @@
 #endif
 
 #include <GL/freeglut.h>
-#include <cutil_inline.h>
-#include <cutil_gl_inline.h>
+#include "../Poiseuille.Core/helper_cuda.h"
+#include "../Poiseuille.Core/helper_cuda_gl.h"
+#include "../Poiseuille.Core/helper_timer.h"
 #include <cuda_gl_interop.h>
-#include "poiseuilleFlowSystem.h"
+#include "../Poiseuille.Core/poiseuilleFlowSystem.h"
 #include "render_particles.h"
+#include <cmath>
 
 extern "C" void cudaGLInit(int argc, char **argv);
 
@@ -30,7 +32,8 @@ bool IsFirstTime = true;
 
 static int fpsCount = 0;
 static int fpsLimit = 1;
-unsigned int timer;
+//unsigned int timer;
+StopWatchInterface *timer = NULL;
 
 ParticleRenderer *renderer = 0;
 
@@ -39,7 +42,8 @@ unsigned int frameCount = 0;
 void ConditionalDisplay();
 
 void cleanup(){
-	cutilCheckError( cutDeleteTimer( timer));    
+    //checkCudaErrors( cutDeleteTimer( timer));
+    sdkDeleteTimer(&timer);
 }
 
 void initGL(int argc, char **argv)
@@ -74,20 +78,24 @@ void computeFPS()
 
 	if (fpsCount == fpsLimit) {
 		char fps[256];
-		float ifps = 1.f / (cutGetAverageTimerValue(timer) / 1000.f);
+        //float ifps = 1.f / (cutGetAverageTimerValue(timer) / 1000.f);
+        float ifps = 1.f / (sdkGetAverageTimerValue(&timer) / 1000.f);
+
 		sprintf(fps, "Dam Break (%d particles): %3.1f fps; elapsed Time: %f",
 			psystem->getNumParticles(), ifps, psystem->getElapsedTime()); 
 		glutSetWindowTitle(fps);
 		fpsCount = 0;         
 
-		cutilCheckError(cutResetTimer(timer));          
+        //cutilCheckError(cutResetTimer(timer));
+        sdkResetTimer(&timer);
 	}
 }
 
 
 void display()
 {
-	cutilCheckError(cutStartTimer(timer));  
+    //cutilCheckError(cutStartTimer(timer));
+    sdkStartTimer(&timer);
 	if(IsFirstTime){
 		IsFirstTime = false;
 		psystem->update(); 
@@ -117,7 +125,8 @@ void display()
 	//glutWireCube(2.0);
 
 	if (renderer) renderer->display();
-	cutilCheckError(cutStopTimer(timer));  
+    //cutilCheckError(cutStopTimer(timer));
+    sdkStopTimer(&timer);
 	glutSwapBuffers();
 	glutReportErrors();
 	computeFPS();
@@ -236,7 +245,8 @@ void SystemInit()
 	renderer->setradius(psystem->getParticleRadius());
 	renderer->setColorBuffer(psystem->getColorBuffer());		
 
-	cutilCheckError(cutCreateTimer(&timer));
+    //cutilCheckError(cutCreateTimer(&timer));
+    sdkCreateTimer(&timer);
 }
 
 int main(int argc, char** argv) 
@@ -255,5 +265,7 @@ int main(int argc, char** argv)
 	atexit(cleanup);
 	glutMainLoop();
 	if (psystem) delete psystem;
-	cudaThreadExit();
+    //cudaThreadExit();
+//    cudaDeviceReset();
 }
+

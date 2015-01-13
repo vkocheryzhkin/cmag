@@ -16,12 +16,14 @@ find_package(OpenGL REQUIRED)
 # GLUT
 find_package(GLUT REQUIRED)
 include_directories(${GLUT_INCLUDE_DIR})
-#link_directories(${GLUT_LIBRARY_DIRS})
-#add_definitions(${GLUT_DEFINITIONS})
 if(NOT GLUT_FOUND)
     message(ERROR " GLUT not found!")
-    message(ERROR ${GLUT_ROOT_PATH})
-    
+    message(ERROR ${GLUT_ROOT_PATH})    
 endif(NOT GLUT_FOUND)
 
+# GLEW
+find_package(GLEW REQUIRED)
+include_directories(${GLEW_INCLUDE_DIRS})
+
 ADD_SUBDIRECTORY( Poiseuille.Core )
+ADD_SUBDIRECTORY( Poiseuille.Demo )
