@@ -6,4 +6,5 @@ file(GLOB PoiseuilleDemo_SRCS    "*.cpp")
 file(GLOB PoiseuilleDemo_HEADERS "*.h")
 
 add_executable(PoiseuilleDemo ${PoiseuilleDemo_SRCS} ${PoiseuilleDemo_HEADERS})
-target_link_libraries(PoiseuilleDemo PoiseuilleCore ${OPENGL_LIBRARIES} ${GLUT_LIBRARY} ${GLEW_LIBRARIES})
+
+target_link_libraries(PoiseuilleDemo PoiseuilleCore ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} ${GLEW_LIBRARIES})

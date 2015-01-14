@@ -5,6 +5,8 @@ if(POLICY CMP0020)
 endif()
 
 cmake_minimum_required(VERSION 2.6)
+set( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake" )
+SET_PROPERTY(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # CUDA
 find_package(CUDA REQUIRED)
@@ -16,10 +18,6 @@ find_package(OpenGL REQUIRED)
 # GLUT
 find_package(GLUT REQUIRED)
 include_directories(${GLUT_INCLUDE_DIR})
-if(NOT GLUT_FOUND)
-    message(ERROR " GLUT not found!")
-    message(ERROR ${GLUT_ROOT_PATH})    
-endif(NOT GLUT_FOUND)
 
 # GLEW
 find_package(GLEW REQUIRED)

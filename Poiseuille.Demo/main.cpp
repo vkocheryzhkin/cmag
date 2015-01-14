@@ -12,6 +12,8 @@
 #include "render_particles.h"
 #include <cmath>
 
+
+
 extern "C" void cudaGLInit(int argc, char **argv);
 
 #define MAX(a,b) ((a > b) ? a : b)
