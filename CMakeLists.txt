@@ -25,3 +25,4 @@ include_directories(${GLEW_INCLUDE_DIRS})
 
 ADD_SUBDIRECTORY( Poiseuille.Core )
 ADD_SUBDIRECTORY( Poiseuille.Demo )
+ADD_SUBDIRECTORY( Poiseuille.Report )

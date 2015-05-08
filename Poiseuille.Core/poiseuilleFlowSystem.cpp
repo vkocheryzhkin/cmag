@@ -56,7 +56,8 @@ PoiseuilleFlowSystem::PoiseuilleFlowSystem(
 	    
 		params.boundaryDamping = -1.0f;
 
-        params.gravity = make_float3(powf(10.0f, -1.0f), 0.0f, 0.0f);
+//        params.gravity = make_float3(powf(10.0f, -1.0f), 0.0f, 0.0f);
+        params.gravity = make_float3(powf(10.0f, -4.0f), 0.0f, 0.0f);
 
 		params.soundspeed = powf(10.0f, -4.0f);			
 		params.mu = powf(10.0f, -3.0f);	

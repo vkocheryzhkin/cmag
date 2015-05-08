@@ -5,8 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <queue>
-#include "poiseuilleFlowSystem.h"
-#include "poiseuilleFlowSystem.cuh"
+#include "../Poiseuille.Core/poiseuilleFlowSystem.h"
 
 using namespace std;
 using namespace thrust;
