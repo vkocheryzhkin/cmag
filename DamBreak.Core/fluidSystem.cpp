@@ -1,9 +1,8 @@
 #include "fluidSystem.h"
 #include "fluidSystem.cuh"
 #include "fluid_kernel.cuh"
-
-#include <cutil_inline.h>
-
+#include <cuda_runtime.h>
+#include "../Common/helper_cuda.h"
 #include <assert.h>
 #include <math.h>
 #include <memory.h>
@@ -140,7 +139,7 @@ void DamBreakSystem::_initialize(int numParticles){
 		posVbo = createVBO(memSize);    
 	registerGLBufferObject(posVbo, &cuda_posvbo_resource);
 	} else {
-		cutilSafeCall( cudaMalloc( (void **)&cudaPosVBO, memSize )) ;
+        checkCudaErrors( cudaMalloc( (void **)&cudaPosVBO, memSize )) ;
 	}
 
 	allocateArray((void**)&dVel, memSize);
@@ -181,7 +180,7 @@ void DamBreakSystem::_initialize(int numParticles){
 		}
 		glUnmapBufferARB(GL_ARRAY_BUFFER);
 	} else {
-		cutilSafeCall( cudaMalloc( (void **)&cudaColorVBO, sizeof(float)*numParticles*4) );
+        checkCudaErrors( cudaMalloc( (void **)&cudaColorVBO, sizeof(float)*numParticles*4) );
 	}	   
 
 	setParameters(&params);
@@ -216,8 +215,8 @@ void DamBreakSystem::_finalize(){
 		glDeleteBuffers(1, (const GLuint*)&posVbo);
 		glDeleteBuffers(1, (const GLuint*)&colorVBO);
 	} else {
-		cutilSafeCall( cudaFree(cudaPosVBO) );
-		cutilSafeCall( cudaFree(cudaColorVBO) );
+        checkCudaErrors( cudaFree(cudaPosVBO) );
+        checkCudaErrors( cudaFree(cudaColorVBO) );
 	}	
 }
 void DamBreakSystem::removeRightBoundary(){

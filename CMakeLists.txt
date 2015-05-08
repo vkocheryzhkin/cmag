@@ -23,6 +23,12 @@ include_directories(${GLUT_INCLUDE_DIR})
 find_package(GLEW REQUIRED)
 include_directories(${GLEW_INCLUDE_DIRS})
 
+ADD_SUBDIRECTORY( Common )
+
 ADD_SUBDIRECTORY( Poiseuille.Core )
 ADD_SUBDIRECTORY( Poiseuille.Demo )
 ADD_SUBDIRECTORY( Poiseuille.Report )
+
+
+ADD_SUBDIRECTORY( DamBreak.Core )
+ADD_SUBDIRECTORY( DamBreak.Demo )
