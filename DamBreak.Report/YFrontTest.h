@@ -3,11 +3,13 @@
 #include <thrust/device_vector.h>
 #include <thrust/sort.h>
 #include <iostream>
-#include<stack>
+#include <stack>
+#include <math.h>
+#include <algorithm>
 
 typedef unsigned int uint;
-#include "fluidSystem.cuh"
-#include "fluidSystem.h"
+// #include "fluidSystem.cuh"
+// #include "fluidSystem.h"
 
 using namespace std;
 
@@ -27,8 +29,8 @@ void YFrontTest(){
 	cout << "YFront System relaxed" << endl;
 	psystem->removeRightBoundary();
 	
-	struct compareFloat4Y{
-		__host__ bool operator()(float4 a, float4 b){
+	struct compareFloat4Y {
+		__host__ bool operator()(float4 a, float4 b) {
 			if(a.w == Fluid && b.w !=Fluid)
 				return true;
 			if(a.w != Fluid && b.w == Fluid)
@@ -62,10 +64,10 @@ void YFrontTest(){
 	thrust::device_ptr<float4> dev_ptr((float4*)psystem->getCudaPosVBO());	
 	thrust::host_vector<float4> h_vec(psystem->getNumParticles());
 	thrust::copy(dev_ptr, dev_ptr + psystem->getNumParticles(), h_vec.begin());		
-	thrust::sort(h_vec.begin(),h_vec.end(),comparator);		
+	thrust::sort(h_vec.begin(),h_vec.end(), comparator);
 	float yheight = ((float4)h_vec[0]).y + radius - psystem->getWorldOrigin().y;
 
-	float timeScale = sqrt(2 * abs(psystem->getGravity().y) / yheight);	
+	float timeScale = sqrt(2 * fabs(psystem->getGravity().y) / yheight);	
 	FILE *file= fopen("YFrontOutput", "w");
 	while (!(timeFrames.empty())){
 		float2 expData= timeFrames.top();
@@ -78,7 +80,7 @@ void YFrontTest(){
 		thrust::host_vector<float4> h_vec(psystem->getNumParticles());
 
 		thrust::copy(dev_ptr, dev_ptr + psystem->getNumParticles(), h_vec.begin());		
-		thrust::sort(h_vec.begin(),h_vec.end(),comparator);	
+		thrust::sort(h_vec.begin(),h_vec.end(), comparator);
 
 		float y = ((float4)h_vec[0]).y;
 		fprintf(file, "%f %f %f %f \n",

@@ -5,8 +5,10 @@
 #include <fstream>
 #include <sstream>
 #include <queue>
-#include "fluidSystem.h"
-#include "fluidSystem.cuh"
+// #include "fluidSystem.h"
+// #include "fluidSystem.cuh"
+
+#include "../DamBreak.Core/fluidSystem.h"
 
 using namespace std;
 using namespace thrust;

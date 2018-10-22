@@ -3,11 +3,13 @@
 #include <thrust/device_vector.h>
 #include <thrust/sort.h>
 #include <iostream>
-#include<stack>
+#include <stack>
+#include <math.h>
 
 typedef unsigned int uint;
-#include "fluidSystem.cuh"
-#include "fluidSystem.h"
+// #include "fluidSystem.cuh"
+// #include "fluidSystem.h"
+// #include "../DamBreak.Core/fluidSystem.cuh"
 
 using namespace std;
 
@@ -60,7 +62,7 @@ void XFrontTest(){
 	timeFrames.push(make_float2(0.00f, 1.0f));	
 
 	float xwidth = (fluidParticlesSize.x + boundaryOffset)  * 2 * radius;
-	float timeScale = sqrt(2* abs(psystem->getGravity().y) / xwidth);	
+	float timeScale = sqrt(2* fabs(psystem->getGravity().y) / xwidth);	
 
 	FILE *file= fopen("XFrontOutput", "w");
 	while (!(timeFrames.empty())){

@@ -4,6 +4,7 @@
 #endif
 
 #include <GL/freeglut.h>
+#include <math.h>
 #include "../Common/helper_cuda.h"
 #include "../Common/helper_cuda_gl.h"
 #include "../Common/helper_timer.h"

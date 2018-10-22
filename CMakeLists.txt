@@ -1,10 +1,7 @@
 project(cmag)
 
-if(POLICY CMP0020)
-  cmake_policy(SET CMP0020 NEW)
-endif()
-
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.1)
+set (CMAKE_CXX_STANDARD 11)
 set( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake" )
 SET_PROPERTY(GLOBAL PROPERTY USE_FOLDERS ON)
 
@@ -29,6 +26,6 @@ ADD_SUBDIRECTORY( Poiseuille.Core )
 ADD_SUBDIRECTORY( Poiseuille.Demo )
 ADD_SUBDIRECTORY( Poiseuille.Report )
 
-
-#ADD_SUBDIRECTORY( DamBreak.Core )
-#ADD_SUBDIRECTORY( DamBreak.Demo )
+ADD_SUBDIRECTORY( DamBreak.Core )
+ADD_SUBDIRECTORY( DamBreak.Demo )
+ADD_SUBDIRECTORY( DamBreak.Report )
