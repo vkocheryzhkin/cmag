@@ -30,5 +30,5 @@ ADD_SUBDIRECTORY( Poiseuille.Demo )
 ADD_SUBDIRECTORY( Poiseuille.Report )
 
 
-ADD_SUBDIRECTORY( DamBreak.Core )
-ADD_SUBDIRECTORY( DamBreak.Demo )
+#ADD_SUBDIRECTORY( DamBreak.Core )
+#ADD_SUBDIRECTORY( DamBreak.Demo )

@@ -5,6 +5,8 @@
 #include <fstream>
 #include <sstream>
 #include <queue>
+#include <math.h>
+
 #include "../Poiseuille.Core/poiseuilleFlowSystem.h"
 
 using namespace std;
@@ -69,7 +71,7 @@ void dump()
 					if(position[i].w == 0.0f){//fluid
 						fp1 << velocity[i].x << " "
 							<< position[i].y 
-							+ abs(psystem->getWorldOrigin().y)
+							+ fabs(psystem->getWorldOrigin().y)
 							- boundaryOffset * 2 * radius
 							<< endl;
 					}else{

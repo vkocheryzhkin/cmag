@@ -1,4 +1,6 @@
 #include "dump.h"
-void main(){		
-	dump();
+
+int main() {
+  dump();
+  return 0;
 }
